@@ -37,16 +37,6 @@ class DataEnrichment():
 
         ''' default datetime column name when applying date and time related column augmentations '''
         self._date_col_name = "DateTime"
-#        ''' list of datetime column augmentations '''
-#        self._aug_col_dt = ["ALL",     # apply all cleaning processes and will ignore other flags
-#                            "DOW",     # add a day of week column
-#                            "YYYY",    # add a cloumn with the year only
-#                            "YY",      # add a cloumn with the year only
-#                            "MMM",     # add a column with three letter month name
-#                            "MM",      # add a column with two digit month number
-#                            "MMM-DD",  # add a column with three letter month and two digit day
-#                           ]
-
         self._cols_to_augment_dict = { "DateTime" : ["ALL"] }
 #        self._l_dt_aug_cols = ["ALL"]
         self._kwargs = {"dt_col_name" : "DateTime",   # identifies the datetime column in the dataframe
@@ -54,8 +44,6 @@ class DataEnrichment():
                         "abbreviate" : False,         # truncates the string to give 3 character names for year, month, dow 
                         "sorted_by" : ["YYYY","MM","DD"]   # sort dataframe by Year, Month, and Day
                        }
-#        self._abbrev_str = False
-#        self._pad_zeros = False
 
         print("Initialing DataEnrichment class for ",self.name)
         return None

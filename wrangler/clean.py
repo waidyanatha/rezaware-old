@@ -79,17 +79,17 @@ class DataClensing():
         pass
 
     ''' Function - 
-            name: convert_impertial_to_metric
+            name: convert_imperial_to_metric
             procedure: 
 
             return DataFrame
 
     '''
-    def convert_impertial_to_metric(self,
-                                    df,
-                                    from_unit_type: str= self.from_unit,
-                                    to_unity_type : str= self.to_unit,
-                                    **kwargs):
+    def convert_imperial_to_metric(self,
+                                   df,
+                                   from_unit_type: str= self.from_unit,
+                                   to_unity_type : str= self.to_unit,
+                                   **kwargs):
         pass
 
     ''' Function - 
