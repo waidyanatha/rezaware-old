@@ -1,1754 +1,284 @@
 Id;Label;lat;lng;Type
-Dorset;Dorset;50.79683685;-2.34473226124306;source
-Las Vegas;Las Vegas;36.1672559;-115.148516;target
-Portland;Portland;45.5202471;-122.6741949;target
-Grapevine;Grapevine;32.9337381;-97.0788754;source
-Austin;Austin;30.2711286;-97.7436995;target
-Coral Gables;Coral Gables;25.6915434;-80.23454887092652;target
-Morro Bay;Morro Bay;35.3658075;-120.849901;target
-Oahu, Honolulu;Oahu, Honolulu;21.48343645;-158.03648372697478;target
-Hong Kong Sar;Hong Kong Sar;22.350627;114.1849161;source
-Sterling;Sterling;31.8151416;-101.0452671;target
-Tucson;Tucson;32.2228765;-110.9748477;target
-Meads Bay;Meads Bay;18.18345325;-63.13948732929756;source
-Bangor;Bangor;44.8011821;-68.7778138;target
-Dallas;Dallas;32.7762719;-96.7968559;target
-Durham;Durham;35.996653;-78.9018053;target
-Jekyll Island;Jekyll Island;31.0655982;-81.41431464659931;target
-Las Cruces;Las Cruces;32.3140354;-106.7798078;target
-New York;New York;40.7127281;-74.0060152;target
-Philadelphia;Philadelphia;39.9527237;-75.1635262;target
-Primm;Primm;35.6115884;-115.3858615;target
-Richmond;Richmond;37.5385087;-77.43428;target
-San Antonio;San Antonio;29.4246002;-98.4951405;target
-Uniondale;Uniondale;40.7159385;-73.59384782542784;target
-Middlesex;Middlesex;51.546055800000005;-0.2537791389340719;source
-Phoenix;Phoenix;33.4484367;-112.074141;target
-Moscow;Moscow;55.7504461;37.6174943;source
-Orlando;Orlando;28.5421109;-81.3790304;source
-Monument Valley;Monument Valley;36.9820026;-110.1108327;target
-Port of Spain;Port of Spain;10.6572678;-61.5180173;source
-Chattanooga;Chattanooga;35.0457219;-85.3094883;target
-Jacksonville;Jacksonville;30.3321838;-81.655651;target
-San Francisco;San Francisco;37.7790262;-122.419906;source
-Bessemer;Bessemer;33.4017766;-86.954437;target
-Charlotte;Charlotte;35.2272086;-80.8430827;target
-Duncanville;Duncanville;32.6518004;-96.9083366;target
-Fort Worth;Fort Worth;32.753177;-97.3327459;target
-Glenn Ellen;Glenn Ellen;41.84103;-88.070717;target
-Lawndale;Lawndale;33.8885217;-118.3531991;target
-Miami Beach;Miami Beach;25.7929198;-80.1353006;target
-Myrtle Beach;Myrtle Beach;33.6956461;-78.8900409;target
-Naples;Naples;40.8358846;14.2487679;target
-National City;National City;32.6781085;-117.0991967;target
-North Las Vegas;North Las Vegas;36.2005843;-115.121584;target
-Orlando;Orlando;28.5421109;-81.3790304;target
-Sarasota;Sarasota;27.3365805;-82.5308545;target
-Southbury;Southbury;41.4814848;-73.2131693;target
-Towson;Towson;39.39645905;-76.61481481790992;target
-Tucumcari;Tucumcari;35.1719425;-103.72504;target
-Singapore;Singapore;1.357107;103.8194992;source
-Boca Raton;Boca Raton;26.3586885;-80.0830984;target
-Bryce Canyon;Bryce Canyon;37.618409;-112.1422341;target
-Westminster;Westminster;51.5004439;-0.1265398;target
-Coral Gables;Coral Gables;25.6915434;-80.23454887092652;source
-Dhaka;Dhaka;23.7644025;90.389015;source
-Gretna;Gretna;29.9146493;-90.0539604;target
-Dubai;Dubai;25.2653471;55.2924914;source
-Cancun;Cancun;43.8130735;125.3171216;target
-Fort Lauderdale;Fort Lauderdale;26.1223084;-80.1433786;target
-Irving;Irving;32.8295183;-96.9442177;target
-Newark;Newark;40.735657;-74.1723667;target
-South San Francisco;South San Francisco;37.6535403;-122.4168664;target
-El Paso;El Paso;31.7754152;-106.464634;target
-Salt Lake City;Salt Lake City;40.7596198;-111.8867975;target
-Atlanta;Atlanta;33.7489924;-84.3902644;target
-Baltimore;Baltimore;39.2908816;-76.610759;target
-Birmingham;Birmingham;52.4796992;-1.9026911;target
-Brooklyn;Brooklyn;40.6526006;-73.9497211;target
-Clearwater Beach;Clearwater Beach;27.9774736;-82.8279313;target
-Detroit;Detroit;42.3315509;-83.0466403;target
-Jersey City;Jersey City;40.7215682;-74.047455;target
-Long Beach;Long Beach;33.7690164;-118.191604;target
-San Francisco;San Francisco;37.7790262;-122.419906;target
-Spartanburg;Spartanburg;34.9498007;-81.9320157;target
-Tallahassee;Tallahassee;30.4380832;-84.2809332;target
-The Woodlands;The Woodlands;30.1734194;-95.504686;target
-Montevideo;Montevideo;-34.9058916;-56.1913095;source
-Casa Grande;Casa Grande;32.8795022;-111.757352;target
-Greenville;Greenville;34.851354;-82.3984882;target
-Los Angeles;Los Angeles;34.0536909;-118.242766;target
-New York City;New York City;40.7127281;-74.0060152;source
-Valdosta;Valdosta;30.8327022;-83.2784851;target
-Nashville;Nashville;36.1622767;-86.7742984;target
-Williams;Williams;48.3629861;-103.4958386;target
-Asheville;Asheville;35.6009498;-82.5540161;target
-Boston;Boston;42.3602534;-71.0582912;target
-Chicago;Chicago;41.8755616;-87.6244212;target
-Denver;Denver;39.7392364;-104.9848623;target
-Florida City;Florida City;25.4480101;-80.479102;target
-Grapevine;Grapevine;32.9337381;-97.0788754;target
-Grass Valley;Grass Valley;39.2190607;-121.06292;target
-Hanover;Hanover;52.3744779;9.7385532;target
-Houston;Houston;29.7589382;-95.3676974;target
-Huntsville;Huntsville;34.729847;-86.5859011;target
-Laughlin;Laughlin;35.1187959;-114.70323202755507;target
-Mesquite;Mesquite;32.7666103;-96.599472;target
-Mountain Home;Mountain Home;43.1329504;-115.691197;target
-Newport Beach;Newport Beach;33.6170092;-117.9294401;target
-Old Greenwich;Old Greenwich;41.022875;-73.564846;target
-Ruidoso Downs;Ruidoso Downs;33.3289733;-105.6044291;target
-South Portland;South Portland;43.6414716;-70.2408811;target
-Tempe;Tempe;33.4255056;-111.9400091;target
-Virginia Beach;Virginia Beach;36.8529841;-75.9774183;target
-West Palm Beach;West Palm Beach;26.715364;-80.0532942;target
-Inglewood;Inglewood;33.9562003;-118.353132;target
-Barbados;Barbados;13.1500331;-59.5250305;source
-Arlington;Arlington;32.701939;-97.105623790337;target
-Mexico City;Mexico City;19.4326296;-99.1331785;target
-Herndon;Herndon;39.909726;-100.785153;target
-Sunnyvale;Sunnyvale;37.3688301;-122.036349;target
-Vicksburg;Vicksburg;32.3528055;-90.8777342;target
-Cheyenne;Cheyenne;41.139981;-104.820246;target
-Cleveland;Cleveland;41.4996562;-81.6936813;target
-Miami;Miami;25.7741728;-80.19362;target
-New Orleans;New Orleans;29.9759983;-90.0782127;target
-Little Rock;Little Rock;34.7465071;-92.2896267;target
-Seattle;Seattle;47.6038321;-122.3300624;target
-Daytona Beach;Daytona Beach;29.2108147;-81.0228331;target
-Baton Rouge;Baton Rouge;30.4459596;-91.18738;target
-Boulder City;Boulder City;35.9787638;-114.8337739;target
-Cocoa Beach;Cocoa Beach;28.3298487;-80.62054663871002;target
-Dorado;Dorado;18.4593799;-66.2615332;target
-Palm Desert;Palm Desert;33.74079965;-116.36936983394352;target
-Raleigh;Raleigh;35.7803977;-78.6390989;target
-San Rafael;San Rafael;37.9735346;-122.5310874;target
-Southern Pines;Southern Pines;35.1740471;-79.3922539;target
-Sunrise;Sunrise;26.1471902;-80.32966128894083;target
-West Hollywood;West Hollywood;34.0923014;-118.3692894;target
-Weston;Weston;51.3471927;-2.9778916;target
-Winter Garden;Winter Garden;28.5502685;-81.59259746085962;target
-Bavaro;Bavaro;18.6107716;-68.4110862;target
-Pasadena;Pasadena;34.1476452;-118.1444779;target
-Brooklyn;Brooklyn;40.6526006;-73.9497211;source
-Burlingame;Burlingame;37.5780965;-122.3473099;target
-Reston;Reston;38.955696;-77.34188283719988;target
-Fairfax;Fairfax;38.8462236;-77.3063733;target
-Irvine;Irvine;33.6856969;-117.8259819;target
-Cincinnati;Cincinnati;39.1014537;-84.5124602;target
-Knoxville;Knoxville;35.9603948;-83.9210261;target
-Renton;Renton;47.4799078;-122.2034496;target
-Seaside;Seaside;36.62593;-121.8169383456945;target
-Miami;Miami;25.7741728;-80.19362;source
-Dania Beach;Dania Beach;26.0524224;-80.143929;target
-Grand Canyon;Grand Canyon;36.0965604;-112.0984941;target
-Winter Haven;Winter Haven;28.0222435;-81.7328568;target
-Garden Grove;Garden Grove;33.7746292;-117.9463717;target
-La Jolla;La Jolla;32.83259;-117.2716839;target
-Mount Charleston;Mount Charleston;36.257191;-115.6427994;target
-Nogales;Nogales;38.5865813;-6.7491704;target
-Punta Gorda;Punta Gorda;26.9297836;-82.0453664;target
-Rancho Mirage;Rancho Mirage;33.770859;-116.42687402345577;target
-Ridgecrest;Ridgecrest;35.6225064;-117.6699414;target
-Saint Louis;Saint Louis;38.6264256;-90.1995853;target
-Yakima;Yakima;46.601557;-120.510842;target
-Orange;Orange;33.7500378;-117.8704931;target
-Rosemont;Rosemont;41.9941334;-87.8756737;target
-Mount Laurel;Mount Laurel;39.934002;-74.8909988;target
-Breckenridge;Breckenridge;32.7558392;-98.9032554;target
-Dublin;Dublin;53.3497645;-6.2602732;source
-Milwaukee;Milwaukee;43.0349931;-87.922497;target
-Las Vegas;Las Vegas;36.1672559;-115.148516;source
-Albuquerque;Albuquerque;35.0841034;-106.650985;target
-Brentwood;Brentwood;37.9317766;-121.696026;target
-Dover;Dover;51.1251275;1.3134228;target
-Forsyth;Forsyth;39.9325368;-88.9511912;target
-Paramus;Paramus;40.9452911;-74.0735899;target
-St. Louis;St. Louis;38.6264256;-90.1995853;target
-Washington D.C.;Washington D.C.;38.8950368;-77.0365427;target
-Montreal;Montreal;45.5031824;-73.5698065;source
-San Diego;San Diego;32.7174202;-117.1627728;target
-Pigeon Forge;Pigeon Forge;35.7884241;-83.5543329;target
-Billings;Billings;45.7874957;-108.49607;target
-Charleston;Charleston;32.7876012;-79.9402728;target
-Grants Pass;Grants Pass;42.4393707;-123.3272489;target
-Lexington;Lexington;38.0464066;-84.4970393;target
-Minneapolis;Minneapolis;44.9772995;-93.2654692;target
-Bali;Bali;48.8588897;2.3200410217200766;target
-Thousand Oaks;Thousand Oaks;34.1705609;-118.8375937;target
-Alexandria;Alexandria;31.199004;29.894378;target
-Monterey;Monterey;36.2231079;-121.3877428;target
-Buenos Aires;Buenos Aires;-34.6075682;-58.4370894;source
-Key Largo;Key Largo;25.091338;-80.46777414781022;target
-Maui, Lahaina;Maui, Lahaina;20.88717735;-156.6748023632949;target
-Federal Way;Federal Way;47.313494;-122.3393103;target
-Guangzhou;Guangzhou;23.1301964;113.2592945;source
-Aurora;Aurora;41.7571701;-88.3147539;target
-Golden;Golden;39.7546349;-105.2205809;target
-Hammond;Hammond;41.5833658;-87.500043;target
-Huntington Beach;Huntington Beach;33.6783336;-118.0000166;target
-Manila;Manila;14.5948914;120.9782618;source
-Fernandina Beach;Fernandina Beach;30.6696818;-81.4625919;target
-Hilton Head Island;Hilton Head Island;32.1618488;-80.7512616;target
-Hollywood;Hollywood;34.0980031;-118.329523;target
-Kenner;Kenner;29.9942265;-90.2417806;target
-Bentonville;Bentonville;36.3728538;-94.2088172;target
-Scottsdale;Scottsdale;33.4942189;-111.9260184;target
-Maui Kahului;Maui Kahului;20.8747708;-156.4529879461996;target
-Coldwater;Coldwater;37.2689131;-99.3267808;target
-Humble;Humble;29.9988312;-95.2621553;target
-Kansas City;Kansas City;39.100105;-94.5781416;target
-Laguna Beach;Laguna Beach;33.5426975;-117.785366;target
-Matteson;Matteson;41.509832;-87.739267;target
-Fort Lee;Fort Lee;40.8509333;-73.9701382;target
-Isla Verde;Isla Verde;0.9588052;-79.64337952822132;target
-Chantilly;Chantilly;49.1799586;2.47578765999255;target
-Key West;Key West;24.5625566;-81.7724368;target
-Lake Buena Vista;Lake Buena Vista;28.38034955;-81.5297578369267;target
-Killeen;Killeen;31.1171441;-97.727796;target
-Daytona Beach Shores;Daytona Beach Shores;29.1760933;-80.9828323;target
-Louisville;Louisville;38.2542376;-85.759407;target
-Pittsburgh;Pittsburgh;40.4416941;-79.9900861;target
-West Fargo;West Fargo;46.874967;-96.900362;target
-Mazatlan;Mazatlan;23.2313053;-106.4153144;target
-Branson;Branson;36.6411357;-93.2175285;target
-Gatlinburg;Gatlinburg;35.714259;-83.5101638;target
-Bowling Green;Bowling Green;36.9903199;-86.4436018;target
-Hauppauge;Hauppauge;40.8239353;-73.20595713476213;target
-Newburgh;Newburgh;41.5034271;-74.0104179;target
-North Myrtle Beach;North Myrtle Beach;33.8278405;-78.6800323;target
-Ottawa;Ottawa;45.3969506;-75.6851593;target
-Albert Lea;Albert Lea;43.6480127;-93.3682656;target
-Aventura;Aventura;25.9564812;-80.1392121;source
-San Luis Obispo;San Luis Obispo;35.3540209;-120.3757163;target
-San Juan;San Juan;18.465299;-66.116666;target
-Wichita;Wichita;37.6922361;-97.3375448;target
-Mckinney;Mckinney;33.1976496;-96.6154471;target
-Key Biscayne;Key Biscayne;25.6968351;-80.1635261;target
-Glattbrugg;Glattbrugg;47.4326312;8.5647892;source
-Grand Rapids;Grand Rapids;42.9632405;-85.6678639;target
-Anderson;Anderson;31.7819242;-95.6258199;target
-Hickory;Hickory;37.959055;-93.3334746;target
-Laurel;Laurel;31.6940509;-89.1306124;target
-Palmdale;Palmdale;34.5793131;-118.1171108;target
-Big Island , Kailua-Kona;Big Island , Kailua-Kona;19.6478398;-155.998093;target
-Fargo;Fargo;46.877229;-96.789821;target
-Fort Myers;Fort Myers;26.640628;-81.8723084;target
-Incline Village;Incline Village;39.2501246;-119.951909;target
-Langhorne;Langhorne;40.1745538;-74.9226665;target
-Memphis;Memphis;35.1335022;-89.9668758;target
-Palm Springs;Palm Springs;33.77217945;-116.49529769683984;target
-Springfield;Springfield;39.7990175;-89.6439575;target
-St. Pete Beach;St. Pete Beach;27.7253065;-82.741212;target
-Waco;Waco;31.549333;-97.1466695;target
-El Segundo;El Segundo;33.917028;-118.4156337;target
-Desert Hot Springs;Desert Hot Springs;33.961124;-116.5016784;target
-El Portal;El Portal;25.8553739;-80.193103;target
-Kissimmee;Kissimmee;28.2918995;-81.4075838;target
-Sedona;Sedona;34.8679599;-111.7617165;target
-Sparks;Sparks;39.5404679;-119.7487235;target
-Casper;Casper;42.8501191;-106.325138;target
-Fallon;Fallon;47.5075937;6.4807726;target
-Moriarty;Moriarty;34.9900503;-106.049189;target
-St. George;St. George;37.104153;-113.5841313;target
-Treasure Island;Treasure Island;37.8233541;-122.37015310228703;target
-Petaluma;Petaluma;38.2325829;-122.636465;target
-Arroyo Grande;Arroyo Grande;35.1185869;-120.590725;target
-Colorado Springs;Colorado Springs;38.8339578;-104.825348;target
-Texarkana;Texarkana;33.44667445;-94.07714830522016;target
-Olathe;Olathe;38.8838856;-94.81887;target
-Denver;Denver;39.7392364;-104.9848623;source
-Playa Del Carmen;Playa Del Carmen;20.6308643;-87.0779503;target
-Elkhart;Elkhart;41.6819935;-85.9766671;target
-Tuscaloosa;Tuscaloosa;33.2095614;-87.5675258;target
-Chapel Hill;Chapel Hill;35.9131542;-79.05578;target
-Dedham;Dedham;41.9063152;-94.8222082;target
-Fort Wayne;Fort Wayne;41.0799898;-85.1386015;target
-Lumberton;Lumberton;34.6183433;-79.0083993;target
-Rutherford;Rutherford;40.826489;-74.1068091;target
-Toledo;Toledo;39.8560679;-4.0239568;target
-Waterbury;Waterbury;41.5538091;-73.0438362;target
-Wilmington;Wilmington;39.7459468;-75.546589;target
-Bridgeton;Bridgeton;38.7566055;-90.42352;target
-Pismo Beach;Pismo Beach;33.7312058;-117.7697509;target
-Mexicali;Mexicali;32.6248622;-115.448325;target
-Cranbury;Cranbury;40.3099385;-74.51772241230152;target
-East Hartford;East Hartford;41.7823216;-72.6120346;target
-Fredericksburg;Fredericksburg;38.3031837;-77.4605399;target
-Oakbrook;Oakbrook;39.1806323;-81.5206784;target
-Tulsa;Tulsa;36.1556805;-95.9929113;target
-Shanghai;Shanghai;31.2322758;121.4692071;source
-Pensacola;Pensacola;30.421309;-87.2169149;target
-Providenciales;Providenciales;21.8020614;-72.30044556984475;target
-Park City;Park City;40.6460921;-111.4979963;target
-Casablanca;Casablanca;33.5950627;-7.6187768;source
-Punta Cana;Punta Cana;18.556551;-68.3691611;target
-Dubai;Dubai;25.2653471;55.2924914;target
-Vienna;Vienna;48.2083537;16.3725042;target
-Harrow;Harrow;51.59682715;-0.3373046180437286;source
-Overland Park;Overland Park;38.9742502;-94.6851702;target
-Anchorage;Anchorage;61.2163129;-149.894852;target
-Lakewood;Lakewood;39.7085736;-105.0846694;target
-Rochester;Rochester;43.157285;-77.615214;target
-Yonkers;Yonkers;40.9312099;-73.8987469;target
-Mumbai;Mumbai;19.0785451;72.878176;source
-Atlantic City;Atlantic City;39.3642852;-74.4229351;target
-Joplin;Joplin;37.08418;-94.51323;target
-Plymouth;Plymouth;50.3712659;-4.1425658;source
-Burbank;Burbank;34.1816482;-118.3258554;target
-Bloomington;Bloomington;39.1670396;-86.5342881;target
-Duck Key;Duck Key;24.778716000000003;-80.91390183832715;target
-Glendale;Glendale;34.1469416;-118.2478471;target
-Windsor;Windsor;51.48375775;-0.6040964041849046;source
-West Covina;West Covina;34.0471735;-117.8963242650494;target
-Indianapolis;Indianapolis;39.7683331;-86.1583502;target
-Elizabethtown;Elizabethtown;37.693952;-85.8591285;target
-Goleta;Goleta;34.4358295;-119.8276389;target
-Miami Lakes;Miami Lakes;25.91162125;-80.32127479996643;target
-Plantation;Plantation;26.12744855;-80.25779068328761;target
-San Clemente;San Clemente;39.4037093;-2.4274052;target
-Sonora;Sonora;29.3333331;-110.6666671;target
-Pittsfield;Pittsfield;42.451302;-73.260018;target
-Monclova;Monclova;26.8999988;-101.4171173;target
-Buena Park;Buena Park;33.870413;-117.9962165;target
-Santa Barbara;Santa Barbara;34.4221319;-119.7026673;target
-Willoughby;Willoughby;41.6397696;-81.4065011;target
-Joliet;Joliet;41.5263603;-88.0840212;target
-Test;Test;33.4652816;51.1577023;source
-Venice Mestre;Venice Mestre;45.4943063;12.2418053;source
-Front Royal;Front Royal;38.9178538;-78.1917718;target
-Camerino;Camerino;43.1357641;13.0683092;source
-Boise;Boise;43.6166163;-116.200886;target
-Levallois;Levallois;48.892956;2.2881683;source
-Paris;Paris;48.8588897;2.3200410217200766;target
-Aventura;Aventura;25.9564812;-80.1392121;target
-Cerritos;Cerritos;33.8644291;-118.0539323;target
-Mesa;Mesa;33.4151117;-111.8314792;target
-Savannah;Savannah;32.0809263;-81.0911768;target
-Montvale;Montvale;41.0467635;-74.0229173;source
-Johannesburg;Johannesburg;-26.205;28.049722;target
-Panama City;Panama City;30.1600827;-85.6545729;target
-Ixtapa;Ixtapa;16.807622700000003;-92.898650478142;target
-Burley;Burley;42.5357428;-113.792794;target
-Guadalajara;Guadalajara;20.6720375;-103.338396;target
-Flagstaff;Flagstaff;35.1987522;-111.6518229;target
-Florence;Florence;43.7698712;11.2555757;target
-Ladson;Ladson;32.9857275;-80.1098123;target
-Springdale;Springdale;36.1867442;-94.1288142;target
-Bradenton;Bradenton;27.4989278;-82.5748194;target
-Yucca Valley;Yucca Valley;34.1236205;-116.4139839;target
-Campinas;Campinas;-22.90556;-47.06083;source
-Captiva Island;Captiva Island;26.5275781;-82.1948171;target
-Romulus;Romulus;42.2222614;-83.3965995;target
-Amargosa Valley;Amargosa Valley;36.4951365;-116.421881;target
-Bethesda;Bethesda;38.98127255;-77.12335871396549;target
-Redmond;Redmond;47.6694141;-122.1238767;target
-Henderson;Henderson;32.182598;-95.7893178;target
-Venice Beach;Venice Beach;33.97996005;-118.46878181253348;target
-Ventura;Ventura;34.4458248;-119.0779359;target
-Zapopan Jal.;Zapopan Jal.;20.7211203;-103.3913671;source
-Enterprise;Enterprise;31.3151708;-85.8552161;target
-Fresno;Fresno;36.7295295;-119.70886126075588;target
-Monroe;Monroe;38.2722313;-90.1792484;target
-Rome;Rome;41.8933203;12.4829321;target
-Chicago;Chicago;41.8755616;-87.6244212;source
-Constanta;Constanta;44.1767161;28.6507598;source
-Anaheim;Anaheim;33.8347516;-117.911732;target
-Columbia;Columbia;4.099917;-72.9088133;target
-Sioux Falls;Sioux Falls;43.5412244;-96.7336646500102;target
-Dumfries;Dumfries;55.069836;-3.6092292;target
-Livonia;Livonia;42.36837;-83.3527097;target
-Kent;Kent;51.20707485;0.7210361813401444;source
-Lisboa;Lisboa;38.7077507;-9.1365919;source
-Buffalo;Buffalo;42.8867166;-78.8783922;target
-Des Moines;Des Moines;41.5910323;-93.6046655;target
-Jackson Hole;Jackson Hole;60.896124;-147.2135823;target
-Nampa;Nampa;43.5737361;-116.559631;target
-San Gabriel;San Gabriel;34.0990733;-118.1085682;target
-South Jordan;South Jordan;40.5584882;-111.9367107;target
-Ontario;Ontario;50.000678;-86.000977;source
-Los Mochis;Los Mochis;25.7928058;-108.990188;target
-Roseburg;Roseburg;43.216505;-123.3417381;target
-West Yellowstone;West Yellowstone;44.6632505;-111.101169;target
-Crystal River;Crystal River;28.8903877;-82.58681269014554;target
-Lake Havasu City;Lake Havasu City;34.4838502;-114.3224495;target
-Rockville Centre;Rockville Centre;40.6574186;-73.6450664;target
-Santa Maria;Santa Maria;-29.6860512;-53.8069214;target
-Smyrna;Smyrna;38.4224548;27.1310699;target
-Bulawayo;Bulawayo;-20.1560599;28.5887063;source
-St. James;St. James;43.9824577;-94.6269181;target
-Coronado;Coronado;32.6915199;-117.1766947;target
-Waltham;Waltham;42.3756401;-71.2358004;target
-Zihuatanejo;Zihuatanejo;17.6467874;-101.5519746;target
-Monterrey;Monterrey;25.6802019;-100.315258;target
-Beverly Hills;Beverly Hills;34.0696501;-118.3963062;target
-Littleton;Littleton;39.613321;-105.016649;target
-Mobile;Mobile;30.6943566;-88.0430541;target
-Sanibel Island;Sanibel Island;26.440359;-82.1137049;target
-Costa Mesa;Costa Mesa;33.6636611;-117.9194651843518;target
-Merrillville;Merrillville;41.4828144;-87.3328139;target
-Ciudad Juarez;Ciudad Juarez;31.7097961;-106.455581;target
-Hood River;Hood River;45.7087902;-121.5123728;target
-Tijuana;Tijuana;32.5010188;-116.964662;target
-Columbus;Columbus;39.9622601;-83.0007065;target
-Cottage Grove;Cottage Grove;44.8277446;-92.9438218;target
-Deadwood;Deadwood;44.376651;-103.729642;target
-Kayenta;Kayenta;36.7218463;-110.253872;target
-Palo Alto;Palo Alto;37.4443293;-122.1598465;target
-San Jose Del Cabo;San Jose Del Cabo;23.0598364;-109.7025148;target
-Teton Village;Teton Village;43.593145;-110.84492617640024;target
-Sherman Oaks;Sherman Oaks;34.1508718;-118.4489865;target
-Vilnius;Vilnius;54.6870458;25.2829111;source
-Anthem;Anthem;33.857492;-112.11359410473516;target
-Auburn Hills;Auburn Hills;42.6875323;-83.2341028;target
-Big Island, Waikoloa;Big Island, Waikoloa;19.9252872;-155.8871312;target
-Carlsbad;Carlsbad;50.2306147;12.8699868;target
-Coeur d'Alene;Coeur d'Alene;47.6742994;-116.7811531;target
-Kingman;Kingman;37.5420937;-98.122172;target
-Miami Springs;Miami Springs;25.8223198;-80.289495;target
-Ocala;Ocala;29.1871986;-82.1400923;target
-Rancho Cucamonga;Rancho Cucamonga;34.1279268;-117.564322058494;target
-Roanoke;Roanoke;37.270973;-79.9414313;target
-Saint Augustine;Saint Augustine;29.8946952;-81.3145395;target
-Stamford;Stamford;41.0534302;-73.5387341;target
-Ocean Shores;Ocean Shores;46.973703;-124.156277;target
-Morelia;Morelia;19.7027116;-101.1923818;target
-Palm Beach;Palm Beach;26.6279798;-80.4494174;target
-Glendale;Glendale;34.1469416;-118.2478471;source
-Moab;Moab;38.5738096;-109.5462146;target
-Bridgeport;Bridgeport;41.1670412;-73.2048348;target
-Clear Lake;Clear Lake;43.1370751;-93.3813637;target
-Concord;Concord;43.207178;-71.537476;target
-Corpus Christi;Corpus Christi;27.7951482;-97.3942053;target
-Marshfield;Marshfield;44.6688524;-90.1717987;target
-Newport-RI;Newport-RI;41.4899827;-71.3137707;target
-Rocky Mount;Rocky Mount;35.9423833;-77.7956949;target
-Shreveport;Shreveport;32.5221828;-93.7651944;target
-Tarrytown;Tarrytown;41.0762077;-73.8587461;target
-Chandler;Chandler;33.3061605;-111.84125;target
-Ontario;Ontario;50.000678;-86.000977;target
-Pueblo;Pueblo;38.2544472;-104.609141;target
-Chula Vista;Chula Vista;32.6400541;-117.0841955;target
-Jasper;Jasper;30.7485258;-94.000884;target
-Bellevue;Bellevue;47.6144219;-122.192337;target
-Campbellsville;Campbellsville;37.3433974;-85.3419069;target
-Galveston;Galveston;29.299328;-94.7945882;target
-Marietta;Marietta;33.9528472;-84.5496148;target
-Marina;Marina;36.6900986;-121.80062933026213;target
-Maui, Kapalua;Maui, Kapalua;20.99490395;-156.6562339558182;target
-Lancaster;Lancaster;40.03813;-76.3056686;target
-Manteca;Manteca;37.7986184;-121.2117148;target
-Tampa;Tampa;27.9477595;-82.458444;target
-London;London;51.5073219;-0.1276474;target
-San Simeon;San Simeon;35.6133158;-121.1442346;target
-Avon;Avon;48.4048867;2.7207225;target
-Eatontown;Eatontown;40.2962222;-74.0509725;target
-Kalispell;Kalispell;48.202158;-114.315321;target
-Taos;Taos;36.4072377;-105.573284;target
-New Delhi;New Delhi;28.6138954;77.2090057;source
-North Miami;North Miami;25.8900949;-80.1867138;source
-Yuma;Yuma;32.665135;-114.47603157249804;target
-Merida;Merida;38.9174665;-6.3443977;target
-Paradise Island;Paradise Island;25.08335515;-77.3063341678734;target
-Indian Wells;Indian Wells;33.7217965;-116.338303;target
-Pleasanton;Pleasanton;37.6624312;-121.8746789;target
-Saint George;Saint George;12.0535331;-61.751805;target
-Vail;Vail;39.6440207;-106.3801669;target
-Holbrook;Holbrook;34.9037063;-110.159316;target
-Tamarindo;Tamarindo;10.302834;-85.8385625;target
-Boulder;Boulder;40.0149856;-105.270545;target
-Round Rock;Round Rock;30.5085915;-97.6788056;target
-Rye;Rye;46.8712641;5.4297754;target
-Silver Spring;Silver Spring;38.9997621;-77.02403709829767;target
-Newport-OR;Newport-OR;44.636755;-124.053442;target
-Tuxtla Gutierrez;Tuxtla Gutierrez;16.753801;-93.115959;target
-Hollywood-FL;Hollywood-FL;26.0112014;-80.1494901;target
-Annapolis;Annapolis;38.9786401;-76.492786;target
-Countryside;Countryside;41.7771605;-87.87297479806902;target
-Medford;Medford;42.4184296;-71.1061639;target
-Marana;Marana;48.961264;4.31224359285714;target
-Miami Beach;Miami Beach;25.7929198;-80.1353006;source
-Groton;Groton;41.3501598;-72.0761998;target
-Poza Rica;Poza Rica;20.5320852;-97.4536355;target
-Oxnard;Oxnard;34.1976308;-119.1803818;target
-Montgomery;Montgomery;32.3669656;-86.3006485;target
-Cortez;Cortez;37.3494528;-108.584073;target
-Spearfish;Spearfish;44.490817;-103.85937;target
-Covington;Covington;39.0836224;-84.508371;target
-Lafayette;Lafayette;30.2043259;-92.0298813;target
-Winter Park;Winter Park;28.5977707;-81.3510264;target
-Hays;Hays;30.0447901;-98.0393127;target
-Mammoth Lakes;Mammoth Lakes;37.6432525;-118.9668509;target
-Stowe;Stowe;52.03701915;-1.0170847763469442;target
-West Haven;West Haven;41.2706527;-72.9470471;target
-Sao Paulo;Sao Paulo;-23.5506507;-46.6333824;source
-Yangon;Yangon;16.7967129;96.1609916;source
-Madison;Madison;43.074761;-89.3837613;target
-Dalian;Dalian;38.9181714;121.6282945;source
-Bluffton;Bluffton;46.4691278;-95.2330859;target
-Cabo San Lucas;Cabo San Lucas;22.8938884;-109.9200604;target
-Bal Harbour;Bal Harbour;-28.0261122;153.4226224;target
-Marco Island;Marco Island;25.9363356;-81.7156832;target
-Plano;Plano;33.0136764;-96.6925096;target
-London;London;51.5073219;-0.1276474;source
-Lisle;Lisle;45.2787444;0.5481384;target
-Omaha;Omaha;41.2587459;-95.9383758;target
-Toronto;Toronto;43.6534817;-79.3839347;target
-East Brunswick;East Brunswick;40.4278841;-74.415984;target
-Doral;Doral;25.8195424;-80.3553302;target
-Hermosa Beach;Hermosa Beach;33.86428;-118.39591;target
-Jackson;Jackson;32.2990021;-90.1847691;target
-Clearwater;Clearwater;27.9658533;-82.8001026;target
-Lake Mary;Lake Mary;28.756618000000003;-81.33888382214167;target
-St. Paul;St. Paul;44.9497487;-93.0931028;target
-Cambridge- MD;Cambridge- MD;38.5714624;-76.0763177;target
-Chesterton;Chesterton;52.2222881;0.1445917;target
-Clive;Clive;41.6096559;-93.7754644;target
-Indio;Indio;33.743765;-116.22331524966393;target
-Cartagena;Cartagena;37.6019353;-0.9841152;target
-Biloxi;Biloxi;30.4007626;-88.8893818;target
-Hamilton;Hamilton;43.2560802;-79.8728583;target
-Edison;Edison;40.538457;-74.39450186737218;target
-Reno;Reno;39.5261206;-119.8126581;target
-River Ranch;River Ranch;-23.975353;151.16085936360884;target
-Wausau;Wausau;44.9596017;-89.6298239;target
-Brenham;Brenham;30.1668828;-96.3977442;target
-Ellensburg;Ellensburg;46.9970635;-120.545122;target
-Foxborough;Foxborough;42.0653768;-71.2478308;target
-Twentynine Palms;Twentynine Palms;34.1356915;-116.0543506;target
-Kulpsville;Kulpsville;40.2428828;-75.3365644;target
-Oshkosh;Oshkosh;44.0206919;-88.5408574;target
-Northbrook;Northbrook;42.128704;-87.8265089;target
-Temecula;Temecula;33.4946353;-117.1473661;target
-Trumbull;Trumbull;41.2428742;-73.2006687;target
-Waldorf;Waldorf;50.4855665;7.2293555;target
-Fairmont;Fairmont;43.6521775;-94.4610832;target
-Woodinville;Woodinville;47.7545827;-122.1588902;target
-Chihuahua;Chihuahua;28.5000001;-106.0000001;target
-Garner;Garner;43.102147;-93.6020069;target
-Gulfport;Gulfport;30.3674198;-89.0928155;target
-Harrisburg;Harrisburg;40.2663107;-76.8861122;target
-Schaumburg;Schaumburg;42.0333608;-88.083406;target
-Warren;Warren;40.8442828;-90.6168408;target
-Washington;Washington;38.8950368;-77.0365427;target
-Yuba City;Yuba City;39.1404477;-121.6169108;target
-Sana'a;Sana'a;15.3538569;44.2058841;source
-Santa Catarina;Santa Catarina;-27.0628367;-51.114965;source
-Batesville;Batesville;35.769799;-91.6409722;target
-Andover;Andover;45.2332985;-93.2913405;target
-Saunderstown;Saunderstown;41.5078795;-71.4245004;target
-Solana Beach;Solana Beach;32.9905597;-117.269131;target
-Claymont;Claymont;39.8006685;-75.4596404;target
-Clinton;Clinton;38.5896187;-89.420064;target
-Kilgore;Kilgore;32.3860733;-94.8758518;target
-Norfolk;Norfolk;52.666667;1.0;target
-Bonita Springs;Bonita Springs;26.339806;-81.7786972;target
-Charlottesville;Charlottesville;38.029306;-78.4766781;target
-Lawrenceburg;Lawrenceburg;38.0371378;-84.8962551;target
-Midland;Midland;32.023939549999994;-102.09648921925708;target
-Surfside;Surfside;25.8784285;-80.1256007;target
-Temple;Temple;31.098207;-97.3427847;target
-South Lake Tahoe;South Lake Tahoe;38.9332411;-119.9843482;target
-Vero Beach;Vero Beach;27.6387163;-80.3975399;target
-San Luis Potosi;San Luis Potosi;22.5000001;-100.4949145;target
-Des Plaines;Des Plaines;42.0415823;-87.8873916;target
-Prescott;Prescott;34.5399962;-112.4687616;target
-Duluth;Duluth;46.7729322;-92.1251218;target
-Chesapeake;Chesapeake;36.7183708;-76.2466798;target
-Albemarle;Albemarle;35.3501426;-80.2000578;target
-Champaign;Champaign;40.1164841;-88.2430932;target
-Hazlet;Hazlet;50.40096315;-108.5940809635044;target
-Mishawaka;Mishawaka;41.6611642;-86.1807031;target
-Long Beach - NYC;Long Beach - NYC;40.65929255;-73.82625793943546;target
-Spokane;Spokane;47.6571934;-117.4235106;target
-Fort Lauderdale;Fort Lauderdale;26.1223084;-80.1433786;source
-Burleson;Burleson;30.4764878;-96.6353488;target
-Canyon;Canyon;34.9799429;-101.919197;target
-Kanab;Kanab;37.0481417;-112.5285476;target
-Winchester;Winchester;51.0612766;-1.3131692;target
-Miramar;Miramar;25.9825093;-80.3234233843979;target
-Santee;Santee;32.8383828;-116.9739167;target
-Lisbon;Lisbon;38.7077507;-9.1365919;source
-Kiawah Island;Kiawah Island;32.6082373;-80.0848166;target
-Youngstown;Youngstown;41.1035786;-80.6520161;target
-Banff;Banff;51.1777781;-115.5682504;target
-Menlo Park;Menlo Park;37.4519671;-122.1779927;target
-Santa Clara;Santa Clara;37.2333253;-121.6846349;target
-State College;State College;40.7944504;-77.8616386;target
-Gilroy;Gilroy;37.0065078;-121.5631723;target
-Bend;Bend;44.0581728;-121.3153096;target
-Bensalem;Bensalem;40.1045549;-74.951279;target
-Blytheville;Blytheville;35.9272953;-89.9189754;target
-Cedar City;Cedar City;37.6774238;-113.061827;target
-Imperial Beach;Imperial Beach;32.5839444;-117.1130849;target
-Maumee;Maumee;41.5628294;-83.6538244;target
-Pompano Beach;Pompano Beach;26.2378597;-80.1247667;target
-Rock Hill;Rock Hill;34.9248667;-81.0250784;target
-Yountville;Yountville;38.4022008;-122.359506;target
-Maui Wailea;Maui Wailea;20.6871749;-156.4390415;target
-Amarillo;Amarillo;35.2072185;-101.8338246;target
-Elk Grove Village;Elk Grove Village;42.0041236;-87.9706457;target
-Great Falls;Great Falls;47.5048851;-111.29189;target
-Lynnwood;Lynnwood;47.8278656;-122.3053932;target
-Tigard;Tigard;45.4307473;-122.771933;target
-Cherryhill;Cherryhill;54.5753736;-5.9420428;target
-Independence;Independence;39.0924792;-94.4137923;target
-New York;New York;40.7127281;-74.0060152;source
-Opelika;Opelika;32.6454116;-85.3782795;target
-Snowmass Village;Snowmass Village;39.2130418;-106.9378207;target
-Union City;Union City;37.5963232;-122.0816297;target
-Campeche;Campeche;19.330194;-89.94351380117641;target
-Durango;Durango;24.833333;-104.833333;target
-Cascade Locks;Cascade Locks;45.669513;-121.890402;target
-Chino Hills;Chino Hills;33.9926803;-117.760056;target
-Ciudad Obregon;Ciudad Obregon;27.4846619;-109.9337782;target
-Coraopolis;Coraopolis;40.5184013;-80.1667247;target
-Oklahoma City;Oklahoma City;35.4729886;-97.5170536;target
-Pickerington;Pickerington;39.8962773;-82.77319049748806;target
-Rock Springs;Rock Springs;41.5860557;-109.2194544;target
-Schertz;Schertz;29.5641617;-98.2695702;target
-Galena;Galena;42.4157304;-90.4294726;target
-Oakland;Oakland;37.8044557;-122.2713563;target
-Bradford;Bradford;53.7944229;-1.7519186;target
-King Of Prussia;King Of Prussia;40.09476245;-75.3851333563417;target
-Portsmouth;Portsmouth;50.8036831;-1.075614;target
-Victorville;Victorville;34.5361067;-117.2911565;target
-Southaven;Southaven;34.9873822;-90.0034862;target
-Hamburg;Hamburg;53.550341;10.000654;source
-Bonners Ferry;Bonners Ferry;48.6912781;-116.31614;target
-Minnetonka;Minnetonka;44.9405086;-93.4638936;target
-Providence;Providence;41.8239891;-71.4128343;target
-Santa Cruz;Santa Cruz;28.469648;-16.2540884;target
-College Park-MD;College Park-MD;38.99203005;-76.94610290199051;target
-Rapid City;Rapid City;44.0869329;-103.2274481;target
-Celebration;Celebration;-1.2310325;116.8991802;target
-Puerto Vallarta;Puerto Vallarta;20.6407176;-105.220306;target
-Queretaro;Queretaro;20.5927744;-100.3902245;target
-Batavia;Batavia;-6.1753942;106.827183;target
-Johnson City;Johnson City;36.3134398;-82.3534728;target
-Oglesby;Oglesby;31.4185003;-97.5072379;target
-Ormond Beach;Ormond Beach;29.2854132;-81.0557921;target
-Port Ludlow;Port Ludlow;47.911568;-122.6921314385483;target
-Turlock;Turlock;37.4946568;-120.8465941;target
-Tysons;Tysons;38.916509000000005;-77.2257977704366;target
-Bakersfield;Bakersfield;35.3738712;-119.0194639;target
-Fort Washington;Fort Washington;38.738019;-77.00207559994112;target
-Tokyo;Tokyo;35.6828387;139.7594549;source
-Woodland Hills;Woodland Hills;34.1684364;-118.6058382;target
-Mahwah;Mahwah;41.0887072;-74.1437552;target
-Lakewood;Lakewood;39.7085736;-105.0846694;source
-Burr Ridge;Burr Ridge;41.7502971;-87.9161818;target
-Elko;Elko;41.1958128;-115.3272864;target
-Newton;Newton;30.8118989;-93.740504;target
-Big Island, Volcano;Big Island, Volcano;19.406893;-155.283386;target
-Burlington;Burlington;44.4761601;-73.212906;target
-Woburn;Woburn;42.4792618;-71.1522766;target
-Weirton;Weirton;40.4189566;-80.5895167;target
-Grasonville;Grasonville;38.959397;-76.1972184486028;target
-Butte;Butte;39.6519275;-121.5858444;target
-Cape Coral;Cape Coral;26.6059432;-81.9806771;target
-Tracy;Tracy;37.7385507;-121.4201395;target
-Canyon Point;Canyon Point;47.228275;-113.0197739;target
-Rowland Heights;Rowland Heights;33.9761238;-117.905339;target
-Stone Mountain;Stone Mountain;33.8062166;-84.1457505;target
-Barcelona;Barcelona;41.3828939;2.1774322;target
-Carlsbad;Carlsbad;50.2306147;12.8699868;source
-West Coxsackie;West Coxsackie;42.3606399;-73.8167921;target
-Tulum;Tulum;20.2152358;-87.42953531439221;target
-Murfreesboro;Murfreesboro;35.8460396;-86.3921096;target
-Marlboro;Marlboro;-41.47447475;173.8330262577606;target
-Southfield;Southfield;42.4733689;-83.2218731;target
-Sunny Isles Beach;Sunny Isles Beach;25.9426915;-80.1218486;target
-Wilkes-Barre;Wilkes-Barre;41.2464824;-75.8817316;target
-Essex Junction;Essex Junction;44.4906817;-73.11136;target
-Gold Canyon;Gold Canyon;33.3710715;-111.42618498017517;target
-Modesto;Modesto;37.6390972;-120.9968782;target
-Male;Male;4.1779879;73.5107387;target
-Page;Page;36.9148305;-111.457294;target
-Caguas;Caguas;18.2345399;-66.0351316;target
-Cancun;Cancun;43.8130735;125.3171216;source
-Lihue - Kauai ;Lihue - Kauai ;21.9769622;-159.3687721;target
-Runnemede;Runnemede;39.8523358;-75.0679498;target
-Mcallen;Mcallen;26.204114;-98.2300605;target
-Puebla;Puebla;18.833333;-98.0;target
-Kendall;Kendall;29.943885;-98.7258845;target
-Norwich;Norwich;52.6285694;1.2923049;target
-Bogota;Bogota;4.6533326;-74.083652;target
-Istanbul;Istanbul;41.0091982;28.9662187;target
-Carmel;Carmel;39.9788017;-86.1189257;target
-Dubuque;Dubuque;42.5006243;-90.6647985;target
-Borjomi;Borjomi;41.8386946;43.3791739;target
-Aspen;Aspen;39.1911128;-106.8235606;target
-La Quinta;La Quinta;33.677474;-116.2958789;target
-Steamboat Springs;Steamboat Springs;40.4846085;-106.8292474188738;target
-Bandon;Bandon;-6.9344694;107.6049539;target
-D'iberville;D'iberville;45.5530737;-73.6021838;target
-Cottonwood;Cottonwood;44.019068;-95.1658845;target
-Riverhead;Riverhead;46.9959724;-53.48184167679248;target
-Sacramento;Sacramento;38.5810606;-121.493895;target
-Santa Rosa;Santa Rosa;38.4404925;-122.7141049;target
-Millbrae;Millbrae;37.598958;-122.4009419;target
-Cedar Rapids;Cedar Rapids;41.9758872;-91.6704053;target
-Guin;Guin;33.9675458;-87.9138911;target
-Greensboro;Greensboro;36.0726355;-79.7919754;target
-Sioux City;Sioux City;42.4966815;-96.4058782;target
-Caracas;Caracas;10.506098;-66.9146017;target
-Frisco;Frisco;33.1506744;-96.8236116;target
-Klamath Falls;Klamath Falls;42.224867;-121.7816704;target
-Fort Smith;Fort Smith;35.3784666;-94.3996456;target
-Green Bay;Green Bay;44.5126379;-88.0125794;target
-Carle Place;Carle Place;40.750241;-73.61187491661425;target
-Dayton;Dayton;39.7589478;-84.1916069;target
-Sonoma;Sonoma;38.5110803;-122.8473388;target
-Auburn;Auburn;32.6098566;-85.4807825;target
-Bass Lake;Bass Lake;41.230017;-86.58293767175564;target
-Amelia Island;Amelia Island;30.6077379;-81.4600909;target
-Weehawken;Weehawken;40.7695457;-74.0204177;target
-Owings Mills;Owings Mills;39.41484355;-76.79182399596584;source
-Palma;Palma;39.5695818;2.6500745;source
-Fort Mill;Fort Mill;35.0073697;-80.9450759;target
-Clearfield;Clearfield;40.800693;-94.4756885;target
-Quebec;Quebec;52.4760892;-71.8258668;target
-Traverse City;Traverse City;44.7606441;-85.6165301;target
-West Chester;West Chester;39.9597213;-75.6059638;target
-Bedford;Bedford;52.1363806;-0.4675041;target
-Bozeman;Bozeman;45.6794293;-111.044047;target
-Boulder;Boulder;40.0149856;-105.270545;source
-Manning;Manning;41.9092293;-95.0650571;target
-Big Island, Kohala Coast;Big Island, Kohala Coast;20.12583283;-155.789663508;target
-Nassau;Nassau;25.0783456;-77.3383331;target
-St. Maarten;St. Maarten;18.0423736;-63.0549948;target
-Nuevo Vallarta;Nuevo Vallarta;20.7027575;-105.2885106;target
-Honolulu;Honolulu;21.2890997;-157.717299;target
-Palm Beach Gardens;Palm Beach Gardens;26.8233946;-80.1386547;target
-Littleton;Littleton;39.613321;-105.016649;source
-Emeryville;Emeryville;37.8314089;-122.2865266;target
-Homewood;Homewood;41.5573283;-87.6654739;target
-Pewaukee;Pewaukee;43.0805651;-88.2612045;target
-Grand Haven;Grand Haven;43.0630734;-86.2283864;target
-Keystone;Keystone;41.9988889;-92.1979353;target
-Stockton;Stockton;37.9577016;-121.2907796;target
-Indian Rocks Beach;Indian Rocks Beach;27.891338;-82.84518880012078;target
-Jamaica;Jamaica;18.1850507;-77.3947693;target
-Vancouver;Vancouver;49.2608724;-123.113952;target
-Meridian;Meridian;32.3643098;-88.703656;target
-Niagara Falls;Niagara Falls;43.08436;-79.0614686;target
-Lake Louise;Lake Louise;51.4249668;-116.177535;target
-Oranjestad;Oranjestad;12.5268736;-70.0356845;target
-Clermont;Clermont;49.3780921;2.4141907;target
-Beachwood;Beachwood;41.464498;-81.508732;target
-Tel Aviv;Tel Aviv;32.0852997;34.7818064;source
-Downey;Downey;33.9404441;-118.1292846;target
-Dulles;Dulles;29.456179;-98.663407;target
-La Mirada;La Mirada;33.9060971;-118.0107092;target
-Yosemite National Park;Yosemite National Park;37.84054795;-119.51658779802511;target
-Sayre;Sayre;35.2979543;-99.6399648;target
-Dana Point;Dana Point;33.4669721;-117.6981075;target
-Manhattan Beach;Manhattan Beach;33.8915985;-118.3951241;target
-Henderson;Henderson;32.182598;-95.7893178;source
-Carolina Beach;Carolina Beach;34.0351727;-77.8935966;target
-Chincoteague Island;Chincoteague Island;37.9384567;-75.3615855;target
-San Jose;San Jose;37.3361905;-121.890583;target
-Athens;Athens;37.9839412;23.7283052;target
-Stratton Mountain;Stratton Mountain;43.0864665;-72.925934;target
-Bandung;Bandung;-6.9344694;107.6049539;target
-Bluff;Bluff;-46.6014038;168.3398682;target
-Sequoia;Sequoia;37.8065921;-119.8954575;target
-Xalapa;Xalapa;19.5408338;-96.9146374;target
-Carlisle;Carlisle;54.8948478;-2.9362311;target
-Halifax;Halifax;44.648618;-63.5859487;target
-Rio Grande;Rio Grande;37.5668223;-106.3832155;target
-Mojave;Mojave;35.01096025;-118.19028326663798;target
-Paso Robles;Paso Robles;35.6267654;-120.6912456;target
-Chesterfield;Chesterfield;38.661953;-90.5643258;target
-Eufaula;Eufaula;31.8912717;-85.1454876;target
-Kauai, Kapaa;Kauai, Kapaa;22.0833399;-159.34635231502904;target
-La Mesa;La Mesa;32.7678288;-117.0230839;target
-Lapeer;Lapeer;43.0904764;-83.2333705;target
-Manassas;Manassas;38.7509488;-77.4752667;target
-Marina Del Rey;Marina Del Rey;33.9776848;-118.4486479;target
-Merced;Merced;37.1641544;-120.7678602;target
-Napa;Napa;28.1083929;84.0917139;target
-Ponte Vedra Beach;Ponte Vedra Beach;30.2396865;-81.3856384;target
-Staunton;Staunton;38.1495947;-79.072557;target
-Saratoga Springs;Saratoga Springs;43.0821793;-73.7853915;target
-Acapulco;Acapulco;16.8680495;-99.8940182;target
-Hyannis;Hyannis;41.6534853;-70.2823663;target
-Mclean;Mclean;40.4631789;-88.8196613;target
-Mamora Bay;Mamora Bay;17.0141482;-61.7365498;target
-Atlantic Beach;Atlantic Beach;40.5886547;-73.7288791;target
-Benton;Benton;45.7162129;-94.0481042;target
-Kalamazoo;Kalamazoo;42.291707;-85.5872286;target
-Kill Devil Hills;Kill Devil Hills;36.0321186;-75.6776147;target
-Parsippany;Parsippany;40.8578772;-74.4259866;target
-Princeton;Princeton;40.34833555;-74.6684230570877;target
-Sterling Heights;Sterling Heights;42.5803122;-83.0302033;target
-Wisconsin Dells;Wisconsin Dells;43.6256168;-89.7715646;target
-Woodbury;Woodbury;42.3775361;-96.0607187;target
-Egg Harbor Township;Egg Harbor Township;39.3820672;-74.6171489;target
-Santa Monica;Santa Monica;34.0194704;-118.4912273;target
-Cathedral City;Cathedral City;33.82298655;-116.46687017113196;target
-Comanche;Comanche;31.9130171;-98.527388;target
-Newport News;Newport News;36.9775016;-76.42977;target
-Corvallis;Corvallis;44.5645659;-123.2620435;target
-Stafford;Stafford;52.8063157;-2.1163818;target
-Carson City;Carson City;39.1649125;-119.7666496;target
-Lake George;Lake George;43.6276486;-73.54977358231127;target
-Bayahibe;Bayahibe;18.3687086;-68.8396888;target
-Hartford;Hartford;41.764582;-72.6908547;target
-Canton;Canton;23.1301964;113.2592945;target
-Clarksville;Clarksville;36.5277607;-87.3588703;target
-Santa Fe;Santa Fe;-30.3154739;-61.1645076;target
-Parsons;Parsons;37.3407838;-95.2596295;target
-Mariposa;Mariposa;37.570148;-119.9036592;target
-Norwood;Norwood;40.7055931;-89.6987129;target
-Kauai, Koloa;Kauai, Koloa;21.9042279;-159.465733;target
-Milpitas;Milpitas;37.4332273;-121.8989248;target
-Falmouth;Falmouth;50.1552197;-5.0688262;target
-Guadalajara;Guadalajara;20.6720375;-103.338396;source
-RIVIERA NAYARIT;RIVIERA NAYARIT;21.5150944;-104.8664742;target
-Bastrop;Bastrop;30.0541116;-97.3887764;target
-Madrid;Madrid;40.4167047;-3.7035825;source
-Palestine;Palestine;31.46242095;34.262716572130714;target
-Cordoba;Cordoba;37.8845813;-4.7760138;source
-Crawley;Crawley;51.1103444;-0.1801094;source
-Catoosa;Catoosa;36.188987;-95.745817;target
-Hollywood Beach;Hollywood Beach;30.2540906;-85.9568811;target
-Kauai, Lihue;Kauai, Lihue;21.9769622;-159.3687721;target
-California;California;36.7014631;-118.755997;target
-Newport;Newport;41.4899827;-71.3137707;target
-San Bernardino;San Bernardino;34.8253019;-116.0833144;target
-Williamsburg;Williamsburg;37.2708788;-76.7074042;target
-Cambridge- MA;Cambridge- MA;52.2055314;0.1186637;target
-Jacksonville Beach;Jacksonville Beach;30.2946859;-81.3931396;target
-Scottsdale;Scottsdale;33.4942189;-111.9260184;source
-Bay City;Bay City;43.5944677;-83.8888648;target
-Escondido;Escondido;33.1216751;-117.0814849;target
-Half Moon Bay;Half Moon Bay;37.4635519;-122.428586;target
-St. Augustine;St. Augustine;29.8946952;-81.3145395;target
-College Park-GA;College Park-GA;33.6534427;-84.4493725;target
-Navarre;Navarre;42.61254875;-1.830787673361753;target
-Boynton Beach;Boynton Beach;26.5256179;-80.0666026;target
-Dfw Airport;Dfw Airport;32.89651945;-97.0465220537124;target
-Hampton;Hampton;37.0300969;-76.3452057;target
-Hartland;Hartland;50.97595295;-4.485571469951127;target
-Lake Charles;Lake Charles;30.2265949;-93.2173759;target
-St  Petersburg;St  Petersburg;59.917857350000006;30.38061935702552;target
-Montreal;Montreal;45.5031824;-73.5698065;target
-Calgary;Calgary;51.0460954;-114.065465;target
-Astoria;Astoria;46.187885;-123.831256;target
-Matamoras;Matamoras;39.5196735;-81.06873959710815;target
-Rockaway;Rockaway;40.9012101;-74.5143232;target
-California;California;36.7014631;-118.755997;source
-Bryan;Bryan;30.6743643;-96.3699632;target
-Hackensack;Hackensack;40.8871438;-74.0410865;source
-Truckee;Truckee;39.327962;-120.1832533;target
-Augusta;Augusta;33.4709714;-81.9748429;target
-City Of Industry;City Of Industry;34.0182252;-117.9593061;target
-Windsor Locks;Windsor Locks;41.9281305;-72.643631;target
-Antalya;Antalya;36.9009641;30.6954846;source
-Lake Oswego;Lake Oswego;45.4206749;-122.670649;target
-Horsham;Horsham;51.0630273;-0.3295028;target
-Blackfoot;Blackfoot;43.190039;-112.348357;target
-Sevierville;Sevierville;35.8681455;-83.561835;target
-Mayaguez;Mayaguez;18.2011161;-67.1391124;target
-Cardiff By The Sea;Cardiff By The Sea;33.0220155;-117.2803463;target
-Red Deer;Red Deer;52.2697395;-113.8181766;target
-Santa Ana;Santa Ana;33.7494951;-117.8732213;target
-Tewksbury;Tewksbury;42.6106479;-71.2342248;target
-Culver City;Culver City;34.0211224;-118.396466;target
-Grace Bay;Grace Bay;21.7965249;-72.17850091889127;target
-Winstonsalem;Winstonsalem;36.099861;-80.244217;target
-Atlanta;Atlanta;33.7489924;-84.3902644;source
-Fort Myers Beach;Fort Myers Beach;26.4520248;-81.948145;target
-Berkeley;Berkeley;37.8753497;-122.23963364918777;source
-Geneva;Geneva;46.2017559;6.1466014;source
-Torreon;Torreon;35.7947315;-107.21208446076524;target
-Gainesville;Gainesville;29.6519684;-82.3249846;target
-Grand Junction;Grand Junction;39.063956;-108.5507317;target
-Nuevo Laredo;Nuevo Laredo;27.4761506;-99.5185992;target
-Moreno Valley;Moreno Valley;33.937517;-117.2305944;target
-Auburndale;Auburndale;28.0652975;-81.7886906;target
-Fort Walton Beach;Fort Walton Beach;30.4057552;-86.618842;target
-Longview;Longview;32.5007031;-94.74049;target
-Delray Beach;Delray Beach;26.4614625;-80.0728201;target
-Sydney;Sydney;-33.8698439;151.2082848;target
-Longboat Key;Longboat Key;27.4125417;-82.6589881;target
-Saddle Brook;Saddle Brook;40.898988;-74.0926418;target
-Terre Haute;Terre Haute;39.4667025;-87.4139119;target
-Iowa City;Iowa City;41.6612561;-91.5299106;target
-North Charleston;North Charleston;32.8546197;-79.9748103;target
-Barboursville;Barboursville;38.4095298;-82.2945923;target
-Davenport;Davenport;41.5235808;-90.5770967;target
-Houma;Houma;29.5957696;-90.7195348;target
-Annawan;Annawan;41.3972573;-89.9045518;target
-Eagan;Eagan;44.818173;-93.1659179;target
-Larkspur;Larkspur;37.9340915;-122.5352539;target
-Lufkin;Lufkin;31.3386242;-94.7288558;target
-San Mateo;San Mateo;37.496904;-122.3330573;target
-Sun Valley;Sun Valley;33.670169;-95.42850117122116;target
-Woodbridge;Woodbridge;40.5576045;-74.2845911;target
-Tavernier;Tavernier;25.022163;-80.513609;target
-Oxford;Oxford;51.7520131;-1.2578499;source
-Forest Grove;Forest Grove;45.5197452;-123.1114405;target
-Valparaiso;Valparaiso;41.4730948;-87.0611412;target
-Zanesville;Zanesville;39.9403453;-82.0131924;target
-Perry;Perry;38.0772859;-89.3760499;target
-Englewood;Englewood;39.6482059;-104.9879641;target
-Brunswick;Brunswick;52.2646577;10.5236066;target
-Colima;Colima;19.166667;-104.0;target
-Galt;Galt;42.6935804;-93.6053548;target
-Coconut Grove;Coconut Grove;25.7398164;-80.2388468;target
-Tupelo;Tupelo;34.2576067;-88.7033859;target
-Grand Cayman;Grand Cayman;19.3298691;-81.17122907994889;target
-Santiago;Santiago;-33.4377756;-70.6504502;source
-Eau Claire;Eau Claire;44.811349;-91.4984941;target
-Statesboro;Statesboro;32.4490141;-81.7832912;target
-Stillwater;Stillwater;36.1156306;-97.0585717;target
-Mount Pleasant;Mount Pleasant;33.1570582;-94.9694007;target
-Kent;Kent;51.20707485;0.7210361813401444;target
-Roswell;Roswell;34.02332;-84.360022;target
-Jeffersonville;Jeffersonville;38.2770227;-85.7371604;target
-Edmonton;Edmonton;53.535411;-113.507996;target
-Peoria;Peoria;40.6938609;-89.5891008;target
-Regina;Regina;50.44876;-104.61731;target
-Magny-le-Hongre;Magny-le-Hongre;48.8631156;2.8135257;target
-Norwalk;Norwalk;41.1175966;-73.4078968;target
-Cherokee;Cherokee;31.8390826;-95.1791849;target
-Orange Beach;Orange Beach;30.2828398;-87.62460710389821;target
-Milford;Milford;41.2222218;-73.0570603;target
-Big Rapid;Big Rapid;44.0625108;-103.4162155;target
-California City;California City;35.125801;-117.9859038;target
-North Salt Lake;North Salt Lake;40.8485564;-111.906882;target
-San Marcos;San Marcos;29.8826436;-97.9405828;target
-Christchurch;Christchurch;-43.530955;172.6366455;target
-Strongsville;Strongsville;41.3144733;-81.83511;target
-Destin;Destin;30.3935337;-86.4957834;target
-Titusville;Titusville;28.6122187;-80.8075538;target
-Kearney;Kearney;40.4906216;-98.9472344;target
-Pearland;Pearland;29.5639758;-95.2864299;target
-Leesburg;Leesburg;28.810823;-81.8778582;target
-Saint Petersburg;Saint Petersburg;59.917857350000006;30.38061935702552;target
-Abilene;Abilene;32.44645;-99.7475905;target
-Veracruz;Veracruz;19.333333;-96.666667;target
-College Station;College Station;30.5955289;-96.3071042;target
-Battle Creek;Battle Creek;42.3192548;-85.1824269;target
-Fairfield;Fairfield;39.7886111;-82.6418883;target
-Carol Stream;Carol Stream;41.9125286;-88.1347927;target
-Saginaw;Saginaw;43.4200387;-83.9490365;target
-Birmingham;Birmingham;52.4796992;-1.9026911;source
-Dhaka;Dhaka;23.7644025;90.389015;target
-Tbilisi;Tbilisi;41.6934591;44.8014495;target
-Garland;Garland;32.912624;-96.6388833;target
-San Leandro;San Leandro;37.7249296;-122.1560768;target
-Elk River;Elk River;45.3038538;-93.5671825;target
-Hayman Island;Hayman Island;-20.0502143;148.88837853389944;target
-Punta De Mita;Punta De Mita;20.6606771;-105.2295009;target
-Saint Martin;Saint Martin;18.085493;-63.05129209796061;target
-Salem;Salem;44.9391565;-123.033121;target
-Hermosillo;Hermosillo;29.0948207;-110.9692202;target
-Zion;Zion;42.4461322;-87.8328505;target
-Norton;Norton;39.7944702;-99.9100033;target
-Detroit Lakes;Detroit Lakes;46.817181;-95.845325;target
-San Juan Capistrano;San Juan Capistrano;33.5016932;-117.6625509;target
-Santiago;Santiago;-33.4377756;-70.6504502;target
-Chinle;Chinle;36.150143400000005;-109.56706853699023;target
-Monterrey;Monterrey;25.6802019;-100.315258;source
-Panama City Beach;Panama City Beach;30.1765914;-85.805386;target
-Linthicum;Linthicum;39.21057975;-76.66257353664076;target
-Lugano;Lugano;46.0050102;8.9520281;source
-Big Island, Hilo;Big Island, Hilo;19.72404;-155.0857483;target
-Oahu, Laie;Oahu, Laie;21.648287;-157.922562;target
-Death Valley;Death Valley;30.41197725;-91.1838302966362;target
-Maui, Kaanapali;Maui, Kaanapali;20.933395;-156.68342882198613;target
-Ramat Hasharon;Ramat Hasharon;32.134855200000004;34.83019949563153;source
-Marathon;Marathon;42.8614141;-94.9823235;target
-Teotihuacan;Teotihuacan;19.69008965;-98.84536815577444;target
-Cranberry Township;Cranberry Township;40.7099343;-80.1060506;target
-Framingham;Framingham;42.3095704;-71.4413097;target
-Beaumont;Beaumont;30.0860459;-94.1018461;target
-East Rutherford;East Rutherford;40.82046;-74.08307621723368;target
-Gurnee;Gurnee;42.3702996;-87.9020186;target
-Lanham;Lanham;38.965365000000006;-76.84179265424164;target
-Rock Island;Rock Island;41.4411786;-90.5766144;target
-Richardson;Richardson;32.9481789;-96.7297206;target
-San Pedro;San Pedro;-24.25;-56.5;target
-Harbor Springs;Harbor Springs;45.431676;-84.991999;target
-Chester;Chester;53.1908873;-2.8908955;target
-Plymouth;Plymouth;50.3712659;-4.1425658;target
-Port Angeles;Port Angeles;48.118146;-123.430741;target
-Islamorada;Islamorada;24.9242995;-80.6278404;target
-Cascavel;Cascavel;-24.9554996;-53.4560544;source
-Rohnert Park;Rohnert Park;38.3396367;-122.7010984;target
-Chichen Itza;Chichen Itza;20.68285195;-88.5687196355205;target
-Hasbrouck Heights;Hasbrouck Heights;40.8579293;-74.0816693;target
-Johnstown;Johnstown;40.3267407;-78.9219698;target
-Lithia Springs;Lithia Springs;33.7939953;-84.6604899;target
-Conway;Conway;35.2521996;-92.6888936;target
-Corbin;Corbin;36.9486986;-84.0968761;target
-Cuernavaca;Cuernavaca;18.9218274;-99.2342282;target
-Pinetop;Pinetop;40.6628756;-75.3754582;target
-Altoona;Altoona;40.518681;-78.394736;target
-Morgantown;Morgantown;39.6296809;-79.9559437;target
-Woodland Hills;Woodland Hills;34.1684364;-118.6058382;source
-Bronx;Bronx;40.8466508;-73.8785937;target
-Starkville;Starkville;33.4503998;-88.8183872;target
-Singapore;Singapore;1.357107;103.8194992;target
-North Miami;North Miami;25.8900949;-80.1867138;target
-Fairview Heights;Fairview Heights;38.5889386;-89.990382;target
-Tyler;Tyler;32.3512601;-95.3010624;target
-Roseville;Roseville;38.7521235;-121.2880059;target
-Borger;Borger;35.6678204;-101.3973876;target
-Twin Falls;Twin Falls;42.5704456;-114.4602554;target
-Eureka;Eureka;40.7906871;-124.1673746;target
-Missoula;Missoula;46.8701049;-113.995267;target
-New Smyrna Beach;New Smyrna Beach;29.0294202;-81.02083424215786;target
-O'Fallon;O'Fallon;38.7910374;-90.7039107;target
-Moscow;Moscow;55.7504461;37.6174943;target
-Paducah;Paducah;37.0833893;-88.6000478;target
-Mineola;Mineola;40.7492678;-73.6406845;target
-Wilkes Barre;Wilkes Barre;41.2464824;-75.8817316;target
-Plainview;Plainview;34.1847936;-101.7068417;target
-Zacatecas;Zacatecas;23.0823582;-103.20856984509813;target
-Cairo;Cairo;30.0443879;31.2357257;target
-Liverpool;Liverpool;53.4071991;-2.99168;target
-Anjou;Anjou;45.3462;4.88149;target
-Aguascalientes;Aguascalientes;22.0000001;-102.5000001;target
-Pebble Beach;Pebble Beach;39.7653975;-74.1968059;target
-Culiacan;Culiacan;24.7978965;-107.393395;target
-Ciudad del Carmen;Ciudad del Carmen;18.651739;-91.81492;target
-Hollister;Hollister;36.8524545;-121.4016021;target
-West Dennis;West Dennis;41.6645557;-70.1727967;target
-Vancouver;Vancouver;49.2608724;-123.113952;source
-Jonesboro;Jonesboro;35.8428646;-90.7034522;target
-Lockhart;Lockhart;29.8832105;-97.6736292;target
-Budapest;Budapest;47.4979937;19.0403594;target
-Los Angeles;Los Angeles;34.0536909;-118.242766;source
-Natchitoches;Natchitoches;31.7606732;-93.0860209;target
-Pocatello;Pocatello;42.8620287;-112.450627;target
-Redondo Beach;Redondo Beach;33.8455911;-118.3886766;target
-East Windsor;East Windsor;41.9156316;-72.6130726;target
-Port St. Lucie;Port St. Lucie;27.2939333;-80.3503283;target
-Heerenberg;Heerenberg;47.6922567;8.653900997190682;source
-Puerto Aventuras;Puerto Aventuras;20.5066683;-87.2300626;target
-Kowloon;Kowloon;22.3116452;114.1767885;source
-Creedmoor;Creedmoor;30.0899368;-97.7338917;target
-Pullman;Pullman;46.7304268;-117.173895;target
-Tampico;Tampico;22.2329889;-97.8614802;target
-Pachuca;Pachuca;20.1165413;-98.7413535;target
-Palm Beach Shores;Palm Beach Shores;26.7781183;-80.0355962;target
-Montrose;Montrose;38.4375391;-108.2403855;target
-Napoli;Napoli;40.8358846;14.2487679;source
-Mount Carmel;Mount Carmel;38.4108801;-87.7614174;target
-Acworth;Acworth;34.0659329;-84.6768796;target
-Doha;Doha;25.2856329;51.5264162;source
-Franklin;Franklin;33.2002659;-95.2231752;target
-Gleneden Beach;Gleneden Beach;44.8789911;-124.0346728;target
-Boston;Boston;42.3602534;-71.0582912;source
-Emeryville;Emeryville;37.8314089;-122.2865266;source
-Cliffside Park;Cliffside Park;40.8214894;-73.9876388;target
-Provo;Provo;40.2337289;-111.6587085;target
-Irvine;Irvine;33.6856969;-117.8259819;source
-Oakbrook Terrace;Oakbrook Terrace;41.8500302;-87.9645077;target
-Zapopan Jal.;Zapopan Jal.;20.7211203;-103.3913671;target
-Beaver;Beaver;38.3335694;-113.2754828;target
-Redding;Redding;40.5863563;-122.391675;target
-Toms River;Toms River;39.9537359;-74.1979576;target
-Rancho Cordova;Rancho Cordova;38.5890723;-121.302728;target
-Tepic;Tepic;21.5043446;-104.894676;target
-Ludington;Ludington;43.9555406;-86.4477416;target
-Cuyahoga Falls;Cuyahoga Falls;41.1348213;-81.4848086;target
-Saint Simons Island;Saint Simons Island;31.2182863;-81.3612077;target
-Lebanon;Lebanon;33.8750629;35.843409;target
-Essex;Essex;51.77046785;0.4646697741230038;source
-Venice;Venice;45.4371908;12.3345898;target
-Los Gatos;Los Gatos;37.226611;-121.9746797;target
-Copley;Copley;42.3499964;-71.0777332;target
-Mystic;Mystic;40.7776709;-92.9453445;target
-Wichita Falls;Wichita Falls;33.9137085;-98.4933873;target
-Maui Kihei;Maui Kihei;20.763395;-156.44639965521395;target
-Preston;Preston;53.7593363;-2.6992717;source
-Lawrenceville;Lawrenceville;33.9562149;-83.9879625;target
-Mcdonough;Mcdonough;40.4376858;-90.6780272;target
-Washington D.C.;Washington D.C.;38.8950368;-77.0365427;source
-Eden Prairie;Eden Prairie;44.8546856;-93.470786;source
-North Reading;North Reading;42.5750939;-71.0786653;source
-Craig;Craig;40.5152491;-107.5464541;target
-Lanai, Lanai City;Lanai, Lanai City;20.7415735;-156.896421;target
-Sussex;Sussex;41.133372;-74.6930393;source
-Hot Springs;Hot Springs;34.5038393;-93.0552437;target
-North Bay Village;North Bay Village;25.8462075;-80.1539351;target
-Timonium;Timonium;39.4475075;-76.5974223220619;target
-Lodi;Lodi;45.2613104;9.491678060021837;target
-Silver Lake;Silver Lake;44.9032959;-94.1955334;target
-Farmville;Farmville;37.3024713;-78.3923813;target
-Townsend;Townsend;35.6753657;-83.7557282;target
-Martinsville;Martinsville;36.6915262;-79.8725386;target
-Leon;Leon;42.63414505;-5.971415104539984;target
-Brookline;Brookline;42.3317642;-71.1211635;target
-Mexico City;Mexico City;19.4326296;-99.1331785;source
-Ashland;Ashland;46.2062319;-90.6802594;target
-Telluride;Telluride;37.9374939;-107.812285;target
-Hollywood;Hollywood;34.0980031;-118.329523;source
-Leeds;Leeds;53.7974185;-1.5437941;source
-Saint Robert;Saint Robert;45.2549408;1.2935658;target
-Molokai, Kaunakakai;Molokai, Kaunakakai;21.08093725;-157.00368301805878;target
-Wrightsville Beach;Wrightsville Beach;34.2079917;-77.7955907;target
-Bristol;Bristol;51.4538022;-2.5972985;target
-Flint;Flint;43.0161693;-83.6900211;target
-Visalia;Visalia;36.3302284;-119.2920585;target
-Big Sur;Big Sur;36.270241;-121.807454;target
-Cranford;Cranford;40.6584358;-74.2995923;target
-Baxter;Baxter;36.2820691;-92.3445222;target
-Los Cabos;Los Cabos;43.5139571;-6.1001155;target
-Mont-Tremblant;Mont-Tremblant;46.11588;-74.5891426;target
-North Dartmouth;North Dartmouth;44.6843412;-63.5826519;target
-Rawlins;Rawlins;39.7904797;-101.0994722;target
-Sandusky;Sandusky;41.4561002;-82.7115813;target
-York;York;53.9590555;-1.0815361;target
-Owensboro;Owensboro;37.7742152;-87.1133304;target
-Plainsboro;Plainsboro;40.3334409;-74.6004341;target
-Saraland;Saraland;30.820742;-88.0705556;target
-Sunset Beach;Sunset Beach;54.7423237;-113.5366453;target
-Sutton;Sutton;30.51216325;-100.53841807826248;target
-West Sussex;West Sussex;50.94458445;-0.5278477012862655;source
-Norcross;Norcross;33.9412127;-84.2135309;target
-Chester;Chester;53.1908873;-2.8908955;source
-Placentia;Placentia;44.8476352;9.666531257696896;target
-Saltillo;Saltillo;25.4230425;-100.9927509;target
-Toluca;Toluca;19.292545;-99.6569007;target
-Universal City;Universal City;34.1419417;-118.3584459;target
-Hill City;Hill City;39.364728;-99.842065;target
-Indian Shores;Indian Shores;27.862801;-82.8484373;target
-Frankfort;Frankfort;50.1106444;8.6820917;target
-Barstow;Barstow;34.8957684;-117.0172077;target
-Carpinteria;Carpinteria;34.3988838;-119.5184564;target
-Rockville;Rockville;39.0817985;-77.1516844;target
-Germantown;Germantown;38.5536601;-89.5384209;target
-Rancho Santa Fe;Rancho Santa Fe;33.024194949999995;-117.19815158464624;target
-Fairbanks;Fairbanks;64.82897449999999;-147.66991691593407;target
-Jefferson City;Jefferson City;38.577359;-92.1724265;target
-Panama;Panama;8.559559;-81.1308434;source
-Amsterdam;Amsterdam;52.3727598;4.8936041;source
-Budd Lake;Budd Lake;40.87389;-74.73827737964814;target
-Singer Island;Singer Island;26.7850625;-80.0375408;target
-Lynchburg;Lynchburg;37.4137536;-79.1422464;target
-Luton;Luton;51.8784385;-0.4152837;source
-Angels Camp;Angels Camp;38.0695732;-120.540503;target
-Coatzacoalcos;Coatzacoalcos;18.1396787;-94.4501731;target
-Urbana;Urbana;40.1117174;-88.207301;target
-Brooklyn Center;Brooklyn Center;45.0748543;-93.3296296;target
-National Harbor;National Harbor;38.78352745;-77.0141294675926;target
-Ajijic;Ajijic;20.3001977;-103.2619347;target
-Glasgow;Glasgow;55.8609825;-4.2488787;source
-Buenos Aires;Buenos Aires;-34.6075682;-58.4370894;target
-North Hollywood;North Hollywood;34.1729044;-118.3740371;target
-Wilmington;Wilmington;39.7459468;-75.546589;source
-Amsterdam;Amsterdam;52.3727598;4.8936041;target
-Kauai, Poipu;Kauai, Poipu;21.8766526;-159.4539141;target
-Fairborn;Fairborn;39.8208998;-84.0193858;target
-Iselin;Iselin;40.569335;-74.31511249016258;target
-Kings Canyon National Park;Kings Canyon National Park;36.91527845;-118.60765585962608;target
-Luray;Luray;48.7201659;1.3972981;target
-Dillon;Dillon;45.2141249;-112.6346079;target
-Hendersonville;Hendersonville;35.3187279;-82.4609528;target
-Ponce;Ponce;18.011564;-66.613958;target
-Laramie;Laramie;41.311367;-105.591101;target
-Mesa Verde National Park;Mesa Verde National Park;37.253776;-108.45559640928934;target
-Paris;Paris;48.8588897;2.3200410217200766;source
-Bay Harbor;Bay Harbor;30.1471462;-85.6146488;target
-Mathis;Mathis;28.0942916;-97.8274111;target
-Le Roy;Le Roy;40.8777854;-93.592905;target
-North Vancouver;North Vancouver;49.3206294;-123.0737925;target
-Williamsport;Williamsport;41.2493292;-77.0027671;target
-Hannover;Hannover;52.3744779;9.7385532;source
-East Orleans;East Orleans;41.7851093;-69.9702947;target
-Eden Prairie;Eden Prairie;44.8546856;-93.470786;target
-Ocean City;Ocean City;39.2776156;-74.5746001;target
-Boca Raton;Boca Raton;26.3586885;-80.0830984;source
-Glen Ellyn;Glen Ellyn;41.8775293;-88.0670118;target
-Quincy;Quincy;42.2509914;-71.0037374;target
-Salina;Salina;38.8402805;-97.6114237;target
-Jessup;Jessup;39.147001450000005;-76.76991768022445;target
-Palm Coast;Palm Coast;29.5541432;-81.2207673;target
-Kauai, Princeville;Kauai, Princeville;22.223611;-159.485278;target
-Mountain View;Mountain View;37.3893889;-122.0832101;target
-Stateline;Stateline;38.9667745;-119.94427458159146;target
-Valle;Valle;13.5110996;-87.54729253516118;target
-Cucuta;Cucuta;45.9893785;23.2575051;target
-Elkins;Elkins;38.925927;-79.8466552;target
-San Miguel de Allende;San Miguel de Allende;20.9142238;-100.743784;target
-St. Petersburg;St. Petersburg;59.917857350000006;30.38061935702552;target
-Wytheville;Wytheville;36.9479966;-81.0869747;target
-Sturgeon Bay;Sturgeon Bay;44.8341639;-87.377042;target
-Coos Bay;Coos Bay;43.3678937;-124.2174647;target
-Starke;Starke;29.9443549;-82.1101114;target
-Sharm El Sheikh;Sharm El Sheikh;27.8644422;34.295447;target
-Muskogee;Muskogee;35.6630196;-95.3927706;target
-Utica;Utica;43.1009031;-75.2326641;target
-Wiltshire;Wiltshire;51.324162;-1.903248669900225;source
-Solana Beach;Solana Beach;32.9905597;-117.269131;source
-Chatillon;Chatillon;46.6591772;5.7302769;source
-Bartonsville;Bartonsville;39.389387;-77.34299500372168;target
-Hallandale Beach;Hallandale Beach;25.9812025;-80.148379;target
-Wixom;Wixom;42.5247729;-83.5363339;target
-Tlalnepantla;Tlalnepantla;19.0297838;-98.98581963546584;target
-Mount Kisco;Mount Kisco;41.2042616;-73.7270761;target
-Fullerton;Fullerton;33.8739385;-117.9243399;source
-Mackinaw City;Mackinaw City;45.783901;-84.727828;target
-Palma De Mallorca;Palma De Mallorca;39.5695818;2.6500745;source
-Oceanside;Oceanside;33.1958696;-117.3794834;target
-Maui, Hana;Maui, Hana;20.7671042;-155.990751995403;target
-Windsor;Windsor;51.48375775;-0.6040964041849046;target
-Pooler;Pooler;32.1158983;-81.2495131;target
-Charles Town;Charles Town;39.2891836;-77.859581;target
-Fullerton;Fullerton;33.8739385;-117.9243399;target
-Brownsville;Brownsville;25.9140256;-97.4890856;target
-Danbury;Danbury;41.394817;-73.4540111;target
-Secaucus;Secaucus;40.7899291;-74.0566735;target
-Allen Park;Allen Park;42.2595071;-83.2107671;target
-Fayetteville;Fayetteville;36.0625843;-94.1574328;target
-Gulf Shores;Gulf Shores;30.2711224;-87.6893826;target
-Reynoldsburg;Reynoldsburg;39.9547861;-82.8121191;target
-Bridgetown;Bridgetown;13.0977832;-59.6184184;target
-Kenmore;Kenmore;47.7573202;-122.2440148;source
-Alahsa;Alahsa;14.85159;44.349569;source
-Crystal Lake;Crystal Lake;42.2411344;-88.3161965;target
-Keene;Keene;42.933597;-72.2784264;target
-Fort Collins;Fort Collins;40.5508527;-105.0668085;target
-East Palatka;East Palatka;29.652377;-81.5995889937833;target
-Oahu, Kapolei;Oahu, Kapolei;21.35835565;-158.0511372926451;target
-Plaquemine;Plaquemine;30.2840655;-91.2370772;target
-Bordentown;Bordentown;40.1462213;-74.7118264;target
-Walla Walla;Walla Walla;46.0667277;-118.3393456;target
-Gettysburg;Gettysburg;39.8308973;-77.231012;target
-Vineland;Vineland;39.4862777;-75.0254256;target
-Topeka;Topeka;39.049011;-95.677556;target
-Palm Coast;Palm Coast;29.5541432;-81.2207673;source
-Diamond Bar;Diamond Bar;34.0286226;-117.8103367;target
-Dodge City;Dodge City;37.7527982;-100.0170787;target
-East Orange;East Orange;40.767323;-74.2048677;target
-Isla Mujeres;Isla Mujeres;21.2321047;-86.73222812171971;target
-Melbourne;Melbourne;-37.8142176;144.9631608;target
-Beaufort;Beaufort;50.2207301;3.9661418;target
-Absecon;Absecon;39.4284503;-74.4957076;target
-Manhattan;Manhattan;40.7896239;-73.9598939;target
-Auckland;Auckland;-36.852095;174.7631803;source
-Delhi;Delhi;28.6517178;77.2219388;source
-Long Bay;Long Bay;18.1060022;-76.3189878;target
-Cocoa;Cocoa;28.3553873;-80.7318827;target
-Westlake Village;Westlake Village;34.1460234;-118.8061794;target
-Hulett;Hulett;44.68276;-104.601682;target
-Del Mar;Del Mar;32.9594891;-117.2653146;target
-Amherst;Amherst;42.3685658;-72.505714;target
-Kaufman;Kaufman;32.601641;-96.3375126;target
-Metairie;Metairie;30.00185465;-90.1767012249077;target
-Kolkata;Kolkata;22.5414185;88.35769124388872;source
-Bora Bora;Bora Bora;-16.504346650000002;-151.73668863927236;target
-Jupiter;Jupiter;26.9260832;-80.12108914060954;target
-Manahawkin;Manahawkin;39.69069545000001;-74.2488121988606;target
-Sandpoint;Sandpoint;48.2765903;-116.553247;target
-Sacramento;Sacramento;38.5810606;-121.493895;source
-Winters;Winters;31.9565343;-99.962313;target
-Cambridge;Cambridge;52.2055314;0.1186637;source
-Brussels;Brussels;50.8465573;4.351697;source
-Bowie;Bowie;33.4198886;-94.4479626;target
-Erlanger;Erlanger;39.0167275;-84.6007773;target
-New Haven;New Haven;41.3082138;-72.9250518;target
-Summerville;Summerville;33.0186699;-80.1762704;target
-Elmira;Elmira;42.0897965;-76.8077338;target
-Rutland;Rutland;52.6423036;-0.6632643077026672;target
-Manchester;Manchester;53.4794892;-2.2451148;source
-Skokie;Skokie;42.0333694;-87.7333972;target
-Vouliagmeni;Vouliagmeni;37.8139557;23.7821394;target
-Somerville;Somerville;42.3875968;-71.0994968;target
-Waldorf;Waldorf;50.4855665;7.2293555;source
-Logan;Logan;40.1075089;-89.3768539;target
-Bucharest;Bucharest;44.4361414;26.1027202;source
-Marrakech;Marrakech;31.62679475;-8.003024256894616;target
-Eugene;Eugene;44.0505054;-123.0950506;target
-Groveland;Groveland;28.5602149;-81.8561226;target
-Bimini;Bimini;25.70318795;-79.28145926583792;target
-San Diego;San Diego;32.7174202;-117.1627728;source
-Greenwood Village;Greenwood Village;39.6172101;-104.950814;target
-Lansing;Lansing;42.7337712;-84.5553805;target
-Naperville;Naperville;41.7728699;-88.1479278;target
-Big Bear Lake;Big Bear Lake;34.2440587;-116.91018;target
-Vinton;Vinton;42.1679131;-92.0239504;target
-Antiqua-St. Johns;Antiqua-St. Johns;17.1184569;-61.8448509;target
-Aptos;Aptos;36.993645;-121.89194984597702;target
-Idaho Falls;Idaho Falls;43.4887907;-112.03628;target
-Santo Domingo;Santo Domingo;18.4801972;-69.942111;target
-Yellowstone National Park;Yellowstone National Park;44.6200885;-110.5606893314306;target
-Studio City;Studio City;34.1483989;-118.3961877;target
-Tampico;Tampico;22.2329889;-97.8614802;source
-Encino;Encino;34.1591324;-118.5016166;source
-Crescent City;Crescent City;41.755948;-124.201747;target
-Grantville;Grantville;33.2348419;-84.8357679;target
-Juneau;Juneau;58.3019496;-134.419734;target
-Kiev;Kiev;50.4500336;30.5241361;target
-Lima;Lima;-12.0621065;-77.0365256;target
-Torrance;Torrance;33.8358492;-118.3406288;target
-Clark;Clark;39.3260541;-87.7838526;target
-Fremont;Fremont;37.5482697;-121.988571;target
-Avondale;Avondale;33.4355977;-112.349602;target
-Sidney;Sidney;-33.8698439;151.2082848;target
-Virgin;Virgin;37.201902;-113.1878542;target
-Ketchum;Ketchum;43.680741;-114.363662;target
-Manama;Manama;17.1750495;95.9999652;target
-Puyallup;Puyallup;47.1849009;-122.29214;target
-Emporia;Emporia;38.4040054;-96.181623;target
-Tacoma;Tacoma;47.2495798;-122.4398746;target
-Weatherford;Weatherford;32.7589648;-97.7970748;target
-Saint Ignace;Saint Ignace;45.8686238;-84.7278281;target
-Lyon;Lyon;45.7578137;4.8320114;source
-Binghamton;Binghamton;42.0987125;-75.9125262;target
-Graham;Graham;39.34062;-99.8980624;target
-Whistler;Whistler;50.1171903;-122.9543022;target
-Jensen Beach;Jensen Beach;27.22089615;-80.25567726584178;target
-South Burlington;South Burlington;44.4669941;-73.1709604;target
-Wallingford;Wallingford;51.60036085;-1.1318028311671635;target
-Montrouge;Montrouge;48.8188544;2.3194375;source
-Dunedin;Dunedin;-45.8740984;170.5035755;target
-Ramat Gan;Ramat Gan;32.0686867;34.8246812;source
-Abu Dhabi;Abu Dhabi;24.4538352;54.3774014;source
-Duck;Duck;36.1700137;-75.7559261;target
-Moran;Moran;27.23650645;94.87909205082008;target
-Midvale;Midvale;40.6149174;-111.9106607;target
-Redwood City;Redwood City;37.4863239;-122.232523;target
-Blanco;Blanco;30.2419274;-98.4004594;target
-Beaconsfield;Beaconsfield;51.6082881;-0.6571233;source
-Leuven;Leuven;50.879202;4.7011675;source
-Canon City;Canon City;38.4423644;-105.222494;target
-Dunn;Dunn;47.30612;-102.6112348;target
-Parker;Parker;32.7599475;-97.7935767;target
-Government Camp;Government Camp;45.3041033;-121.7547596;target
-Anguilla;Anguilla;18.1954947;-63.0750234;target
-Sausalito;Sausalito;37.8590272;-122.485469;target
-Ardmore;Ardmore;34.1742611;-97.1436254;target
-Massapequa Park;Massapequa Park;40.6803785;-73.4551241;target
-Stevens Point;Stevens Point;44.5229223;-89.574111;target
-Beaverton;Beaverton;45.4871723;-122.80378;target
-Sint Jansklooster;Sint Jansklooster;52.67782145;6.004795500887328;source
-Kuwait City;Kuwait City;29.3796532;47.9734174;target
-Enfield;Enfield;51.6520851;-0.0810175;source
-Lisbon;Lisbon;38.7077507;-9.1365919;target
-Hong Kong;Hong Kong;22.2793278;114.1628131;source
-Mineral Wells;Mineral Wells;32.8084605;-98.1128223;target
-Galliano;Galliano;44.0160698;11.2913408;target
-Southgate;Southgate;51.6281547;-0.123596;target
-La Pine;La Pine;43.6703995;-121.503636;target
-Martinsburg;Martinsburg;39.4562528;-77.9639604;target
-Reading;Reading;51.456659;-0.9696512;target
-Custer;Custer;38.1072962;-105.3543375;target
-Baldwin Park;Baldwin Park;34.08092715;-117.96491555095368;source
-Pesaro;Pesaro;43.9098114;12.9131228;source
-Coalville;Coalville;52.7257981;-1.3741375;target
-Walnut Creek;Walnut Creek;37.9020731;-122.0618702;target
-Everett;Everett;47.9673056;-122.201399;target
-Shawnee;Shawnee;39.0273676;-95.7627535;target
-Rome;Rome;41.8933203;12.4829321;source
-Hapeville;Hapeville;33.660109;-84.4102046;target
-Kingston;Kingston;17.9712148;-76.7928128;target
-Hertfordshire;Hertfordshire;51.8400523;-0.0978551922452396;source
-Oakdale;Oakdale;44.985624;-92.9645794;target
-Heerhugowaard;Heerhugowaard;52.6631484;4.8326672;source
-Haverhill;Haverhill;42.7777829;-71.0767724;target
-Englewood Cliffs;Englewood Cliffs;40.8853773;-73.9523597;target
-Southampton;Southampton;50.9025349;-1.404189;source
-Quito;Quito;-0.2201641;-78.5123274;target
-Liverpool;Liverpool;53.4071991;-2.99168;source
-Accra;Accra;5.5571096;-0.2012376;target
-Hawthorne;Hawthorne;33.9188589;-118.3483256;target
-Mykonos;Mykonos;37.451434500000005;25.392337493319413;target
-Brownsburg;Brownsburg;39.8433769;-86.3977736;target
-Falls Church;Falls Church;38.882334;-77.1710914;target
-Grandville;Grandville;48.5956451;4.2319159;target
-Rimini;Rimini;43.9470982;12.630768610516004;source
-Rockford;Rockford;42.2713945;-89.093966;target
-Mahe;Mahe;11.7021978;75.5364701;target
-Mumbai;Mumbai;19.0785451;72.878176;target
-Adelaide;Adelaide;-34.9281805;138.5999312;target
-Plantation;Plantation;26.12744855;-80.25779068328761;source
-Vernal;Vernal;40.4556825;-109.5284741;target
-Louisville;Louisville;38.2542376;-85.759407;source
-Ridgeland;Ridgeland;32.4284761;-90.1323087;target
-Surrey;Surrey;51.2715316;-0.3414523511290909;source
-Delaware;Delaware;38.6920451;-75.4013315;target
-Venice Beach;Venice Beach;33.97996005;-118.46878181253348;source
-Brisbane;Brisbane;-27.4689682;153.0234991;target
-Ely;Ely;52.40187845;0.2838574194741751;target
-San Ramon;San Ramon;41.7253374;1.363189;target
-Saint Paul;Saint Paul;44.9497487;-93.0931028;target
-Milan;Milan;45.4641943;9.1896346;source
-Altamonte Springs;Altamonte Springs;28.6649055;-81.37626861372098;target
-Big Water;Big Water;8.2888729;-13.1580202;target
-Hondo;Hondo;29.3474121;-99.1412026;target
-Lost Pines;Lost Pines;29.4268944;-98.8422863;target
-Milano;Milano;45.4641943;9.1896346;source
-Firebaugh;Firebaugh;36.8588376;-120.456007;target
-Ljubljana;Ljubljana;46.0500268;14.5069289;target
-Colchester;Colchester;51.8896903;0.8994651;target
-Glen Allen;Glen Allen;37.316934;-90.02781236389168;target
-Panguitch;Panguitch;37.8227551;-112.435763;target
-Hillsboro;Hillsboro;45.5228939;-122.989827;target
-North East;North East;54.73141115;-1.7919813357694694;target
-Dublin;Dublin;53.3497645;-6.2602732;target
-Jerusalem;Jerusalem;31.7788242;35.2257626;source
-Winter Garden;Winter Garden;28.5502685;-81.59259746085962;source
-Hershey;Hershey;40.2850285;-76.65346622319689;target
-Victoria;Victoria;-36.5986096;144.6780052;target
-Funchal;Funchal;32.6496497;-16.9086783;target
-American Canyon;American Canyon;38.1749179;-122.2608044;target
-Sanford;Sanford;35.4798757;-79.1802994;target
-Bascharage;Bascharage;49.5712686;5.912845;source
-Pinedale;Pinedale;42.8671325;-109.8609808;target
-Sandy;Sandy;40.5710454;-111.8953815;target
-Guildford;Guildford;51.2356068;-0.5732063;source
-Marble Falls;Marble Falls;30.5777511;-98.2756505;target
-Olive Branch;Olive Branch;34.9617605;-89.8295315;target
-Nanjing;Nanjing;32.0615652;118.7915079;target
-Helena;Helena;46.5927425;-112.036277;target
-White House;White House;38.8976997;-77.03655315;target
-Big Sky;Big Sky;45.2589644;-111.308725;target
-East Point;East Point;33.6795531;-84.4393724;target
-Portage;Portage;42.2011538;-85.5800022;target
-Guangzhou;Guangzhou;23.1301964;113.2592945;target
-Hangzhou;Hangzhou;30.2489634;120.2052342;target
-Shanghai;Shanghai;31.2322758;121.4692071;target
-Taunton;Taunton;51.0147895;-3.1029086;target
-Shrewsbury;Shrewsbury;52.707755;-2.7540658;target
-Roma;Roma;41.8933203;12.4829321;target
-Torrance;Torrance;33.8358492;-118.3406288;source
-Colonial Heights;Colonial Heights;37.2555718;-77.4112016;target
-Mostoles;Mostoles;40.3238525;-3.8649214;source
-Carbondale;Carbondale;37.7274692;-89.216655;target
-Adel;Adel;41.6174123;-94.0185176;target
-Mason;Mason;30.705029;-99.2233284;target
-Beijing;Beijing;39.906217;116.3912757;target
-Chengdu;Chengdu;30.6598628;104.0633717;target
-Shenzhen;Shenzhen;22.5445741;114.0545429;target
-Hillside;Hillside;41.8778084;-87.9028398;target
-Healdsburg;Healdsburg;38.5904785;-122.86502953263708;target
-Lijiang;Lijiang;26.8595868;100.2249797;target
-Tianjin;Tianjin;39.0856735;117.1951073;target
-Gaithersburg;Gaithersburg;39.1399187;-77.1929215;target
-Villahermosa;Villahermosa;18.0018152;-92.9330401483751;target
-Hefei;Hefei;31.8228094;117.2218033;target
-Jinan;Jinan;36.6507007;117.1140042;target
-Zhejiang;Zhejiang;29.0000001;119.9999999;target
-El Dorado Hills;El Dorado Hills;38.67950505;-121.05936567127864;target
-Randers;Randers;56.4355428;10.0425957;source
-Wauwatosa;Wauwatosa;43.0494122;-88.0079271;target
-Berlin;Berlin;52.5170365;13.3888599;source
-Copenhagen;Copenhagen;55.6867243;12.5700724;source
-Marquette;Marquette;46.4481521;-87.6305899;target
-Syracuse;Syracuse;37.0646139;15.2907196;target
-Chambersburg;Chambersburg;39.9405903;-77.6598624;target
-Alamosa;Alamosa;37.5780995;-105.7890452;target
-Nantong;Nantong;31.9827896;120.8904588;target
-Okeechobee;Okeechobee;27.3923408;-80.8873655;target
-Spring Lake;Spring Lake;53.5193105;-114.1385071;target
-Elgin;Elgin;42.03726;-88.2810994;target
-Orangeburg;Orangeburg;33.4918203;-80.8556476;target
-Fairview;Fairview;56.073947;-118.3797878;target
-Warwick;Warwick;52.2814519;-1.5815742;target
-Dinuba;Dinuba;36.5432837;-119.3870656;target
-Mentor;Mentor;41.6664781;-81.3399769;target
-Commerce;Commerce;34.002581;-118.156586;target
-Phoenix;Phoenix;33.4484367;-112.074141;source
-Guanacaste;Guanacaste;10.37884405;-85.43382874573226;target
-Vilvoorde;Vilvoorde;50.9287524;4.4228712;source
-Cheshire;Cheshire;41.4989861;-72.900658;source
-Carolina;Carolina;35.90503535;-79.04775326525107;target
-Ishigaki;Ishigaki;24.3382831;124.1577569;target
-West Valley City;West Valley City;40.6967254;-111.9868211;target
-Cheltenham;Cheltenham;51.8995685;-2.0711559;source
-Miamisburg;Miamisburg;39.6428362;-84.2866083;target
-Prineville;Prineville;44.2998261;-120.834972;target
-Hornell;Hornell;42.3278477;-77.6611025;target
-Lac-Beauport;Lac-Beauport;46.944403;-71.296806;target
-Brugg;Brugg;47.4824633;8.2085662;source
-Evansville;Evansville;37.9747645;-87.5558483;target
-Cusco;Cusco;-13.5170887;-71.9785356;target
-Meise;Meise;50.9341625;4.3287322;source
-Olympia;Olympia;37.63819;21.63053756728882;target
-Greenbelt;Greenbelt;38.9933654;-76.88333238304114;target
-Thornton;Thornton;39.8695516;-104.985181;target
-Middletown;Middletown;41.5623178;-72.6509061;target
-Trois Rivieres;Trois Rivieres;46.3715918;-72.6005021;target
-Torino;Torino;45.0677551;7.6824892;source
-Beuningen;Beuningen;51.8586611;5.767357;source
-Iasi;Iasi;47.1615341;27.5836142;source
-Oacoma;Oacoma;43.796109;-99.39533;target
-High Point;High Point;35.9556924;-80.0053176;target
-Toulouse;Toulouse;43.6044622;1.4442469;source
-Rotterdam;Rotterdam;51.9244424;4.47775;source
-Mason City;Mason City;43.1524574;-93.2017941;target
-Tinley Park;Tinley Park;41.5733669;-87.7844944;target
-Calistoga;Calistoga;38.5787966;-122.579705;target
-Coram;Coram;40.87941295;-73.00394259997734;target
-Morrisville;Morrisville;47.88338804999999;-55.76861996265019;target
-Estes Park;Estes Park;40.3771926;-105.523216;target
-Littlefield;Littlefield;33.9189172;-102.332836;target
-Antwerp;Antwerp;51.2211097;4.3997081;source
-Clermont;Clermont;49.3780921;2.4141907;source
-Mississauga;Mississauga;43.5896231;-79.6443879;target
-Runaway Bay;Runaway Bay;33.1666284;-97.8811684;target
-Hellerup;Hellerup;55.7336657;12.5655408;source
-Rahway;Rahway;40.6081591;-74.2776468;target
-Utrecht;Utrecht;52.080985600000005;5.12768396945229;source
-Oahu, Kahuku;Oahu, Kahuku;20.887218;-156.482834;target
-Mascot;Mascot;-33.9289562;151.1951782;source
-Verona;Verona;45.4384958;10.9924122;source
-Macon;Macon;32.8406946;-83.6324022;target
-Sheridan;Sheridan;39.3530598;-100.4576457;target
-Bolton;Bolton;53.5782863;-2.4300367;source
-Tokyo;Tokyo;35.6828387;139.7594549;target
-Musanze;Musanze;-1.4741392;29.568173968338307;target
-Cupertino;Cupertino;37.3228934;-122.0322895;target
-Lincoln;Lincoln;40.8088861;-96.7077751;target
-White Plains;White Plains;41.0339862;-73.7629097;target
-Avalon;Avalon;33.34221;-118.3272612;target
-Danville;Danville;40.125222;-87.6304614;target
-Arcadia;Arcadia;34.1362075;-118.0401497;target
-Salerno;Salerno;40.41944165;15.310756230322482;target
-Gurgaon;Gurgaon;28.42826235;77.00270014657752;source
-Richland;Richland;38.7060457;-88.0949352;target
-Seatac;Seatac;47.4449086;-122.283084;target
-Dijon;Dijon;47.3215806;5.0414701;source
-Odessa;Odessa;46.4843023;30.7322878;target
-Newbury;Newbury;51.4020243;-1.3242212;source
-Kauai, Waimea;Kauai, Waimea;21.96365;-159.67413843779505;target
-Surfside Beach;Surfside Beach;28.9616861;-95.274756634748;target
-Kittery;Kittery;43.088448;-70.736847;target
-Oakhurst;Oakhurst;40.2613085;-74.02665522857244;target
-Plainfield;Plainfield;41.6086711;-88.2054345;target
-Warsaw;Warsaw;52.2319581;21.0067249;source
-Sisters;Sisters;44.290948;-121.5492516;target
-Ann Arbor;Ann Arbor;42.2681569;-83.7312291;target
-Alkmaar;Alkmaar;52.6008538;4.817099446443963;source
-Ipswich;Ipswich;52.0579495;1.1526345;source
-Mansfield;Mansfield;40.75839;-82.5154471;target
-New London;New London;41.3556187;-72.0997804;target
-Lawndale;Lawndale;33.8885217;-118.3531991;source
-South Bend;South Bend;41.6833813;-86.2500066;target
-Boppard;Boppard;50.2312823;7.5885884;source
-Paragould;Paragould;36.0584021;-90.4973286;target
-Edna;Edna;28.9772626;-96.6462526;target
-Cambridge;Cambridge;52.2055314;0.1186637;target
-Ely;Ely;52.40187845;0.2838574194741751;source
-Woodland;Woodland;38.6786109;-121.7733285;target
-Veghel;Veghel;51.6134636;5.5446455;source
-Goa;Goa;15.3503192;74.10178169795284;target
-Fairfax;Fairfax;38.8462236;-77.3063733;source
-Geldrop;Geldrop;51.4226684;5.5607546;source
-Katy;Katy;29.7857853;-95.8243956;target
-Ancona;Ancona;43.4801204;13.218790609151764;source
-Frankfurt Oder;Frankfurt Oder;52.3412273;14.549452;source
-Cody;Cody;44.5263107;-109.056392;target
-Bandon;Bandon;-6.9344694;107.6049539;source
-Soller;Soller;39.7663047;2.7150538;target
-Mechelen;Mechelen;51.0281381;4.4803453;source
-Moline;Moline;41.5058344;-90.5136642;target
-Suffern;Suffern;41.1151372;-74.1493948;target
-Ekaterinburg;Ekaterinburg;56.7881462;60.66895779116639;source
-Ocho Rios;Ocho Rios;18.3792074;-77.1174197681076;target
-Bergamo;Bergamo;45.7566557;9.754219200862249;source
-Perrysburg;Perrysburg;41.5571178;-83.6279321;target
-Lenox;Lenox;40.8812978;-94.5588947;target
-Ronkonkoma;Ronkonkoma;40.8153761;-73.112333;target
-Glasgow;Glasgow;55.8609825;-4.2488787;target
-Bar Harbor;Bar Harbor;44.3876378;-68.2043361;target
-San Bruno;San Bruno;37.6261715;-122.4332435;source
-Rogers;Rogers;36.3320197;-94.1185366;target
-Harbour Island;Harbour Island;25.4997548;-76.63404797983921;target
-Doha;Doha;25.2856329;51.5264162;target
-Bretton Woods;Bretton Woods;44.2576311;-71.4413006;target
-White Plains;White Plains;41.0339862;-73.7629097;source
-Monaco;Monaco;43.73844905;7.424224092532953;source
-Madrid;Madrid;40.4167047;-3.7035825;target
-Cork;Cork;51.897077;-8.4654674;source
-Sheboygan;Sheboygan;43.7508284;-87.71453;target
-Hoover;Hoover;33.4092646;-86.66217961474177;target
-Cozumel;Cozumel;20.4317585;-86.92027456597663;target
-Middleburg Heights;Middleburg Heights;41.3614401;-81.812912;target
-Vernon Hills;Vernon Hills;42.2204892;-87.9803604;target
-Monticello;Monticello;42.6214159;8.96043915620514;target
-Koloa;Koloa;21.9042279;-159.465733;target
-St. Thomas;St. Thomas;49.4972;3.82019;target
-Kuda Huraa;Kuda Huraa;4.32824645;73.59765961860367;target
-Simi Valley;Simi Valley;34.2677404;-118.7538071;target
-Gateway;Gateway;26.5801741;-81.73882374764526;target
-Montreux;Montreux;46.4310831;6.9129921;target
-Ashburn;Ashburn;39.0300191;-77.46964646557657;target
-Red Bluff;Red Bluff;40.1784279;-122.235923;target
-Oslo;Oslo;59.9133301;10.7389701;source
-Kitty Hawk;Kitty Hawk;36.0664318;-75.6935448;target
-Schiller Park;Schiller Park;41.9558637;-87.8708965;target
-Little Torch Key;Little Torch Key;24.6693097;-81.3909144;target
-Forestville;Forestville;48.739437;-69.088211;target
-Campton;Campton;37.7342526;-83.547409;target
-Cologne;Cologne;50.938361;6.959974;source
-Horse Cave;Horse Cave;37.179496;-85.9069175;target
-Selma;Selma;32.4078632;-87.0207473;target
-Saint Louis Park;Saint Louis Park;44.9475726;-93.3569023;target
-Mooresville;Mooresville;35.5848596;-80.8100724;target
-Marlborough;Marlborough;42.3459271;-71.5522874;target
-Brindisi;Brindisi;40.63591975;17.688443357842537;source
-Florianopolis;Florianopolis;-27.5973002;-48.5496098;source
-Forks;Forks;47.950222;-124.386165;target
-Lubbock;Lubbock;33.5635206;-101.879336;target
-Council Bluffs;Council Bluffs;41.258841;-95.8519484;target
-Bridgnorth;Bridgnorth;52.5345626;-2.4194132;source
-Frederiksberg;Frederiksberg;55.678016;12.5326186;source
-Jersey City;Jersey City;40.7215682;-74.047455;source
-Capitol Heights;Capitol Heights;38.8849913;-76.9134765;target
-Saint Denis Cedex;Saint Denis Cedex;-20.879486;55.4514137;source
-Whitefish;Whitefish;48.450293;-114.33828531635989;target
-Bedoin;Bedoin;44.1240383;5.1806559;source
-Flushing;Flushing;51.49433865;3.415005767601362;target
-Hertogenbosch;Hertogenbosch;37.8710553;-122.2681889;source
-Great Exuma;Great Exuma;36.223089;-81.7761012;target
-Mallorca;Mallorca;39.613432;2.880353635614984;target
-Bishop;Bishop;37.363679;-118.39524;target
-Prague;Prague;50.0596288;14.446459273258007;target
-Hudson;Hudson;40.7381635;-74.0550731;target
-Freudenberg;Freudenberg;50.8983662;7.8773745;source
-North Las Vegas;North Las Vegas;36.2005843;-115.121584;source
-La Palma;La Palma;28.6552318;-17.85732234254766;target
-South Plainfield;South Plainfield;40.5792701;-74.4115401;target
-Brighton;Brighton;50.83891575;-0.1269305425007466;source
-Powell Butte;Powell Butte;45.4870645;-122.5039797;target
-Peru;Peru;-6.8699697;-75.0458515;target
-Webster;Webster;37.2895151;-92.8792111;target
-Niagara On The Lake;Niagara On The Lake;43.2556116;-79.0723264;target
-Nashua;Nashua;42.7656251;-71.4677032;target
-Richfield;Richfield;44.8766431;-93.2877877;target
-North Adams;North Adams;42.6990321;-73.1118964;target
-Blackwell;Blackwell;32.0869699;-100.3188899;target
-Hopkinsville;Hopkinsville;36.8657651;-87.4889532;target
-Torrington;Torrington;41.8006523;-73.1212214;target
-Durham City;Durham City;54.7785577;-1.5757010209442777;source
-Ibiza;Ibiza;38.9743901;1.4197463178515335;target
-Sunderland;Sunderland;54.9058512;-1.3828727;source
-Manitowoc;Manitowoc;44.0886059;-87.6575841;target
-Pagosa Springs;Pagosa Springs;37.2695661;-107.0108163;target
-Austell;Austell;33.8126059;-84.6343783;target
-Tulare;Tulare;36.2516475;-118.852583;target
-Nottingham;Nottingham;52.9534193;-1.1496461;source
-Long Island City;Long Island City;40.7415095;-73.9569751;target
-St. Peter;St. Peter;44.3238384;-93.9585295;target
-Jean;Jean;35.7790078;-115.324314;target
-Capelle Ann Den Ijssel;Capelle Ann Den Ijssel;51.92917;4.57778;source
-Needham;Needham;31.9868295;-88.33308822099423;target
-Portofino;Portofino;44.3036653;9.2093446;target
-Pomona;Pomona;34.0553813;-117.7517496;target
-Quebec City;Quebec City;46.8183175;-71.2143518;target
-Birch Run;Birch Run;61.13815625;-149.80130747710984;target
-Estero;Estero;26.4381474;-81.8067537;target
-Shakopee;Shakopee;44.7980186;-93.5268986;target
-Harare;Harare;-17.831773;31.045686;target
-Surry;Surry;37.1381363;-76.834945;target
-Battle Ground;Battle Ground;45.7813532;-122.5337433;target
-New Bern;New Bern;35.1084931;-77.0441143;target
-Brazil;Brazil;-10.3333333;-53.2;target
-Mannheim;Mannheim;49.4892913;8.4673098;source
-Loveland;Loveland;40.3977612;-105.0749801;target
-Artesia;Artesia;33.8690197;-118.0796195;target
-Cape Canaveral;Cape Canaveral;28.45077;-80.52662;target
-Bondi Junction;Bondi Junction;-33.8930034;151.2501228;source
-Maui, Makawao;Maui, Makawao;20.8510965;-156.32371705593866;target
-Troy;Troy;39.95737395;26.238017461011644;target
-St Georges;St Georges;48.6581382;6.9280988;target
-Stockholm;Stockholm;59.3251172;18.0710935;source
-Stuttgart;Stuttgart;48.7784485;9.1800132;source
-The Colony;The Colony;33.0890094;-96.8863922;target
-Higuey;Higuey;18.6127983;-68.7119822;target
-Firenze;Firenze;43.7698712;11.2555757;source
-Hoofddorp;Hoofddorp;52.3055506;4.6926655;source
-Corona;Corona;33.8752945;-117.5664449;target
-Scranton;Scranton;41.4086874;-75.6621294;target
-Milledgeville;Milledgeville;33.0801429;-83.2320991;target
-Naples;Naples;40.8358846;14.2487679;source
-Adeje;Adeje;28.1219416;-16.7241893;target
-Shelburne;Shelburne;44.394248450000006;-73.22640417513911;target
-Alphen Aan Den Rijn;Alphen Aan Den Rijn;52.1131403;4.6408411999450685;source
-Revere;Revere;42.4084302;-71.0119948;target
-Oak Ridge;Oak Ridge;36.0103562;-84.2696449;target
-Zurich;Zurich;47.3744489;8.5410422;source
-Botafogo;Botafogo;-22.94886035;-43.18011371065211;target
-Chessington;Chessington;51.358336;-0.2986216;source
-Seoul;Seoul;37.5666791;126.9782914;source
-Hoboken;Hoboken;40.7433066;-74.0323752;target
-Castries;Castries;43.6779101;3.9868904;target
-West Long Branch;West Long Branch;40.2903891;-74.0176381;target
-Rio De Janeiro;Rio De Janeiro;-22.9110137;-43.2093727;target
-Gardena;Gardena;33.8963593;-118.3053037;source
-Abaco Island;Abaco Island;26.9244718;-77.59887606373994;target
-North Redington Beach;North Redington Beach;27.8161361;-82.8206587;target
-Rottach-Egern;Rottach-Egern;47.6909599;11.7707109;source
-Georgetown;Georgetown;6.8137426;-58.1624465;target
-Dallas;Dallas;32.7762719;-96.7968559;source
-Palm Bay;Palm Bay;27.9946969;-80.6366144;target
-Zapata;Zapata;26.9879626;-99.1673556;target
-Marietta;Marietta;33.9528472;-84.5496148;source
-Lake Placid;Lake Placid;44.279621;-73.979874;target
-Stockport;Stockport;53.407901;-2.160243;source
-Riverside;Riverside;33.9459413;-117.41024442439222;target
-Portarlington;Portarlington;53.162222;-7.191111;source
-Neenah;Neenah;44.1858193;-88.462609;target
-Plover;Plover;42.8783598;-94.6234034;target
-Wilsonville;Wilsonville;45.3099218;-122.7681602;target
-Twickenham;Twickenham;51.4467444;-0.3281887;source
-Rio Hato;Rio Hato;8.3789084;-80.1641302;target
-Normal;Normal;40.5092961;-88.9843937;target
-Bismarck;Bismarck;46.808327;-100.783739;target
-Den Haag;Den Haag;52.0799838;4.3113461;source
-Johnson Creek;Johnson Creek;43.076113;-88.7742707;source
-Baltimore;Baltimore;39.2908816;-76.610759;source
-Rosemead;Rosemead;34.0676169;-118.0879763;source
-Ensenada;Ensenada;31.8658887;-116.6029835;target
-Mt.Crested Butte;Mt.Crested Butte;38.9076593;-106.9690519;target
-Beaver Creek;Beaver Creek;39.6048786;-106.51500172410503;target
-Gloucester;Gloucester;51.8653705;-2.2458192;source
-Deer Park;Deer Park;42.1608585;-88.0814651;target
-Nevis;Nevis;17.1508813;-62.5852896007;target
-Odessa;Odessa;46.4843023;30.7322878;source
-Trincity;Trincity;10.6343224;-61.3567735;target
-Olympic Valley;Olympic Valley;39.1984156;-120.2298597;target
-Wildsteig;Wildsteig;47.7012483;10.9363218;source
-Deerfield Beach;Deerfield Beach;26.318342;-80.0996306;target
-Palermo;Palermo;38.1112268;13.3524434;source
-Lodi;Lodi;45.2613104;9.491678060021837;source
-Saginaw;Saginaw;43.4200387;-83.9490365;source
-Natchitoches;Natchitoches;31.7606732;-93.0860209;source
-Rio De Janeiro;Rio De Janeiro;-22.9110137;-43.2093727;source
-Megeve;Megeve;45.8567089;6.617932;target
-Cambridge- MA;Cambridge- MA;52.2055314;0.1186637;source
-Apodaca Nuevo Leon;Apodaca Nuevo Leon;25.7430212;-100.1710854;source
-Newcastle;Newcastle;54.9738474;-1.6131572;source
-Edinburgh;Edinburgh;55.9533456;-3.1883749;source
-Swansea;Swansea;51.6195955;-3.9459248;source
-Sao Paulo;Sao Paulo;-23.5506507;-46.6333824;target
-Globe;Globe;51.5081048;-0.097196767224824;target
-Alamogordo;Alamogordo;32.9046474;-105.941835;target
-Duesseldorf;Duesseldorf;51.19077325;6.793516713552313;source
-Hope;Hope;45.0554436;42.1230338;target
-Dresden;Dresden;51.0493286;13.7381437;source
-Haugesund;Haugesund;59.46824785;5.082761213563481;source
-Port of Spain;Port of Spain;10.6572678;-61.5180173;target
-Morehead;Morehead;38.1839705;-83.4326841;target
-Venezia;Venezia;45.4371908;12.3345898;target
-Tiverton;Tiverton;50.91733035;-3.4625507372679287;source
-Warrington;Warrington;53.3899497;-2.5943178;source
-Pawleys Island;Pawleys Island;33.4293486;-79.1215912;target
-Bern;Bern;46.9482713;7.4514512;source
-Kyoto;Kyoto;35.021041;135.7556075;source
-Kelso;Kelso;46.1421249;-122.905299;target
-Waltham Abbey;Waltham Abbey;51.6892068;-0.0009449;target
-Welches;Welches;45.3384997;-121.9634026;target
-Torrey;Torrey;38.2997368;-111.42047;target
-Delta;Delta;33.3926893;-95.6749486;target
-Lancashire;Lancashire;53.8611703;-2.5650887919475496;source
-Hialeah;Hialeah;25.8575963;-80.2781057;target
+[H]Las Vegas;Las Vegas;36.1672559;-115.148516;target
+[C]Dorset;Dorset;50.79683685;-2.34473226124306;source
+[H]Portland;Portland;45.5202471;-122.6741949;target
+[H]Austin;Austin;30.2711286;-97.7436995;target
+[C]Grapevine;Grapevine;32.9337381;-97.0788754;source
+[H]Coral Gables;Coral Gables;25.6915434;-80.23454887092652;target
+[H]Morro Bay;Morro Bay;35.3658075;-120.849901;target
+[H]Oahu, Honolulu;Oahu, Honolulu;21.48343645;-158.03648372697478;target
+[H]Sterling;Sterling;31.8151416;-101.0452671;target
+[C]Hong Kong Sar;Hong Kong Sar;22.350627;114.1849161;source
+[H]Tucson;Tucson;32.2228765;-110.9748477;target
+[H]Bangor;Bangor;44.8011821;-68.7778138;target
+[C]Meads Bay;Meads Bay;18.18345325;-63.13948732929756;source
+[H]Dallas;Dallas;32.7762719;-96.7968559;target
+[H]Durham;Durham;35.996653;-78.9018053;target
+[H]Jekyll Island;Jekyll Island;31.0655982;-81.41431464659931;target
+[H]Las Cruces;Las Cruces;32.3140354;-106.7798078;target
+[H]New York;New York;40.7127281;-74.0060152;target
+[H]Philadelphia;Philadelphia;39.9527237;-75.1635262;target
+[H]Primm;Primm;35.6115884;-115.3858615;target
+[H]Richmond;Richmond;37.5385087;-77.43428;target
+[H]San Antonio;San Antonio;29.4246002;-98.4951405;target
+[H]Uniondale;Uniondale;40.7159385;-73.59384782542784;target
+[H]Phoenix;Phoenix;33.4484367;-112.074141;target
+[C]Middlesex;Middlesex;51.546055800000005;-0.2537791389340719;source
+[C]Moscow;Moscow;55.7504461;37.6174943;source
+[H]Monument Valley;Monument Valley;36.9820026;-110.1108327;target
+[C]Orlando;Orlando;28.5421109;-81.3790304;source
+[H]Chattanooga;Chattanooga;35.0457219;-85.3094883;target
+[C]Port of Spain;Port of Spain;10.6572678;-61.5180173;source
+[H]Jacksonville;Jacksonville;30.3321838;-81.655651;target
+[H]Bessemer;Bessemer;33.4017766;-86.954437;target
+[C]San Francisco;San Francisco;37.7790262;-122.419906;source
+[H]Charlotte;Charlotte;35.2272086;-80.8430827;target
+[H]Duncanville;Duncanville;32.6518004;-96.9083366;target
+[H]Fort Worth;Fort Worth;32.753177;-97.3327459;target
+[H]Glenn Ellen;Glenn Ellen;41.84103;-88.070717;target
+[H]Lawndale;Lawndale;33.8885217;-118.3531991;target
+[H]Miami Beach;Miami Beach;25.7929198;-80.1353006;target
+[H]Myrtle Beach;Myrtle Beach;33.6956461;-78.8900409;target
+[H]Naples;Naples;40.8358846;14.2487679;target
+[H]National City;National City;32.6781085;-117.0991967;target
+[H]North Las Vegas;North Las Vegas;36.2005843;-115.121584;target
+[H]Orlando;Orlando;28.5421109;-81.3790304;target
+[H]Sarasota;Sarasota;27.3365805;-82.5308545;target
+[H]Southbury;Southbury;41.4814848;-73.2131693;target
+[H]Towson;Towson;39.39645905;-76.61481481790992;target
+[H]Tucumcari;Tucumcari;35.1719425;-103.72504;target
+[H]Boca Raton;Boca Raton;26.3586885;-80.0830984;target
+[C]Singapore;Singapore;1.357107;103.8194992;source
+[H]Bryce Canyon;Bryce Canyon;37.618409;-112.1422341;target
+[H]Westminster;Westminster;51.5004439;-0.1265398;target
+[C]Coral Gables;Coral Gables;25.6915434;-80.23454887092652;source
+[H]Gretna;Gretna;29.9146493;-90.0539604;target
+[C]Dhaka;Dhaka;23.7644025;90.389015;source
+[C]Dubai;Dubai;25.2653471;55.2924914;source
+[H]Fort Lauderdale;Fort Lauderdale;26.1223084;-80.1433786;target
+[H]Irving;Irving;32.8295183;-96.9442177;target
+[H]Newark;Newark;40.735657;-74.1723667;target
+[H]South San Francisco;South San Francisco;37.6535403;-122.4168664;target
+[H]El Paso;El Paso;31.7754152;-106.464634;target
+[H]Salt Lake City;Salt Lake City;40.7596198;-111.8867975;target
+[H]Atlanta;Atlanta;33.7489924;-84.3902644;target
+[H]Baltimore;Baltimore;39.2908816;-76.610759;target
+[H]Birmingham;Birmingham;52.4796992;-1.9026911;target
+[H]Brooklyn;Brooklyn;40.6526006;-73.9497211;target
+[H]Clearwater Beach;Clearwater Beach;27.9774736;-82.8279313;target
+[H]Detroit;Detroit;42.3315509;-83.0466403;target
+[H]Jersey City;Jersey City;40.7215682;-74.047455;target
+[H]Long Beach;Long Beach;33.7690164;-118.191604;target
+[H]San Francisco;San Francisco;37.7790262;-122.419906;target
+[H]Spartanburg;Spartanburg;34.9498007;-81.9320157;target
+[H]Tallahassee;Tallahassee;30.4380832;-84.2809332;target
+[H]The Woodlands;The Woodlands;30.1734194;-95.504686;target
+[C]Montevideo;Montevideo;-34.9058916;-56.1913095;source
+[H]Casa Grande;Casa Grande;32.8795022;-111.757352;target
+[H]Greenville;Greenville;34.851354;-82.3984882;target
+[H]Los Angeles;Los Angeles;34.0536909;-118.242766;target
+[H]Valdosta;Valdosta;30.8327022;-83.2784851;target
+[C]New York City;New York City;40.7127281;-74.0060152;source
+[H]Nashville;Nashville;36.1622767;-86.7742984;target
+[H]Williams;Williams;48.3629861;-103.4958386;target
+[H]Asheville;Asheville;35.6009498;-82.5540161;target
+[H]Boston;Boston;42.3602534;-71.0582912;target
+[H]Chicago;Chicago;41.8755616;-87.6244212;target
+[H]Denver;Denver;39.7392364;-104.9848623;target
+[H]Florida City;Florida City;25.4480101;-80.479102;target
+[H]Grapevine;Grapevine;32.9337381;-97.0788754;target
+[H]Grass Valley;Grass Valley;39.2190607;-121.06292;target
+[H]Hanover;Hanover;52.3744779;9.7385532;target
+[H]Houston;Houston;29.7589382;-95.3676974;target
+[H]Huntsville;Huntsville;34.729847;-86.5859011;target
+[H]Laughlin;Laughlin;35.1187959;-114.70323202755507;target
+[H]Mesquite;Mesquite;32.7666103;-96.599472;target
+[H]Mountain Home;Mountain Home;43.1329504;-115.691197;target
+[H]Newport Beach;Newport Beach;33.6170092;-117.9294401;target
+[H]Old Greenwich;Old Greenwich;41.022875;-73.564846;target
+[H]Ruidoso Downs;Ruidoso Downs;33.3289733;-105.6044291;target
+[H]South Portland;South Portland;43.6414716;-70.2408811;target
+[H]Tempe;Tempe;33.4255056;-111.9400091;target
+[H]Virginia Beach;Virginia Beach;36.8529841;-75.9774183;target
+[H]West Palm Beach;West Palm Beach;26.715364;-80.0532942;target
+[H]Inglewood;Inglewood;33.9562003;-118.353132;target
+[H]Arlington;Arlington;32.701939;-97.105623790337;target
+[C]Barbados;Barbados;13.1500331;-59.5250305;source
+[H]Herndon;Herndon;39.909726;-100.785153;target
+[H]Sunnyvale;Sunnyvale;37.3688301;-122.036349;target
+[H]Vicksburg;Vicksburg;32.3528055;-90.8777342;target
+[H]Cheyenne;Cheyenne;41.139981;-104.820246;target
+[H]Cleveland;Cleveland;41.4996562;-81.6936813;target
+[H]Miami;Miami;25.7741728;-80.19362;target
+[H]New Orleans;New Orleans;29.9759983;-90.0782127;target
+[H]Little Rock;Little Rock;34.7465071;-92.2896267;target
+[H]Seattle;Seattle;47.6038321;-122.3300624;target
+[H]Daytona Beach;Daytona Beach;29.2108147;-81.0228331;target
+[H]Baton Rouge;Baton Rouge;30.4459596;-91.18738;target
+[H]Boulder City;Boulder City;35.9787638;-114.8337739;target
+[H]Cocoa Beach;Cocoa Beach;28.3298487;-80.62054663871002;target
+[H]Palm Desert;Palm Desert;33.74079965;-116.36936983394352;target
+[H]Raleigh;Raleigh;35.7803977;-78.6390989;target
+[H]San Rafael;San Rafael;37.9735346;-122.5310874;target
+[H]Southern Pines;Southern Pines;35.1740471;-79.3922539;target
+[H]Sunrise;Sunrise;26.1471902;-80.32966128894083;target
+[H]West Hollywood;West Hollywood;34.0923014;-118.3692894;target
+[H]Weston;Weston;51.3471927;-2.9778916;target
+[H]Winter Garden;Winter Garden;28.5502685;-81.59259746085962;target
+[H]Pasadena;Pasadena;34.1476452;-118.1444779;target
+[C]Brooklyn;Brooklyn;40.6526006;-73.9497211;source
+[H]Burlingame;Burlingame;37.5780965;-122.3473099;target
+[H]Reston;Reston;38.955696;-77.34188283719988;target
+[H]Fairfax;Fairfax;38.8462236;-77.3063733;target
+[H]Irvine;Irvine;33.6856969;-117.8259819;target
+[H]Cincinnati;Cincinnati;39.1014537;-84.5124602;target
+[H]Knoxville;Knoxville;35.9603948;-83.9210261;target
+[H]Renton;Renton;47.4799078;-122.2034496;target
+[H]Seaside;Seaside;36.62593;-121.8169383456945;target
+[C]Miami;Miami;25.7741728;-80.19362;source
+[H]Dania Beach;Dania Beach;26.0524224;-80.143929;target
+[H]Grand Canyon;Grand Canyon;36.0965604;-112.0984941;target
+[H]Winter Haven;Winter Haven;28.0222435;-81.7328568;target
+[H]Garden Grove;Garden Grove;33.7746292;-117.9463717;target
+[H]La Jolla;La Jolla;32.83259;-117.2716839;target
+[H]Mount Charleston;Mount Charleston;36.257191;-115.6427994;target
+[H]Punta Gorda;Punta Gorda;26.9297836;-82.0453664;target
+[H]Rancho Mirage;Rancho Mirage;33.770859;-116.42687402345577;target
+[H]Ridgecrest;Ridgecrest;35.6225064;-117.6699414;target
+[H]Saint Louis;Saint Louis;38.6264256;-90.1995853;target
+[H]Yakima;Yakima;46.601557;-120.510842;target
+[H]Orange;Orange;33.7500378;-117.8704931;target
+[H]Rosemont;Rosemont;41.9941334;-87.8756737;target
+[H]Mount Laurel;Mount Laurel;39.934002;-74.8909988;target
+[H]Breckenridge;Breckenridge;32.7558392;-98.9032554;target
+[C]Dublin;Dublin;53.3497645;-6.2602732;source
+[H]Milwaukee;Milwaukee;43.0349931;-87.922497;target
+[C]Las Vegas;Las Vegas;36.1672559;-115.148516;source
+[H]Albuquerque;Albuquerque;35.0841034;-106.650985;target
+[H]Brentwood;Brentwood;37.9317766;-121.696026;target
+[H]Dover;Dover;51.1251275;1.3134228;target
+[H]Forsyth;Forsyth;39.9325368;-88.9511912;target
+[H]Paramus;Paramus;40.9452911;-74.0735899;target
+[H]St. Louis;St. Louis;38.6264256;-90.1995853;target
+[H]Washington D.C.;Washington D.C.;38.8950368;-77.0365427;target
+[H]San Diego;San Diego;32.7174202;-117.1627728;target
+[C]Montreal;Montreal;45.5031824;-73.5698065;source
+[H]Pigeon Forge;Pigeon Forge;35.7884241;-83.5543329;target
+[H]Billings;Billings;45.7874957;-108.49607;target
+[H]Charleston;Charleston;32.7876012;-79.9402728;target
+[H]Grants Pass;Grants Pass;42.4393707;-123.3272489;target
+[H]Lexington;Lexington;38.0464066;-84.4970393;target
+[H]Minneapolis;Minneapolis;44.9772995;-93.2654692;target
+[H]Thousand Oaks;Thousand Oaks;34.1705609;-118.8375937;target
+[H]Alexandria;Alexandria;31.199004;29.894378;target
+[H]Monterey;Monterey;36.2231079;-121.3877428;target
+[H]Key Largo;Key Largo;25.091338;-80.46777414781022;target
+[C]Buenos Aires;Buenos Aires;-34.6075682;-58.4370894;source
+[H]Maui, Lahaina;Maui, Lahaina;20.88717735;-156.6748023632949;target
+[H]Federal Way;Federal Way;47.313494;-122.3393103;target
+[C]Guangzhou;Guangzhou;23.1301964;113.2592945;source
+[H]Aurora;Aurora;41.7571701;-88.3147539;target
+[H]Golden;Golden;39.7546349;-105.2205809;target
+[H]Hammond;Hammond;41.5833658;-87.500043;target
+[H]Huntington Beach;Huntington Beach;33.6783336;-118.0000166;target
+[C]Manila;Manila;14.5948914;120.9782618;source
+[H]Fernandina Beach;Fernandina Beach;30.6696818;-81.4625919;target
+[H]Hilton Head Island;Hilton Head Island;32.1618488;-80.7512616;target
+[H]Hollywood;Hollywood;34.0980031;-118.329523;target
+[H]Kenner;Kenner;29.9942265;-90.2417806;target
+[H]Bentonville;Bentonville;36.3728538;-94.2088172;target
+[H]Scottsdale;Scottsdale;33.4942189;-111.9260184;target
+[H]Maui Kahului;Maui Kahului;20.8747708;-156.4529879461996;target
+[H]Coldwater;Coldwater;37.2689131;-99.3267808;target
+[H]Humble;Humble;29.9988312;-95.2621553;target
+[H]Kansas City;Kansas City;39.100105;-94.5781416;target
+[H]Laguna Beach;Laguna Beach;33.5426975;-117.785366;target
+[H]Matteson;Matteson;41.509832;-87.739267;target
+[H]Fort Lee;Fort Lee;40.8509333;-73.9701382;target
+[H]Chantilly;Chantilly;49.1799586;2.47578765999255;target
+[H]Key West;Key West;24.5625566;-81.7724368;target
+[H]Lake Buena Vista;Lake Buena Vista;28.38034955;-81.5297578369267;target
+[H]Killeen;Killeen;31.1171441;-97.727796;target
+[H]Daytona Beach Shores;Daytona Beach Shores;29.1760933;-80.9828323;target
+[H]Louisville;Louisville;38.2542376;-85.759407;target
+[H]Pittsburgh;Pittsburgh;40.4416941;-79.9900861;target
+[H]West Fargo;West Fargo;46.874967;-96.900362;target
+[H]Branson;Branson;36.6411357;-93.2175285;target
+[H]Gatlinburg;Gatlinburg;35.714259;-83.5101638;target
+[H]Bowling Green;Bowling Green;36.9903199;-86.4436018;target
+[H]Hauppauge;Hauppauge;40.8239353;-73.20595713476213;target
+[H]Newburgh;Newburgh;41.5034271;-74.0104179;target
+[H]North Myrtle Beach;North Myrtle Beach;33.8278405;-78.6800323;target
+[H]Albert Lea;Albert Lea;43.6480127;-93.3682656;target
+[C]Aventura;Aventura;25.9564812;-80.1392121;source
+[H]San Luis Obispo;San Luis Obispo;35.3540209;-120.3757163;target
+[H]Wichita;Wichita;37.6922361;-97.3375448;target
+[H]Mckinney;Mckinney;33.1976496;-96.6154471;target
+[H]Key Biscayne;Key Biscayne;25.6968351;-80.1635261;target
+[C]Glattbrugg;Glattbrugg;47.4326312;8.5647892;source
+[H]Grand Rapids;Grand Rapids;42.9632405;-85.6678639;target
+[H]Anderson;Anderson;31.7819242;-95.6258199;target
+[H]Hickory;Hickory;37.959055;-93.3334746;target
+[H]Laurel;Laurel;31.6940509;-89.1306124;target
+[H]Palmdale;Palmdale;34.5793131;-118.1171108;target
+[H]Big Island , Kailua-Kona;Big Island , Kailua-Kona;19.6478398;-155.998093;target
+[H]Fargo;Fargo;46.877229;-96.789821;target
+[H]Fort Myers;Fort Myers;26.640628;-81.8723084;target
+[H]Incline Village;Incline Village;39.2501246;-119.951909;target
+[H]Langhorne;Langhorne;40.1745538;-74.9226665;target
+[H]Memphis;Memphis;35.1335022;-89.9668758;target
+[H]Palm Springs;Palm Springs;33.77217945;-116.49529769683984;target
+[H]Springfield;Springfield;39.7990175;-89.6439575;target
+[H]St. Pete Beach;St. Pete Beach;27.7253065;-82.741212;target
+[H]Waco;Waco;31.549333;-97.1466695;target
+[H]El Segundo;El Segundo;33.917028;-118.4156337;target
+[H]Desert Hot Springs;Desert Hot Springs;33.961124;-116.5016784;target
+[H]El Portal;El Portal;25.8553739;-80.193103;target
+[H]Kissimmee;Kissimmee;28.2918995;-81.4075838;target
+[H]Sedona;Sedona;34.8679599;-111.7617165;target
+[H]Sparks;Sparks;39.5404679;-119.7487235;target
+[H]Casper;Casper;42.8501191;-106.325138;target
+[H]Fallon;Fallon;47.5075937;6.4807726;target
+[H]Moriarty;Moriarty;34.9900503;-106.049189;target
+[H]St. George;St. George;37.104153;-113.5841313;target
+[H]Treasure Island;Treasure Island;37.8233541;-122.37015310228703;target
+[H]Petaluma;Petaluma;38.2325829;-122.636465;target
+[H]Arroyo Grande;Arroyo Grande;35.1185869;-120.590725;target
+[H]Colorado Springs;Colorado Springs;38.8339578;-104.825348;target
+[H]Texarkana;Texarkana;33.44667445;-94.07714830522016;target
+[H]Olathe;Olathe;38.8838856;-94.81887;target
+[C]Denver;Denver;39.7392364;-104.9848623;source
+[H]Elkhart;Elkhart;41.6819935;-85.9766671;target
+[H]Tuscaloosa;Tuscaloosa;33.2095614;-87.5675258;target
+[H]Chapel Hill;Chapel Hill;35.9131542;-79.05578;target
+[H]Dedham;Dedham;41.9063152;-94.8222082;target
+[H]Fort Wayne;Fort Wayne;41.0799898;-85.1386015;target
+[H]Lumberton;Lumberton;34.6183433;-79.0083993;target
+[H]Rutherford;Rutherford;40.826489;-74.1068091;target
+[H]Toledo;Toledo;39.8560679;-4.0239568;target
+[H]Waterbury;Waterbury;41.5538091;-73.0438362;target
+[H]Wilmington;Wilmington;39.7459468;-75.546589;target
+[H]Bridgeton;Bridgeton;38.7566055;-90.42352;target
+[H]Pismo Beach;Pismo Beach;33.7312058;-117.7697509;target
+[H]Cranbury;Cranbury;40.3099385;-74.51772241230152;target
+[H]East Hartford;East Hartford;41.7823216;-72.6120346;target
+[H]Fredericksburg;Fredericksburg;38.3031837;-77.4605399;target
+[H]Oakbrook;Oakbrook;39.1806323;-81.5206784;target
+[H]Tulsa;Tulsa;36.1556805;-95.9929113;target
+[H]Pensacola;Pensacola;30.421309;-87.2169149;target
+[C]Shanghai;Shanghai;31.2322758;121.4692071;source
+[H]Park City;Park City;40.6460921;-111.4979963;target
+[H]Vienna;Vienna;48.2083537;16.3725042;target
+[H]Overland Park;Overland Park;38.9742502;-94.6851702;target
+[H]Anchorage;Anchorage;61.2163129;-149.894852;target
+[H]Lakewood;Lakewood;39.7085736;-105.0846694;target
+[H]Rochester;Rochester;43.157285;-77.615214;target
+[H]Yonkers;Yonkers;40.9312099;-73.8987469;target
+[H]Atlantic City;Atlantic City;39.3642852;-74.4229351;target
+[H]Joplin;Joplin;37.08418;-94.51323;target
+[H]Burbank;Burbank;34.1816482;-118.3258554;target
+[C]Plymouth;Plymouth;50.3712659;-4.1425658;source
+[H]Bloomington;Bloomington;39.1670396;-86.5342881;target
+[H]Duck Key;Duck Key;24.778716000000003;-80.91390183832715;target
+[H]Glendale;Glendale;34.1469416;-118.2478471;target
+[C]Windsor;Windsor;51.48375775;-0.6040964041849046;source
