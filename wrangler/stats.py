@@ -189,6 +189,7 @@ class DataStatistics():
             ''' Central Tendency mode, median, and mean'''
 
             stats_df =  df.copy()
+        
             stat_keys = list(stats_df.columns)
             var_vals = list(stats_df.mode(axis=0, numeric_only=True, dropna=True))
             stat_dict.update({"Mode" : dict(zip(stat_keys,var_vals))})
@@ -268,7 +269,7 @@ class DataStatistics():
     '''
     def fit_distributions(self,
                           df,     # valid pandas dataframe
-                          dist_type_list="popular",
+                          dist_type_list="full",
                          ):
         import traceback
         import pandas as pd
