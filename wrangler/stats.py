@@ -208,6 +208,85 @@ class DataStatistics():
             print(traceback.format_exc())
 
         return stat_dict
+    
+    def new_get_central_tendency(self, df):
+        import traceback
+        import pandas as pd
+        from scipy.stats import norm
+        
+        stat_dict = {}
+        
+        
+        try:
+            if not isinstance(df,pd.DataFrame):
+                raise ValueError("data is an invalid pandas DataFrame")
+            
+            stats_df = df.copy()
+            
+            #provide statistics of Mode, Median, Mean, Variance and Standard Deviation
+            stat_keys = list(stats_df.columns)
+            var_vals = list(stats_df.mode(axis=0, numeric_only=True, dropna=True))
+            stat_dict.update({"Mode" : dict(zip(stat_keys,var_vals))})
+            var_vals = list(round(stats_df.median(axis=0, numeric_only=True, skipna=True),4))
+            stat_dict.update({"Median" : dict(zip(stat_keys,var_vals))})
+            var_vals = list(round(stats_df.mean(axis=0, numeric_only=True, skipna=True),4))
+            stat_dict.update({"Mean" : dict(zip(stat_keys,var_vals))})
+            var_vals = list(round(stats_df.var(axis=0, numeric_only=True, skipna=True),4))
+            stat_dict.update({"Variance" : dict(zip(stat_keys,var_vals))})
+            var_vals = list(round(stats_df.std(axis=0, numeric_only=True, skipna=True),4))
+            stat_dict.update({"Standard Deviation" : dict(zip(stat_keys, var_vals))})
+            
+            stat_keys = list(stats_df.select_dtypes(['int64']).columns)
+            num_columns = len(stat_keys)
+            
+            #provides the percentage of data within one standard deviation of the mean
+            print("% of data within 1 standard deviation of the mean:")
+            for i in range (0, num_columns):
+                cdf_lower_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])                        [stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] - (stat_dict['Standard Deviation'])[stat_keys[i]])
+                cdf_upper_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] + (stat_dict['Standard Deviation'])[stat_keys[i]])
+                probability = round(cdf_upper_limit - cdf_lower_limit, 6)
+                percentage = str(probability * 100)
+                print(stat_keys[i]+":"+(percentage))
+            print(' ')
+            print(' ')
+
+            #provides the percentage of data within two standard deviations of the mean
+            print("% of data within 2 standard deviations of the mean:")
+            for i in range (0, num_columns):
+                cdf_lower_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] - (2*(stat_dict['Standard Deviation'])[stat_keys[i]]))
+                cdf_upper_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] + (2*(stat_dict['Standard Deviation'])[stat_keys[i]]))
+                probability = round(cdf_upper_limit - cdf_lower_limit, 6)
+                percentage = str(probability * 100)
+                print(stat_keys[i]+":"+(percentage))
+            print(' ')
+            print(' ')
+            
+            #provides the percentage of data within three standard deviations of the mean
+            print("% of data within 3 standard deviations of the mean:")
+            for i in range (0, num_columns):
+                cdf_lower_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] - (3*(stat_dict['Standard Deviation'])[stat_keys[i]]))
+                cdf_upper_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] + (3*(stat_dict['Standard Deviation'])[stat_keys[i]]))
+                probability = round(cdf_upper_limit - cdf_lower_limit, 6)
+                percentage = str(probability * 100)
+                print(stat_keys[i]+":"+(percentage))
+            print(' ')
+            print(' ')
+
+
+        
+        except Exception as err:
+            _s_fn_id = "Class <DataStatistics> Function <new_get_central_tendency>"
+            print("[Error}"+_s_fn_id, err)
+            print(traceback.format_exc())
+        
+       
+           
+        
+        return stat_dict
+       
+    
+        
+                        
 
     ''' Function - 
             name: get_uniformity
