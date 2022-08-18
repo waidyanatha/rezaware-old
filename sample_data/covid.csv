@@ -1,5 +1,7 @@
 dateRep,day,month,year,cases,deaths,countriesAndTerritories,geoId,countryterritoryCode,popData2019,continentExp,Cumulative_number_for_14_days_of_COVID-19_cases_per_100000
 24/10/2020,24,10,2020,61,2,Afghanistan,AF,AFG,38041757,Asia,2.58663132
+24/10/2020,24,10,2020,61,2,Afghanistan,AF,AFG,38041757,Asia,2.58663132
+
 23/10/2020,23,10,2020,116,4,Afghanistan,AF,AFG,38041757,Asia,2.45256811
 22/10/2020,22,10,2020,135,2,Afghanistan,AF,AFG,38041757,Asia,2.35004918
 21/10/2020,21,10,2020,88,2,Afghanistan,AF,AFG,38041757,Asia,2.17392693

@@ -213,8 +213,10 @@ class DataStatistics():
         import traceback
         import pandas as pd
         from scipy.stats import norm
+        from tabulate import tabulate
         
         stat_dict = {}
+        d = []
         
         
         try:
@@ -222,6 +224,7 @@ class DataStatistics():
                 raise ValueError("data is an invalid pandas DataFrame")
             
             stats_df = df.copy()
+            
             
             #provide statistics of Mode, Median, Mean, Variance and Standard Deviation
             stat_keys = list(stats_df.columns)
@@ -239,49 +242,34 @@ class DataStatistics():
             stat_keys = list(stats_df.select_dtypes(['int64']).columns)
             num_columns = len(stat_keys)
             
-            #provides the percentage of data within one standard deviation of the mean
-            print("% of data within 1 standard deviation of the mean:")
+            #provides the percentage of data within 1-3 standard deviations of the mean
+            print("% of data within standard deviations of the mean:")
             for i in range (0, num_columns):
                 cdf_lower_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])                        [stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] - (stat_dict['Standard Deviation'])[stat_keys[i]])
                 cdf_upper_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] + (stat_dict['Standard Deviation'])[stat_keys[i]])
-                probability = round(cdf_upper_limit - cdf_lower_limit, 6)
-                percentage = str(probability * 100)
-                print(stat_keys[i]+":"+(percentage))
-            print(' ')
-            print(' ')
-
-            #provides the percentage of data within two standard deviations of the mean
-            print("% of data within 2 standard deviations of the mean:")
-            for i in range (0, num_columns):
+                probability1 = round(cdf_upper_limit - cdf_lower_limit, 6)
+                percentage1 = str(probability1 * 100)
+               
                 cdf_lower_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] - (2*(stat_dict['Standard Deviation'])[stat_keys[i]]))
                 cdf_upper_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] + (2*(stat_dict['Standard Deviation'])[stat_keys[i]]))
-                probability = round(cdf_upper_limit - cdf_lower_limit, 6)
-                percentage = str(probability * 100)
-                print(stat_keys[i]+":"+(percentage))
-            print(' ')
-            print(' ')
-            
-            #provides the percentage of data within three standard deviations of the mean
-            print("% of data within 3 standard deviations of the mean:")
-            for i in range (0, num_columns):
+                probability2 = round(cdf_upper_limit - cdf_lower_limit, 8)
+                percentage2 = str(probability2 * 100)
+                
                 cdf_lower_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] - (3*(stat_dict['Standard Deviation'])[stat_keys[i]]))
                 cdf_upper_limit  = norm((stat_dict['Mean'])[stat_keys[i]],(stat_dict['Standard Deviation'])[stat_keys[i]]).cdf((stat_dict['Mean'])[stat_keys[i]] + (3*(stat_dict['Standard Deviation'])[stat_keys[i]]))
-                probability = round(cdf_upper_limit - cdf_lower_limit, 6)
-                percentage = str(probability * 100)
-                print(stat_keys[i]+":"+(percentage))
-            print(' ')
-            print(' ')
-
-
-        
+                probability3 = round(cdf_upper_limit - cdf_lower_limit, 8)
+                percentage3 = str(probability3 * 100)
+                
+                d.append([stat_keys[i], percentage1, percentage2, percentage3])
+                
+            #formats and prints this data as a table   
+            print(tabulate(d, headers=['variable', '1 standard deviation', '2 standard deviations', '3 standard deviations']))
+                                           
         except Exception as err:
             _s_fn_id = "Class <DataStatistics> Function <new_get_central_tendency>"
             print("[Error}"+_s_fn_id, err)
             print(traceback.format_exc())
-        
-       
-           
-        
+            
         return stat_dict
        
     
