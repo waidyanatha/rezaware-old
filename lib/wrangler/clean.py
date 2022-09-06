@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
+''' Load necessary and sufficient python librairies that are used throughout the class'''
+try:
+    import os
+    from numpy import isin
+    import numpy as np
+    from datetime import datetime, timedelta, date, timezone
+    import pandas as pd
+    import traceback
+
+    print("All packages in DataClensing loaded successfully!")
+
+except Exception as e:
+    print("Some packages didn't load\n{}".format(e))
+
 '''
     CLASS to clean up the data after extraction and staged in a desired file format:
         1) Remove empty columns and rows
@@ -11,12 +25,11 @@ class DataClensing():
     ''' Function
             name: __init__
             parameters:
-                    @name (str)
-                    @clean (dict)
-            procedure: 
 
-            return DataFrame
+            procedure: Initialize the class
+            return None
 
+            author: nuwan.waidyanatha@rezgateway.com
     '''
     def __init__(self, name : str="data", **clean:dict):
 
@@ -31,9 +44,8 @@ class DataClensing():
                             ]
 
         self.name = name
-        self._clean_procs = ["all"]
+#        self._clean_procs = ["all"]
 
-        print(params)
         return None
 
 
@@ -46,7 +58,7 @@ class DataClensing():
     '''
     def get_cleaned_data(self,
                          df,
-                         clean_scope : str= self.clean_scope,
+                         clean_scope, # : str= self._clean_procs,
                          **kwargs):
         pass
 
@@ -60,8 +72,8 @@ class DataClensing():
     def get_unit_converted_data(self,
                                 df,
                                 data_catalog, 
-                                cols : list=["all"]
-                                units : dict= self.convertions,
+                                cols, # : list=["all"],
+                                units, # : dict= self.convertions,
                                 **kwargs):
         pass
 
@@ -73,8 +85,8 @@ class DataClensing():
 
     '''
     def convert_currency(self,df,
-                         from_currency : str= self.to_currency,
-                         to_currency : str= self.to_currency,
+                         from_currency, # : str= self.to_currency,
+                         to_currency, # : str= self.to_currency,
                          **kwargs):
         pass
 
@@ -87,8 +99,8 @@ class DataClensing():
     '''
     def convert_imperial_to_metric(self,
                                    df,
-                                   from_unit_type: str= self.from_unit,
-                                   to_unity_type : str= self.to_unit,
+                                   from_unit_type, #: str= self.from_unit,
+                                   to_unity_type, # : str= self.to_unit,
                                    **kwargs):
         pass
 
@@ -117,3 +129,47 @@ class DataClensing():
     '''
     def drop_empty_rows(self,df,**kwargs):
         pass
+
+    ''' Function
+            name: drop_duplicates
+            parameters:
+                df - dataframe with all the data
+                kwargs - define whether to drop duplocate coloums or rows
+                        and the list of rows to consider to validate duplication
+            return dataframe (_return_df)
+
+            author: nuwan.waidyanatha@rezgateway.com
+    '''
+    def drop_duplicates(self,df,**kwargs):
+
+        _return_df = pd.DataFrame()   # initialize return var
+        _col_list = []   # initialize column list
+        _row_index_list = []   # initiatlize row index list
+
+        try:
+            if df.shape[0] <= 0:
+                raise ValueError("No data in the dataframe")
+            _return_df = df.copy()
+            
+            ''' if columns are listed, drop them '''
+            if "columns" in kwargs.keys():
+                _col_list = kwargs['columns']
+            else:
+                _col_list = _return_df.columns
+            ''' verify columns are in dataframe '''
+            if (set(_col_list).issubset(set(_return_df.columns))):
+                _return_df.drop_duplicates(_col_list, inplace=True, ignore_index=True)
+            else:
+                raise ValueError("List of columns don't match the dataframe columns")
+
+            ''' if row index is given drop them '''
+            if "row_index" in kwargs.keys():
+                _row_index_list = kwargs['row_index']
+                # COMPLETE THIS
+        
+        except Exception as err:
+            _s_fn_id = "Class <DataClensing> Function <drop_duplicates>"
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return _return_df
