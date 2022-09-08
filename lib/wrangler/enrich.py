@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
+''' Load necessary and sufficient python librairies that are used throughout the class'''
+try:
+    import os
+#    from numpy import isin
+#    import numpy as np
+#    from datetime import datetime, timedelta, date, timezone
+    import pandas as pd
+    from pandas.api.types import is_datetime64_any_dtype as is_datetime
+    import calendar
+    import traceback
+
+    print("All packages in OTAWebScraper loaded successfully!")
+
+except Exception as e:
+    print("Some packages didn't load\n{}".format(e))
+
 '''
     CLASS to enrich the data after the data has been extracted and cleaned:
         1) 
@@ -61,9 +77,9 @@ class DataEnrichment():
                           col_augment_dict : dict,
                           **kwargs):
 
-        import traceback
-        import pandas as pd
-        from pandas.api.types import is_datetime64_any_dtype as is_datetime
+#        import traceback
+#        import pandas as pd
+#        from pandas.api.types import is_datetime64_any_dtype as is_datetime
         
         ''' Exception text header '''
         _s_fn_id = "Class <DataEnrichment> Function <get_enriched_data>"
@@ -104,7 +120,7 @@ class DataEnrichment():
                 if "Text" in key:
                     pass
 
-            print(self._cols_to_augment_dict)
+            print("Columns to augment to dataframe:\n",self._cols_to_augment_dict)
 
             ''' if sorted **kwarg is provided then sort by the given columns 
                 if the columns are not in dataframe the aument them and remove before returning dataframe '''
@@ -126,7 +142,7 @@ class DataEnrichment():
     @staticmethod
     def get_DOW(self,_dt_df, **kwargs):
 
-        import pandas as pd
+#        import pandas as pd
 
         ''' single column dataframe with datetime values'''
         dow_df = pd.DataFrame([])
@@ -150,7 +166,7 @@ class DataEnrichment():
     @staticmethod
     def get_YYYY(self,_dt_df, **kwargs):
 
-        import pandas as pd
+#        import pandas as pd
 
         ''' single column dataframe with datetime values'''
         yyyy_df = pd.DataFrame([])
@@ -170,7 +186,7 @@ class DataEnrichment():
     @staticmethod
     def get_DD(self,_dt_df, **kwargs):
 
-        import pandas as pd
+#        import pandas as pd
 
         ''' single column dataframe with datetime values'''
         dd_df = pd.DataFrame([])
@@ -193,7 +209,7 @@ class DataEnrichment():
     @staticmethod
     def get_MM(self,_dt_df, **kwargs):
 
-        import pandas as pd
+#        import pandas as pd
 
         ''' single column dataframe with datetime values'''
         mm_df = pd.DataFrame([])
@@ -216,8 +232,8 @@ class DataEnrichment():
     @staticmethod
     def get_MMM(self,_dt_df, **kwargs):
 
-        import pandas as pd
-        import calendar
+#        import pandas as pd
+#        import calendar
 
         ''' single column dataframe with datetime values'''
         mmm_df = pd.DataFrame([])
@@ -241,7 +257,7 @@ class DataEnrichment():
     @staticmethod
     def get_MMM_DD(self,_dt_df, **kwargs):
 
-        import pandas as pd
+#        import pandas as pd
 
         ''' single column dataframe with datetime values'''
         mmm_dd_df = pd.DataFrame([])

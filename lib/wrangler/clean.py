@@ -46,6 +46,7 @@ class DataClensing():
         self.name = name
 #        self._clean_procs = ["all"]
 
+        print("Initialing DataEnrichment class for ",self.name)
         return None
 
 

@@ -36,8 +36,9 @@ class OTAWebScraper():
 
             author: nuwan.waidyanatha@rezgateway.com
     '''
-    def __init__(self):
+    def __init__(self, name : str="data"):
         
+        self.name = name
         self.path = "../../data/hospitality/bookings/scraper"
         self.ratesStoragePath = "../../data/hospitality/bookings/scraper/rates"
         self.file = "ota_input_urls.json"
@@ -67,6 +68,7 @@ class OTAWebScraper():
                                "review_score", # rating
                                "other",   # any other relevant text
                               ]
+        print("Initialing OTAWebScraper class for ",self.name)
         return None
 
     ''' Function
@@ -525,6 +527,7 @@ class OTAWebScraper():
                                 url,   # parameterized url
                                 checkin_date, # intended checkin date
                                 search_dt,    # scrape run date time
+                                destination_id, # location searched for
                                 fileName,     # store in csv file
                                 path          # directory path to store csv
                                ):
@@ -560,7 +563,8 @@ class OTAWebScraper():
                 _data_dict['Room Type'] = _list.find('span', class_='df597226dd').text
                 _data_dict['Room Rate'] = _list.find('span', class_='fcab3ed991 bd73d13072').text
                 _data_dict['Review Score'] = _list.find('div', class_='b5cd09854e d10a6220b4').text
-                _data_dict['Destination ID'] = _list.find('div', class_='a1fbd102d9').text
+                _data_dict['Destination ID'] = destination_id,
+                _data_dict['Location Desc'] = _list.find('div', class_='a1fbd102d9').text
                 _data_dict['Other Info'] = _list.find('div', class_='d22a7c133b').text
 
                 if bool(_data_dict):
@@ -621,6 +625,7 @@ class OTAWebScraper():
                     saveTo = self._scrape_bookings_to_csv(ota_dict['url'],      # constructed url with parameters
                                                           ota_dict['checkin'],  # booking intended checkin date
                                                           searchDT,   # date & time scraping was executed
+                                                          ota_dict['destination_id'],  # destingation id to lookup the name
                                                           _fname,       # csv file name to store in
                                                           dirPath     # folder name to save the files
                                                          )
