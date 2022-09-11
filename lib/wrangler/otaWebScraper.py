@@ -56,17 +56,18 @@ class OTAWebScraper():
 #                          "Boston, USA",
 #                          "Colombo, Sri Lanka",
                          ]
-        self.scrape_columns = ["search_datetime", # date&time scraping ran
+        self.scrape_columns = ["search_dt", # date&time scraping ran
+                               "property_name",   # hotel name
                                "checkin_date",    # anticipated checkin date
-                               "propery_name",    # hotel name
-                               "destination_city",   # hotel located city
+                               "destination_id",  # hotel destination id
+                               "destination_name",   # hotel located city
                                "destination_country",# hotel located country
                                "room_type",    # room type; e.g., double bed, queen bed
                                "adult_count",  # number of adults
                                "child_count",  # numbe of children
                                "room_rate",    # price per night
                                "review_score", # rating
-                               "other",   # any other relevant text
+                               "other_info",   # any other relevant text
                               ]
         print("Initialing OTAWebScraper class for ",self.name)
         return None
@@ -325,6 +326,12 @@ class OTAWebScraper():
             if 'checkoutOffset' in kwargs:
                 self.checkout_offset = kwargs['checkoutOffset']
 
+            ''' set the directory path to csv files with destination ids '''
+            if dirPath[-1] != "/":
+                _dest_dir_path = dirPath+"/"+"destinations"
+            else:
+                _dest_dir_path = dirPath+"destinations"
+
             ''' get the input parameters from the properties file '''
             _ota_input_param_list = self.get_scrape_input_params(property_dict)
             
@@ -339,8 +346,10 @@ class OTAWebScraper():
 
                     ''' get the list of destination ids '''
                     if "destinations" in ota.keys():
-                        _l_dest = self.get_destination_ids(fileName=ota["destinations"],
-                                                           dirPath=dirPath, col_name="destinationID")
+                        _l_dest = self.get_destination_ids(fileName=ota["destinations"],   # filename with destination ids
+                                                           dirPath=_dest_dir_path,   # path to the desitnation folder
+                                                           col_name="destinationID"  # column name with destination ids
+                                                          )
                         if len(_l_dest) > 0:
                             self.destination_id = _l_dest
 
@@ -559,15 +568,15 @@ class OTAWebScraper():
 
             for _list in lists:
                 _data_dict = {}
-                _data_dict['Search DateTime'] = search_dt,
-                _data_dict['Checkin Date'] = checkin_date,
-                _data_dict['Property Name'] = _list.find('div', class_='fcab3ed991 a23c043802').text
-                _data_dict['Room Type'] = _list.find('span', class_='df597226dd').text
-                _data_dict['Room Rate'] = _list.find('span', class_='fcab3ed991 bd73d13072').text
-                _data_dict['Review Score'] = _list.find('div', class_='b5cd09854e d10a6220b4').text
-                _data_dict['Destination ID'] = destination_id,
-                _data_dict['Location Desc'] = _list.find('div', class_='a1fbd102d9').text
-                _data_dict['Other Info'] = _list.find('div', class_='d22a7c133b').text
+                _data_dict['search_dt'] = search_dt,
+                _data_dict['checkin_date'] = checkin_date,
+                _data_dict['property_name'] = _list.find('div', class_='fcab3ed991 a23c043802').text
+                _data_dict['room_type'] = _list.find('span', class_='df597226dd').text
+                _data_dict['room_rate'] = _list.find('span', class_='fcab3ed991 bd73d13072').text
+                _data_dict['review_score'] = _list.find('div', class_='b5cd09854e d10a6220b4').text
+                _data_dict['destination_id'] = destination_id,
+                _data_dict['location_desc'] = _list.find('div', class_='a1fbd102d9').text
+                _data_dict['other_info'] = _list.find('div', class_='d22a7c133b').text
 
                 if bool(_data_dict):
                     _save_df = pd.concat([_save_df,pd.DataFrame(_data_dict)])

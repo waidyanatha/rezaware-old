@@ -37,8 +37,8 @@ db_name = "rezstage"
 db_schema = "lakehouse"
 #--username and password to connect
 #  default db_user="postgres", db_pswd = "postgres"
-db_user = "nuwan"
-db_pswd = "kotchchi7281"
+db_user = "postgres"
+db_pswd = "postgres"
 
 ''' SPARK '''
 #--settings to connect to the database to perform work loads '''

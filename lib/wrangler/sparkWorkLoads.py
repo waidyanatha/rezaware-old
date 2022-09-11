@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
     import sys
@@ -6,9 +9,9 @@ try:
     import importlib
     config = importlib.reload(config)
     import os
-#    from pyspark.sql.functions import split, col,substring,regexp_replace
+    from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
     import findspark
-    import pandas as pd
+#    import pandas as pd
 #    from pandas.api.types import is_datetime64_any_dtype as is_datetime
 #    import calendar
     import traceback
@@ -57,6 +60,8 @@ class SparkWorkLoads():
         self.spark_url = None
         self.spark_session = None
 
+        ''' Spark function parameters '''
+        self.spark_save_mode = "Append"
         try:
             ''' --- DATABASE ---
                 set the host IP '''
@@ -101,7 +106,7 @@ class SparkWorkLoads():
 
             ''' set the database schema '''
             if "dbSchema" in kwargs.keys():
-                self.host = kwargs['dbSchema']
+                self.db_schema = kwargs['dbSchema']
             elif config.db_schema:
                 self.db_schema = config.db_schema
             else:
@@ -174,7 +179,7 @@ class SparkWorkLoads():
             return DataFrame
 
     '''
-    def get_spark_session(self, **kwargs):
+    def DEPRECATED_get_spark_session(self, **kwargs):
 
         try:
             ''' the Spark session should be instantiated as follows '''
@@ -218,7 +223,7 @@ class SparkWorkLoads():
             load_sdf = self.spark_session.read.format("jdbc").\
                 options(
                     url=self.spark_url,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
-                    dbtable=dbTable,      # '_issuefix_bkdata.customerbookings',
+                    dbtable=self.db_schema+"."+dbTable,      # '_issuefix_bkdata.customerbookings',
                     user=self.db_user,     # 'postgres',
                     password=self.db_pswd, # 'postgres',
                     driver=self.db_driver).load()
@@ -234,7 +239,7 @@ class SparkWorkLoads():
         return load_sdf
 
     ''' Function
-            name: read_folder_csv_to_sdf
+            name: insert_sdf_into_table
             parameters:
                     @name (str)
                     @enrich (dict)
@@ -243,7 +248,65 @@ class SparkWorkLoads():
             return DataFrame
 
     '''
-    def read_csv_to_sdf(self,dirPath: str, **kwargs):
+    def insert_sdf_into_table(self, save_sdf, dbTable:str, **kwargs):
+        
+        _num_records_saved = 0
+        
+        try:
+            ''' validate sdf have data '''
+            if save_sdf.count() <= 0:
+                raise ValueError("Invalid spark dataframe with %d records" % (save_sdf.count())) 
+            ''' validate table '''
+            
+            ''' if created audit columns don't exist add them '''
+            listColumns=save_sdf.columns
+            if "created_dt" not in listColumns:
+                save_sdf = save_sdf.withColumn("created_dt", current_timestamp())
+            if "created_by" not in listColumns:
+                save_sdf = save_sdf.withColumn("created_by", lit(self.db_user))
+            if "created_proc" not in listColumns:
+                save_sdf = save_sdf.withColumn("created_proc", lit("Unknown"))
+            
+            ''' TODO: add code to accept options() to manage schema specific
+                authentication and access to tables '''
+
+            if "saveMode" in kwargs.keys():
+                self.spark_save_mode = kwargs['saveMode']
+                
+            print("Wait a moment while we insert data int %s" % dbTable)
+            ''' jdbc:postgresql://<host>:<port>/<database> '''
+            
+            # driver='org.postgresql.Driver').\
+            save_sdf.select(save_sdf.columns).write.format("jdbc").mode(self.spark_save_mode).\
+                options(
+                    url=self.spark_url,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
+                    dbtable=self.db_schema+"."+dbTable,       # '_issuefix_bkdata.customerbookings',
+                    user=self.db_user,     # 'postgres',
+                    password=self.db_pswd, # 'postgres',
+                    driver=self.db_driver).save("append")
+#            load_sdf.printSchema()
+
+            print("Save to %s complete!" % (dbTable))
+            _num_records_saved = save_sdf.count()
+
+        except Exception as err:
+            _s_fn_id = "Class <SparkWorkLoads> Function <insert_sdf_into_table>"
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return _num_records_saved
+
+    ''' Function
+            name: read_csv_to_sdf
+            parameters:
+                    filesPath (str)
+                    @enrich (dict)
+            procedure: 
+
+            return DataFrame
+
+    '''
+    def read_csv_to_sdf(self,filesPath: str, **kwargs):
 
         _csv_to_sdf = self.spark_session.sparkContext.emptyRDD()     # initialize the return var
         _tmp_df = self.spark_session.sparkContext.emptyRDD()
@@ -253,11 +316,11 @@ class SparkWorkLoads():
         _l_cols = []
         try:
             ''' check if the folder and files exists '''
-            if not dirPath:
-                raise ValueError("Invalid folder path %s" % dirPath)
-            filelist = os.listdir(dirPath)
+            if not filesPath:
+                raise ValueError("Invalid folder path %s" % filesPath)
+            filelist = os.listdir(filesPath)
             if not (len(filelist) > 0):
-                raise ValueError("No data files found in director: %s" % (dirPath))
+                raise ValueError("No data files found in director: %s" % (filesPath))
 
             ''' extract data from **kwargs if exists '''
             if 'schema' in kwargs.keys():
@@ -271,7 +334,7 @@ class SparkWorkLoads():
                                                           header='True', \
                                                           inferSchema='True', \
                                                           delimiter=',') \
-                                            .csv(dirPath)
+                                            .csv(filesPath)
 
 #            _csv_to_sdf.select(split(_csv_to_sdf.room_rate, '[US$]',2).alias('rate_curr')).show()
 
