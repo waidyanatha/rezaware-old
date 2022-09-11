@@ -71,3 +71,22 @@ class DataImport():
                    **kwargs):
         pass
 
+    ''' Function
+            name: csv_to_sql
+            parameters:
+                csv_df - dataframe containing the data to import into sql
+                sql_scritp - script to use with importing the data into the tables
+                kwargs - (i) database connection parameters
+                         (ii) force replace table rows
+
+            return error_log, stats_dict (dict) - with the database data ingestion
+                            and error log with failed rows
+
+            author: nuwan.waidyanatha@rezgateway.com
+    '''
+    @staticmethod
+    def csv_to_sql(self,
+                     csv_df,   # dataframe with the data
+                     **kwargs,   # other parameters to consider
+                    ):
+        return None

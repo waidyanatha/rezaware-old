@@ -48,6 +48,7 @@ class DataEnrichment():
                            "MMM",     # add a column with three letter month name
                            "MM",      # add a column with two digit month number
                            "MMM-DD",  # add a column with three letter month and two digit day
+                           "HH-mm",   # add a column with two digit hour and two digit minute
                           ]
                          }
 
@@ -132,36 +133,14 @@ class DataEnrichment():
         return _dt_aug_df
 
 
-    ''' Function - 
-            name: get_DOW
-            procedure: 
-
-            return DataFrame
-
-    '''
-    @staticmethod
-    def get_DOW(self,_dt_df, **kwargs):
-
-#        import pandas as pd
-
-        ''' single column dataframe with datetime values'''
-        dow_df = pd.DataFrame([])
-        dt_col_name =  _dt_df.columns[0]
-        dow_df["DOW"] = _dt_df[dt_col_name].dt.day_name()
-
-        ''' if abbreviation is true truncate to first three letters '''
-        if kwargs["abbreviate"]:
-            dow_df["DOW"] = dow_df["DOW"].str[:3]
-        
-        return dow_df
-
-
-    ''' Function - 
+    ''' Function
             name: get_YYYY
-            procedure: 
+            parameters:
+                _dt_df - 
+                kwargs - 
+            return dataframe (mm_df)
 
-            return DataFrame
-
+            author: nuwan.waidyanatha@rezgateway.com
     '''
     @staticmethod
     def get_YYYY(self,_dt_df, **kwargs):
@@ -176,35 +155,14 @@ class DataEnrichment():
         return yyyy_df
 
 
-    ''' Function - 
-            name: get_DD
-            procedure: 
-
-            return DataFrame
-
-    '''
-    @staticmethod
-    def get_DD(self,_dt_df, **kwargs):
-
-#        import pandas as pd
-
-        ''' single column dataframe with datetime values'''
-        dd_df = pd.DataFrame([])
-        dt_col_name =  _dt_df.columns[0]
-        dd_df["DD"] = _dt_df[dt_col_name].dt.day
-
-        if kwargs["pad_lead_zeros"]:
-            dd_df["DD"] = dd_df["DD"].apply(lambda x: '{0:0>2}'.format(x))
-
-        return dd_df["DD"]
-
-
-    ''' Function - 
+    ''' Function
             name: get_MM
-            procedure:
+            parameters:
+                _dt_df - 
+                kwargs - 
+            return dataframe (mm_df)
 
-            return DataFrame
-
+            author: nuwan.waidyanatha@rezgateway.com
     '''
     @staticmethod
     def get_MM(self,_dt_df, **kwargs):
@@ -248,6 +206,29 @@ class DataEnrichment():
 
 
     ''' Function - 
+            name: get_DD
+            procedure: 
+
+            return DataFrame
+
+    '''
+    @staticmethod
+    def get_DD(self,_dt_df, **kwargs):
+
+#        import pandas as pd
+
+        ''' single column dataframe with datetime values'''
+        dd_df = pd.DataFrame([])
+        dt_col_name =  _dt_df.columns[0]
+        dd_df["DD"] = _dt_df[dt_col_name].dt.day
+
+        if kwargs["pad_lead_zeros"]:
+            dd_df["DD"] = dd_df["DD"].apply(lambda x: '{0:0>2}'.format(x))
+
+        return dd_df["DD"]
+
+
+    ''' Function - 
             name: get_MMM_DD
             procedure: 
 
@@ -270,6 +251,54 @@ class DataEnrichment():
         return mmm_dd_df["MMM-DD"]
 
 
+    ''' Function
+            name: get_DOW
+            parameters:
+                _dt_df - 
+                kwargs - 
+            return dataframe (dow_df)
+
+            author: nuwan.waidyanatha@rezgateway.com
+    '''
+    @staticmethod
+    def get_DOW(self,_dt_df, **kwargs):
+
+#        import pandas as pd
+
+        ''' single column dataframe with datetime values'''
+        dow_df = pd.DataFrame([])
+        dt_col_name =  _dt_df.columns[0]
+        dow_df["DOW"] = _dt_df[dt_col_name].dt.day_name()
+
+        ''' if abbreviation is true truncate to first three letters '''
+        if kwargs["abbreviate"]:
+            dow_df["DOW"] = dow_df["DOW"].str[:3]
+        
+        return dow_df
+
+
+    ''' Function
+            name: get_HH_mm
+            parameters:
+                _dt_df - 
+                kwargs - 
+            return dataframe (hhmm_df)
+
+            author: nuwan.waidyanatha@rezgateway.com
+    '''
+    @staticmethod
+    def get_HH_mm(self,_dt_df, **kwargs):
+
+#        import pandas as pd
+
+        ''' single column dataframe with datetime values'''
+        hhmm_df = pd.DataFrame([])
+        dt_col_name =  _dt_df.columns[0]
+        hhmm_df["HH:m"] = _dt_df[dt_col_name].dt.strftime('%H:%M')
+
+        return hhmm_df
+
+
     ''' Function - 
             name: get_dt_augmentations
             procedure: 
@@ -287,7 +316,8 @@ class DataEnrichment():
                           'YYYY': self.get_YYYY,
                           "MMM" : self.get_MMM,
                           "MM" : self.get_MM,
-                          "MMM-DD" : self.get_MMM_DD
+                          "MMM-DD" : self.get_MMM_DD,
+                          "HH-mm" : self.get_HH_mm,
                          }
 
         _augmented_dt_df = _dt_df.copy()

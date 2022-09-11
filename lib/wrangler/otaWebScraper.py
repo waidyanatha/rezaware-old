@@ -418,6 +418,8 @@ class OTAWebScraper():
             if "search_datetime" in kwargs.keys():
                 _search_dt = kwargs["search_datetime"]
 
+            ''' TODO - change the function to round search datetime to nearest 30 min
+                using _distinct_df['search_datetime']=_distinct_df['search_datetime'].dt.round('30min') '''
             ''' pick the year, month, day, hour, min from search date time ''' 
             _minute = _search_dt.minute
             if _minute < 30:
@@ -710,7 +712,7 @@ class OTAWebScraper():
     def read_folder_csv_to_df(self,dirPath: str, **kwargs):
 
         ota_rates_df = pd.DataFrame()     # initialize the return var
-        _tmp_df = []
+        _tmp_df = pd.DataFrame()
         _start_dt = None
         _end_dt = None
         _l_cols = []
