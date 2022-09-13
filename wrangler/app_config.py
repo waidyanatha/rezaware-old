@@ -8,7 +8,18 @@
         Timezon, Currency
 '''
 
-''' IMPLEMENTATION '''
+''' APP OWNER '''
+#--organization name
+#  default: RezAWARE (rezgateway)
+org_name = "rezaware"
+#--org url
+#  default: https://rezgateway.com
+org_url = "https://rezgateway.com"
+#--org admin email
+#  defulat: rezaware@rezgateway.com
+org_email = "rezaware@rezgateway.com"
+
+''' HOSTS '''
 #--application hosting location must be replaced with deployed url 
 #  default localhost
 host_ip = "127.0.0.1"
@@ -48,6 +59,24 @@ db_pswd = "postgres"
 spark_home = '/opt/spark/'
 spark_bin = '/opt/spark/bin'
 spark_jar = '/opt/spark/jars/postgresql-42.5.0.jar'
+
+''' AIRFLOW '''
+#--set the AIRFLOW_HOME directory $path to save the dags
+#  default: airflow_home = "~/airflow"
+airflow_home = "~/airflow"
+#--set the aiflow username and password
+#  default: username="rezaware" password="rezaware"
+airflow_admin = "rezaware"
+airflow_pswd = "rezaware"
+#--set the airflow email to communicate logs and errors to the admin
+#  default: airflow_email = "admin.rezaware@rezgateway.com"
+airflow_email = "admin.rezaware@rezgateway.com"
+#--set the airflow database as postgres and mage sure the change
+#  aiflow.cfg parameters
+#     sql_alchemy_conn =postgresql+psycopg2://airflow@localhost:5432/airflow
+#     executor = LocalExecutor
+airflow_db_user = "rezawareflow"
+airflow_db_pswd = "rezawareflow"
 
 ''' TIMEZONE '''
 #-- implementation specific timezone in UTC
