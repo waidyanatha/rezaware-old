@@ -31,21 +31,6 @@ except Exception as e:
 
 class OTAWebScraper():
 
-#    try:
-#        ''' standard python packages '''
-#        import os
-#        import sys
-#        import logging
-#        import traceback
-#        import configparser
-#        import pandas as pd
-#        from datetime import datetime, date, timedelta
-
-#        print("All OTAWebScraper software packages loaded successfully!")
-
-#    except Exception as e:
-#        print("Some software packages in OTAWebScraper didn't load\n{}".format(e))
-
     ''' Function
             name: __init__
             parameters:
@@ -53,17 +38,20 @@ class OTAWebScraper():
             procedure: Initialize the class
             return None
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def __init__(self, name : str="data", **kwargs):
         
         self.name = name
-        
+
+        ''' Set the wrangler root directory '''
         self.rootDir = "./wrangler"
         if "ROOT_DIR" in kwargs.keys():
             self.rootDir = kwargs['ROOT_DIR']
+        if self.rootDir[-1] != "/":
+            self.rootDir +="/"
+
         self.modulePath = os.path.join(self.rootDir, 'modules/ota/')
-#      CONFIG_PATH = os.path.join(MODULE_PATH, 'app.cfg')
         self.configPath = os.path.join(self.modulePath, 'app.cfg')
         global config
         config = configparser.ConfigParser()
@@ -71,6 +59,8 @@ class OTAWebScraper():
 
         ''' get the file and path for the logger '''
         self.logPath = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
+        if not os.path.exists(self.logPath):
+            os.makedirs(self.logPath)
         self.logFile = os.path.join(self.logPath,config.get('LOGGING','LOGFILE'))
 
         ''' innitialize the logger '''
@@ -80,7 +70,7 @@ class OTAWebScraper():
         if (logger.hasHandlers()):
             logger.handlers.clear()
         # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFile)
+        fh = logging.FileHandler(self.logFile, config.get('LOGGING','LOGMODE'))
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -94,11 +84,23 @@ class OTAWebScraper():
         self.dataPath = os.path.join(self.rootDir,config.get('STORES','DATA'))
 #        print("Data files path: ", DATA_PATH)
         logger.info("Data store path: %s", self.dataPath)
-
-        self.path = os.path.join(self.rootDir,config.get('STORES','DATA')) #"../../data/hospitality/bookings/scraper"
+        #"../../data/hospitality/bookings/scraper"
+        self.path = os.path.join(self.rootDir,config.get('STORES','DATA'))
+        ''' select the storate method '''
+        self.storeMethod = config.get('STORES','METHOD')
         ''' default: ../../data/hospitality/bookings/scraper/rates '''
         self.ratesStoragePath = self.path+'rates'
         self.file = "ota_input_urls.json"
+        
+        ''' set the tmp dir to store large data to share with other functions
+            if self.tmpDIR = None then data is not stored, otherwise stored to
+            given location; typically specified in app.conf
+        '''
+        self.tmpDIR = None
+        if "WRITE_TO_FILE":
+            self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+            if not os.path.exists(self.tmpDIR):
+                os.makedirs(self.tmpDIR)
 
         self.scrape_start_date = date.today()
         self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
@@ -136,7 +138,7 @@ class OTAWebScraper():
             procedure: read the list of urls from the CSV file and compile a list
             return list (url_list)
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def load_ota_list(self, dirPath:str, fileName:str):
 
@@ -147,7 +149,7 @@ class OTAWebScraper():
         url_list = []     # initialize the return parameter
         property_data = {}
         
-        _s_fn_id = "Class <WebScraper> Function <get_url_list>"
+        _s_fn_id = "function <get_url_list>"
         logger.info("Executing %s", _s_fn_id)
 
         try:
@@ -167,7 +169,7 @@ class OTAWebScraper():
                 property_data = json.load(f)
 
         except Exception as err:
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id,err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -182,13 +184,13 @@ class OTAWebScraper():
             procedure: build the url by inserting the values from the **kwargs dict
             return string (url)
             
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
 
             TODO - change the ota_scrape_tags_df to a list of dictionaries
     '''
     def get_scrape_input_params(self, property_dict:dict):
 
-        _s_fn_id = "Class <WebScraper> Function <get_scrape_input_params>"
+        _s_fn_id = "function <get_scrape_input_params>"
         logger.info("Executing %s", _s_fn_id)
 
         try:
@@ -212,8 +214,7 @@ class OTAWebScraper():
                     ota_param_list.append(param_dict)
       
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <get_scrape_input_params>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -228,13 +229,14 @@ class OTAWebScraper():
                         Then construcct and return a dataframe for all corresponding OTAs
             return dataframe (_scrape_tags_df)
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def get_scrape_html_tags(self, property_dict:dict):
 
         _scrape_tags_df = pd.DataFrame()
 
-        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <get_scrape_output_params>"
+        logger.info("Executing %s", _s_fn_id)
 
         try:
             if not property_dict:
@@ -250,8 +252,7 @@ class OTAWebScraper():
                                                    ignore_index=False)
 
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <get_scrape_output_params>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id,err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -268,7 +269,8 @@ class OTAWebScraper():
                         For each OTA template url use the insert_params_in_url function to
                         construct the list of parameterized URLs
             return: list with the set of urls (scrape_url_list)
-            author: nuwan.waidyanatha@rezgateway.com
+
+            author: <nuwan.waidyanatha@rezgateway.com>
 
             TODO: the nested looping code to add the location, checkin, checkout, page is dirty
                     Need a better method rather than nested loop because not all OTAs will consist
@@ -278,7 +280,8 @@ class OTAWebScraper():
 
         _l_dests = []
 
-#        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <get_scrape_output_params>"
+#        logger.info("Executing %s", _s_fn_id)
 
         try:
             if not fileName:
@@ -301,8 +304,7 @@ class OTAWebScraper():
 
 
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <get_scrape_output_params>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id,err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -318,7 +320,7 @@ class OTAWebScraper():
             procedure: build the url by inserting the values from the **kwargs dict
             return string (url)
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def insert_params_in_url(self, url: str, **kwargs ):
 
@@ -326,7 +328,8 @@ class OTAWebScraper():
 
         url_w_params = None
 
-#        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <insert_params_in_url>"
+#        logger.info("Executing %s", _s_fn_id)
 
         try:
             if not url:
@@ -343,8 +346,7 @@ class OTAWebScraper():
                     url_w_params = re.sub(_s_regex, _s_repl_val, url_w_params)
             
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <insert_params_in_url>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -361,7 +363,8 @@ class OTAWebScraper():
                         For each OTA template url use the insert_params_in_url function to
                         construct the list of parameterized URLs
             return: list with the set of urls (scrape_url_list)
-            author: nuwan.waidyanatha@rezgateway.com
+
+            author: <nuwan.waidyanatha@rezgateway.com>
 
             TODO: the nested looping code to add the location, checkin, checkout, page is dirty
                     Need a better method rather than nested loop because not all OTAs will consist
@@ -369,13 +372,14 @@ class OTAWebScraper():
     '''
     def build_scrape_url_list(self, fileName:str, dirPath=None, **kwargs):
 
-#        scrape_url_list = []
         _scrape_url_dict = {}
-        _ota_parameterized_url_list = []
+        _ota_parameterized_url_list = [] 
 
-        _s_fn_id = "Class <WebScraper> Function <build_scrape_url_list>"
+        err_count = 0      # logging the number of errors
+        _tmpFPath = None   # tempory file path to store the parameterized URL list
+        
+        _s_fn_id = "function <build_scrape_url_list>"
         logger.info("Executing %s",_s_fn_id)
-        err_count = 0
 
         try:
             if not dirPath:
@@ -398,6 +402,7 @@ class OTAWebScraper():
             if 'startDate' in kwargs:
                 self.scrape_start_date = kwargs['startDate']
             else:
+                logger.warning("Invalid scrape start date. Setting start date to today %s", str(self.scrape_start_date))
                 print("Invalid scrape start date. Setting start date to today %s" %(str(self.scrape_start_date)))
             if 'endDate' in kwargs:
                 if self.scrape_start_date < kwargs['endDate']:
@@ -479,14 +484,19 @@ class OTAWebScraper():
                     print(err)
                     
                 logger.info("Build %s completed %d error ota urls", _s_fn_id, err_count)
-                logger.info("Parameterized %d urls.",len(_ota_url_parameterized_list))
+                logger.info("Parameterized %d urls.",len(_ota_parameterized_url_list))
+                if len(_ota_parameterized_url_list) > 0 and self.tmpDIR:
+                    tmpDF = pd.DataFrame(_ota_parameterized_url_list)
+                    _tmpFPath = os.path.join(self.tmpDIR,"build_scrape_url_list.csv")
+                    tmpDF.to_csv(_tmpFPath, sep=',', index=False)
+                    logger.info("Data written to %s",_tmpFPath)
 
         except Exception as err:
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
-        return _scrape_url_dict, _ota_parameterized_url_list
+        return _tmpFPath, _ota_parameterized_url_list
 
 
     ''' Function
@@ -500,14 +510,15 @@ class OTAWebScraper():
             procedure: 
             return string (_s3Storageobj)
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def get_search_data_dir_path(self,dirPath, **kwargs):
 
         _SearchDataDir = None
         _search_dt = datetime.now()
         
-        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <scrape_data_to_csv>"
+        logger.info("Executing %s", _s_fn_id)
 
         try:
             ''' establish the storage block '''
@@ -516,11 +527,11 @@ class OTAWebScraper():
             ''' add the folder if not exists '''
             if self.ratesStoragePath[-1] != "/":
                 self.ratesStoragePath +="/"
-            if not os.path.exists(self.ratesStoragePath):
-                os.makedirs(self.ratesStoragePath)
+#            if not os.path.exists(self.ratesStoragePath):
+#                os.makedirs(self.ratesStoragePath)
 
-            if "search_datetime" in kwargs.keys():
-                _search_dt = kwargs["search_datetime"]
+            if "searchDateTime" in kwargs.keys():
+                _search_dt = kwargs["searchDateTime"]
 
             ''' TODO - change the function to round search datetime to nearest 30 min
                 using _distinct_df['search_datetime']=_distinct_df['search_datetime'].dt.round('30min') '''
@@ -537,12 +548,23 @@ class OTAWebScraper():
                             +"-"+str(_search_dt.hour)+"-"+str(_minute)+"/"     # csv file name
 
             ''' add the folder if not exists '''
-            if not os.path.exists(_SearchDataDir):
-                os.makedirs(_SearchDataDir)
+            if kwargs['storageLocation'] == 'local':
+                if not os.path.exists(self.ratesStoragePath):
+                    os.makedirs(self.ratesStoragePath)
+                if not os.path.exists(_SearchDataDir):
+                    os.makedirs(_SearchDataDir)
+            elif kwargs['storageLocation'] == 'AWS_S3':
+                print("todo")
+            else:
+                raise ValueError("%s is an undefined storage location in **kwargs"
+                                 % (kwargs['storageLocation']))
+
+            logger.info("Extracting data into %s storage", kwargs['storageLocation'])
+            logger.info("Storage location: %s", _SearchDataDir)
+            logger.info("Search datetime set to: %s", str(_search_dt))
 
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <scrape_data_to_csv>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -557,7 +579,7 @@ class OTAWebScraper():
             procedure: build the url by inserting the values from the **kwargs dict
             return string (url)
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def scrape_data_to_csv(self,url,_scrape_tags_df,fileName, path):
 
@@ -567,7 +589,8 @@ class OTAWebScraper():
         import csv
         from csv import writer
 
-        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <scrape_data_to_csv>"
+        logger.info("Executing %s", _s_fn_id)
 
         try:
             if _scrape_tags_df.shape[0] <= 0:
@@ -615,8 +638,7 @@ class OTAWebScraper():
                     _prop_data_df = pd.concat([_prop_data_df, pd.DataFrame(_scraped_data_dict, index=[0])])
 
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <scrape_data_to_csv>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -631,7 +653,7 @@ class OTAWebScraper():
             procedure: build the url by inserting the values from the **kwargs dict
             return string (url)
 
-            author: nileka.desilva@rezgateway.com
+            author: <nileka.desilva@rezgateway.com>
     '''
     def _scrape_bookings_to_csv(self,
                                 url,   # parameterized url
@@ -651,7 +673,8 @@ class OTAWebScraper():
         saveTo = None
         _save_df = pd.DataFrame()
 
-        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <_scrape_bookings_to_csv>"
+#        logger.info("Executing %s", _s_fn_id)
 
         try:
             headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36'}
@@ -683,11 +706,19 @@ class OTAWebScraper():
                     _save_df = pd.concat([_save_df,pd.DataFrame(_data_dict)])
 
             if _save_df.shape[0] > 0:
-                _save_df.to_csv(saveTo,index=False, sep=',')
+                if self.storeMethod == 'local':
+#                    print(saveTo)
+                    _save_df.to_csv(saveTo,index=False, sep=',')
+                elif self.storeMethod == 'AWS-S3':
+                    print("todo")
+                else:
+                    raise ValueError("%s is an undefined storage location in **kwargs"
+                                     % (kwargs['storageLocation']))
+
+#                _save_df.to_csv(saveTo,index=False, sep=',')
             
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <_scrape_bookings_to_csv>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -697,7 +728,7 @@ class OTAWebScraper():
     ''' Function
             name: scrape_url_list
             parameters:
-                ota_url_list - string with folder path to the csv files
+                otaURLlist - string with folder path to the csv files
                 **kwargs - contain the plance holder key value pairs
                             columns: list
                             start_date: datetime.date
@@ -707,22 +738,26 @@ class OTAWebScraper():
                         the dictionary into a dataframe
             return dataframe (ota_bookings_df)
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
 
-    def scrape_url_list(self,ota_url_list: list, searchDT: datetime, dirPath:str):
+    def scrape_url_list(self,otaURLlist, searchDT: datetime, dirPath:str):
 
         saveTo = None   # init file name
         _l_saved_files = []
 
-        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <scrape_url_list>"
+        logger.info("Executing %s", _s_fn_id)
 
         try:
-            if ota_url_list == []:
-                raise ValueError("Invalid list of URLs")
+            if len(otaURLlist) > 0:
+                logger.info("loading parameterized urls from list %d records", len(otaURLlist))
+                print("loading parameterized urls from list %d records" % len(otaURLlist))
+            else:
+                raise ValueError("List of URLs required to proceed; non defined in list.")
 
             ''' loop through the list of urls to scrape and save the data'''
-            for ota_dict in ota_url_list:
+            for ota_dict in otaURLlist:
 #                _ota_tags_df = _scrape_tags_df.loc[_scrape_tags_df['ota']==ota_dict['ota']]
 
                 ''' file name is concaternation of ota name + location + checkin date + page offset and .csv file extension'''
@@ -753,8 +788,7 @@ class OTAWebScraper():
 #            print("Scraping and data save to csv complete!")
 
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <scrape_url_list>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -773,12 +807,13 @@ class OTAWebScraper():
                         the dictionary into a dataframe
             return dataframe (ota_bookings_df)
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
 
     def remove_empty_files(self,path):
 
-        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <remove_empty_files>"
+        logger.info("Executing %s", _s_fn_id)
 
         _l_removed_files = []
         try:
@@ -802,8 +837,7 @@ class OTAWebScraper():
 
 
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <scrape_url_list>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -823,7 +857,7 @@ class OTAWebScraper():
                         the dictionary into a dataframe
             return dataframe (ota_bookings_df)
 
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
 
     def read_folder_csv_to_df(self,dirPath: str, **kwargs):
@@ -834,7 +868,8 @@ class OTAWebScraper():
         _end_dt = None
         _l_cols = []
 
-        logger.info("Executing %s", __name__)
+        _s_fn_id = "function <read_folder_csv_to_df>"
+        logger.info("Executing %s", _s_fn_id)
 
         try:
             ''' check if the folder and files exists '''
@@ -868,8 +903,7 @@ class OTAWebScraper():
             ota_rates_df.reset_index(drop=True)
 
         except Exception as err:
-            _s_fn_id = "Class <WebScraper> Function <read_folder_csv_to_df>"
-            logger.error("%s", _s_fn_id+" "+err)
+            logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 

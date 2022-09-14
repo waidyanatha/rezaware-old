@@ -1,2 +1,13 @@
 ~/workspace/rezgate/wrangler/data/hospitality/bookings/scraper/rates/*
 ~/workspace/rezgate/wrangler/__pycache__/*
+~/workspace/rezgate/mining/notebooks/hospitality/.ipynb_checkpoints/
+~/workspace/rezgate/nohup.out
+~/workspace/rezgate/wrangler/__pycache__/
+~/workspace/rezgate/wrangler/data/hospitality/bookings/scraper/rates/
+~/workspace/rezgate/wrangler/data/tmp/
+~/workspace/rezgate/wrangler/logs/
+~/workspace/rezgate/wrangler/modules/ota/__init__.py
+~/workspace/rezgate/wrangler/modules/ota/__pycache__/
+~/workspace/rezgate/wrangler/notebooks/.ipynb_checkpoints/
+~/workspace/rezgate/wrangler/notebooks/hospitality/.ipynb_checkpoints/
+~/workspace/rezgate/wrangler/utils/__pycache__/

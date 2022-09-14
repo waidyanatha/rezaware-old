@@ -3,18 +3,18 @@
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
-    import sys
-    sys.path.insert(1, './wrangler')
-    import app_config as config
-    import importlib
-    config = importlib.reload(config)
     import os
-    from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
+    import sys
     import findspark
+    findspark.init()
+    from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
 #    import pandas as pd
 #    from pandas.api.types import is_datetime64_any_dtype as is_datetime
 #    import calendar
+    import configparser    
+    import logging
     import traceback
+
 
     print("All packages in SparkWorkLoads loaded successfully!")
 
@@ -42,11 +42,55 @@ class SparkWorkLoads():
             return None
 
     '''
-    def __init__(self, sparkPath:str=None, **kwargs:dict):
+    def __init__(self, name : str="data",   # identifier for the instances
+                 sparkPath:str=None,        # directory path to spark insallation
+                 **kwargs:dict,   # can contain hostIP and database connection settings
+                ):
+
+        self.name = name
+        ''' initiate to load app.cfg data '''
+        global confApp
+        global confUtil
+        confApp = configparser.ConfigParser()
+        confUtil = configparser.ConfigParser()
+
+        ''' Set the wrangler root directory '''
+        self.rootDir = "./wrangler"
+        if "ROOT_DIR" in kwargs.keys():
+            self.rootDir = kwargs['ROOT_DIR']
+        if self.rootDir[-1] != "/":
+            self.rootDir +="/"
+        ''' load the main app and utils config env vars '''
+        self.appConfigPath = os.path.join(self.rootDir, 'app.cfg')
+        confApp.read(self.appConfigPath)
+        self.utilsPath = os.path.join(self.rootDir, 'utils/')
+        self.utilsConfigPath = os.path.join(self.utilsPath, 'app.cfg')
+        confUtil.read(self.utilsConfigPath)
+
+        ''' get the file and path for the logger '''
+        self.logPath = os.path.join(self.rootDir,confUtil.get('LOGGING','LOGPATH'))
+        if not os.path.exists(self.logPath):
+            os.makedirs(self.logPath)
+        self.logFile = os.path.join(self.logPath,confUtil.get('LOGGING','LOGFILE'))
+        ''' innitialize the logger '''
+        global logger
+        logger = logging.getLogger('SparkWorkLoads')
+        logger.setLevel(logging.DEBUG)
+        if (logger.hasHandlers()):
+            logger.handlers.clear()
+        # create file handler which logs even debug messages
+        fh = logging.FileHandler(self.logFile, confUtil.get('LOGGING','LOGMODE'))
+        fh.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+        ''' set a new logger section '''
+        logger.info('########################################################')
+        logger.info(__name__)
+        logger.info('Utils Path = %s', self.utilsPath)
 
         ''' Initialize the DB connection parameters '''
-        self.host_ip = None
-        self.db_type = None
         self.db_port = None
         self.db_driver = None
         self.db_name = None
@@ -65,73 +109,75 @@ class SparkWorkLoads():
         try:
             ''' --- DATABASE ---
                 set the host IP '''
+            self.host_ip = None
             if "hostIP" in kwargs.keys():
                 self.host_ip = kwargs['hostIP']
-            elif config.host_ip:
-                self.host_ip = config.host_ip
+            elif confApp.get('HOSTS','HOSTIP'):
+                self.host_ip = confApp.get('HOSTS','HOSTIP')
             else:
-                raise ConnectionError("Undefined host IP. Set the host_ip in app_config.py")
+                raise ConnectionError("Undefined host IP. Set the host_ip in app.cfg")
 
             ''' set the database type '''
+            self.db_type = None
             if "dbType" in kwargs.keys():
                 self.db_type = kwargs['dbType']
-            elif config.db_type:
-                self.db_type = config.db_type
+            elif confApp.get('DATABASE','DBTYPE'):
+                self.db_type = confApp.get('DATABASE','DBTYPE')
             else:
-                raise ConnectionError("Undefined database type. Set the db_type in app_config.py")
+                raise ConnectionError("Undefined database type. Set the db_type in app.cfg")
 
             ''' set the database port '''
             if "dbPort" in kwargs.keys():
                 self.db_port = kwargs['dbPort']
-            elif config.db_port:
-                self.db_port = config.db_port
+            elif confApp.get('DATABASE','DBPORT'):
+                self.db_port = confApp.get('DATABASE','DBPORT')
             else:
-                raise ConnectionError("Undefined database port. Set the db_port in app_config.py")
+                raise ConnectionError("Undefined database port. Set the db_port in app.cfg")
 
             ''' set the database driver '''
             if "dbDriver" in kwargs.keys():
                 self.db_driver = kwargs['dbDriver']
-            elif config.db_driver:
-                self.db_driver = config.db_driver
+            elif confApp.get('DATABASE','DBDRIVER'):
+                self.db_driver = confApp.get('DATABASE','DBDRIVER')
             else:
-                raise ConnectionError("Undefined database password. Set the db_driver in app_config.py")
+                raise ConnectionError("Undefined database password. Set the db_driver in app.cfg")
 
             ''' set the database name '''
             if "dbName" in kwargs.keys():
                 self.db_name = kwargs['dbName']
-            elif config.db_name:
-                self.db_name = config.db_name
+            elif confApp.get('DATABASE','DBNAME'):
+                self.db_name = confApp.get('DATABASE','DBNAME')
             else:
-                raise ConnectionError("Undefined database name. Set the db_name in app_config.py")
+                raise ConnectionError("Undefined database name. Set the db_name in app.cfg")
 
             ''' set the database schema '''
             if "dbSchema" in kwargs.keys():
                 self.db_schema = kwargs['dbSchema']
-            elif config.db_schema:
-                self.db_schema = config.db_schema
+            elif confApp.get('DATABASE','DBSCHEMA'):
+                self.db_schema = confApp.get('DATABASE','DBSCHEMA')
             else:
-                raise ConnectionError("Undefined database schema. Set the db_schema in app_config.py")
+                raise ConnectionError("Undefined database schema. Set the db_schema in app.cfg")
 
             ''' set the database username '''
             if "dbUser" in kwargs.keys():
                 self.db_user = kwargs['dbUser']
-            elif config.db_user:
-                self.db_user = config.db_user
+            elif confApp.get('DATABASE','DBUSER'):
+                self.db_user = confApp.get('DATABASE','DBUSER')
             else:
-                raise ConnectionError("Undefined database username. Set the db_user in app_config.py")
+                raise ConnectionError("Undefined database username. Set the db_user in app.cfg")
 
             ''' set the database password '''
             if "dbPswd" in kwargs.keys():
-                self.db_pswd = kwargs['dbPswd']
-            elif config.db_pswd:
-                self.db_pswd = config.db_pswd
+                self.db_pswd = kwargs['DBPSWD']
+            elif confApp.get('DATABASE','DBPORT'):
+                self.db_pswd = confApp.get('DATABASE','DBPSWD')
             else:
-                raise ConnectionError("Undefined database password. Set the db_pswd in app_config.py")
+                raise ConnectionError("Undefined database password. Set the db_pswd in app.cfg")
 
 
             ''' --- SPARK ---
                 set the spark home directory '''
-            if not (sparkPath or config.spark_home):
+            if not (sparkPath or confUtil.get('SPARK','SPARKHOMEDIR')):
                 raise ValueError("Spark directory required to proceed. \
                                 Must be specified in app_config.py or \
                                 spark_path %s must be valid" % sparkPath)
@@ -140,15 +186,17 @@ class SparkWorkLoads():
                 ''' TODO validate spark_dir '''
                 self.spark_dir = sparkPath
             else:
-                self.spark_dir = config.spark_home
+                self.spark_dir = confUtil.get('SPARK','SPARKHOMEDIR')
             
             findspark.init(self.spark_dir)
             from pyspark.sql import SparkSession
+            logger.info("Importing %s library from spark dir: %s" % (SparkSession.__name__, self.spark_dir))
 
             ''' set the db_type specific jar '''
-            if not config.spark_jar:
-                raise ConnectionError("Spark requires a valid jar file to use %s" % config.db_type)
-            self.spark_jar = config.spark_jar
+            if not confUtil.get('SPARK','SPARKJARDIR'):
+                raise ConnectionError("Spark requires a valid jar file to use with %s" % self.db_type)
+            self.spark_jar = confUtil.get('SPARK','SPARKJARDIR')
+            logger.info("Defining Spark Jar dir: %s" % (self.spark_jar))
 
             ''' the Spark session should be instantiated as follows '''
             self.spark_session = SparkSession \
@@ -156,14 +204,18 @@ class SparkWorkLoads():
                     .appName("rezaware wrangler") \
                     .config("spark.jars", self.spark_jar) \
             .getOrCreate()
+            logger.info("Starting a Spark Session: %s" % (self.spark_session))
 
             ''' build the url for db connection '''
             self.spark_url = "jdbc:"+self.db_type+"://"+self.host_ip+":"+self.db_port+"/"+self.db_name
+            logger.info("Defined spark database connection url: %s" % (self.spark_url))
 
-            print("Connection complete! ready to load data.")
+            logger.info("Connection complete! ready to load data.")
+#            print("Connection complete! ready to load data.")
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <__init__>"
+            logger.error("%s %s \n",_s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -191,6 +243,7 @@ class SparkWorkLoads():
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <get_spark_session>"
+            logger.error("%s %s \n",_s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -233,6 +286,7 @@ class SparkWorkLoads():
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <get_data_from_table>"
+            logger.error("%s %s \n",_s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -291,6 +345,7 @@ class SparkWorkLoads():
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <insert_sdf_into_table>"
+            logger.error("%s %s \n",_s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -340,6 +395,7 @@ class SparkWorkLoads():
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <read_folder_csv_to_sdf>"
+            logger.error("%s %s \n",_s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
