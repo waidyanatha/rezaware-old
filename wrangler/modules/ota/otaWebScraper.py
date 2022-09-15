@@ -560,7 +560,7 @@ class OTAWebScraper():
                                  % (kwargs['storageLocation']))
 
             logger.info("Extracting data into %s storage", kwargs['storageLocation'])
-            logger.info("Storage location: %s", _SearchDataDir)
+            logger.info("OTA price data storage location: %s", _SearchDataDir)
             logger.info("Search datetime set to: %s", str(_search_dt))
 
         except Exception as err:

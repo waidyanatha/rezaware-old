@@ -38,8 +38,9 @@ class SparkWorkLoads():
                     @name (str)
                     @enrich (dict)
             procedure: 
-
             return None
+            
+            author: <nuwan.waidyanatha@rezgateway.com>
 
     '''
     def __init__(self, name : str="data",   # identifier for the instances
@@ -89,6 +90,14 @@ class SparkWorkLoads():
         logger.info('########################################################')
         logger.info(__name__)
         logger.info('Utils Path = %s', self.utilsPath)
+        
+        ''' get tmp storage location '''
+        self.tmpDIR = None
+
+        self.tmpDIR = os.path.join(self.rootDir,confUtil.get('STORES','TMPDATA'))
+        if not os.path.exists(self.tmpDIR):
+            os.makedirs(self.tmpDIR)
+
 
         ''' Initialize the DB connection parameters '''
         self.db_port = None
@@ -226,10 +235,10 @@ class SparkWorkLoads():
             parameters:
                     @name (str)
                     @enrich (dict)
-            procedure: 
+            procedure:
 
             return DataFrame
-
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def DEPRECATED_get_spark_session(self, **kwargs):
 
@@ -255,9 +264,9 @@ class SparkWorkLoads():
                     @name (str)
                     @enrich (dict)
             procedure: 
-
             return DataFrame
 
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def get_data_from_table(self, dbTable:str, **kwargs):
         
@@ -298,9 +307,9 @@ class SparkWorkLoads():
                     @name (str)
                     @enrich (dict)
             procedure: 
-
             return DataFrame
 
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def insert_sdf_into_table(self, save_sdf, dbTable:str, **kwargs):
         
@@ -357,9 +366,9 @@ class SparkWorkLoads():
                     filesPath (str)
                     @enrich (dict)
             procedure: 
-
             return DataFrame
 
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def read_csv_to_sdf(self,filesPath: str, **kwargs):
 
@@ -401,5 +410,52 @@ class SparkWorkLoads():
 
         return _csv_to_sdf
         
+    ''' Function
+            name: read_csv_to_sdf
+            parameters:
+                    filesPath (str)
+                    @enrich (dict)
+            procedure: 
+            return DataFrame
 
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def save_sdf_to_csv(self, sdf, filesPath=None, **kwargs):
+        
+        _csv_file_path = None
+
+        _s_fn_id = "function <read_folder_csv_to_sdf>"
+        logger.info("Executing %s in %s",_s_fn_id, __name__)
+        
+        try:
+            ''' data exists? '''
+            if sdf.count() <= 0:
+                raise ValueError("No data for input dataframe to save")
+            logger.info("Received % rows to save to file", sdf.count())
+            ''' determine where to save '''
+            if filesPath:
+                _csv_file_path = filesPath
+                logger.info("File ready to save to %s", _csv_file_path)
+            else:
+                fname = "save_sdf_to_csv.csv"
+                _csv_file_path = os.path.join(self.tmpDIR, fname)
+                logger.info("No file path defined, saving to %s", _csv_file_path)
+
+            ''' save sdf to csv '''
+#            sdf.write.option("header",True)\
+#                    .option("delimiter",",")\
+#                    .csv(_csv_file_path)
+            sdf.write.mode("overwrite")\
+                    .option("header",True)\
+                    .format("csv")\
+                    .save(_csv_file_path)
+
+            logger.info("%d rows of data written to %s",sdf.count(), _csv_file_path)
+
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return _csv_file_path
           
