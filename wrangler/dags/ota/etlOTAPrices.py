@@ -145,6 +145,8 @@ with DAG(
 
         dirPath = None
         _search_dt = datetime.now()
+        ''' round the search datatime to nearest 15 min '''
+        _search_dt = _search_dt + (datetime.min - _search_dt) % timedelta(minutes=15)
         fnargs = {'searchDateTime': _search_dt,
                   'storageLocation': "local",   # values can be "local" or "AWS_S3"
                  }
