@@ -373,7 +373,7 @@ class SparkWorkLoads():
     def read_csv_to_sdf(self,filesPath: str, **kwargs):
 
         _csv_to_sdf = self.spark_session.sparkContext.emptyRDD()     # initialize the return var
-        _tmp_df = self.spark_session.sparkContext.emptyRDD()
+#         _tmp_df = self.spark_session.sparkContext.emptyRDD()
         _start_dt = None
         _end_dt = None
         _sdf_cols = []

@@ -1,0 +1,41 @@
+city,state,airportCode
+Las Vegas,Nevada,LAX
+New York,New York,NYC
+Boston,Massachusetts,BOS
+Orlando,Florida,ORL
+New Orleans,Louisiana,MSY
+Honolulu,Hawaii,HNL
+Chicago,Illinois,CHI
+Alexandria,Virginia,AEX
+San Antonio,Texas,SAT
+Asheville,North Carolina,AVL
+Miami,Florida,MIA
+Los Angeles,California,LAX
+San Francisco,California,SFO
+Washington,DC,WAS
+Phoenix,Arizona,PHX
+Houston,Texas,HOU
+Philadelphia,Pennsylvania,PHL
+Dallas,Texas,DFW
+San Jose,California,SJC
+Austin,Texas,AUS
+Jacksonville,Florida,JAX
+Columbus,Ohio,CMH
+Indianapolis,Indiana,IND
+Charlotte,North Carolina,CLT
+Seattle,Washington,SEA
+Denver,Colorado,DEN
+Nashville,Tennessee,BNA
+Oklahoma City,Oklahoma,OKC
+El Paso,Texas,ELP
+Portland,Oregon,PDX
+Detroit,Michigan,DTT
+Memphis,Tennessee,MEM
+Louisville,Kentucky,SDF
+Baltimore,Maryland,BWI
+Milwaukee,Wisconsin,MKE
+Tucson,Arizona,TUS
+Fresno,California,FAT
+Sacramento,California,SAC
+Kansas City,Missouri,MCI
+Oakland,California,OAK

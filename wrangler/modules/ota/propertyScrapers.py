@@ -20,16 +20,10 @@ except Exception as e:
 
 
 '''
-    CLASS spefic to scraping date from Online Travel Ageny web sites; e.g. booking.com, hotel.com,
-    Use a scheduler to run main.py which will execute the relavent functions to scrape and file the data
-        1) Load the ota_input_data.json comprising the url with parameter list and specific data find html tags
-        2) separate the scrape inputr paramenter list for the url from the scrape data find html tags
-        3) Inset the input parameters into the url to build a list of scrapable urls
-        4) Scraped data is parsed, using the html tags find
-        5) data is stored according to the specified folder and structure
+    CLASS spefic to scraping
 '''
 
-class OTAWebScraper():
+class PropertyScraper():
 
     ''' Function
             name: __init__
@@ -115,20 +109,20 @@ class OTAWebScraper():
 #                          "Colombo, Sri Lanka",
                          ]
         ''' DEPRATED -- because read_folder_csv_to_df is DEPRECATED '''
-        self.scrape_columns = ["search_dt", # date&time scraping ran
-                               "property_name",   # hotel name
-                               "checkin_date",    # anticipated checkin date
-                               "destination_id",  # hotel destination id
-                               "destination_name",   # hotel located city
-                               "destination_country",# hotel located country
-                               "room_type",    # room type; e.g., double bed, queen bed
-                               "adult_count",  # number of adults
-                               "child_count",  # numbe of children
-                               "room_rate",    # price per night
-                               "review_score", # rating
-                               "other_info",   # any other relevant text
-                              ]
-        print("Initialing OTAWebScraper class for ",self.name)
+#         self.scrape_columns = ["search_dt", # date&time scraping ran
+#                                "property_name",   # hotel name
+#                                "checkin_date",    # anticipated checkin date
+#                                "destination_id",  # hotel destination id
+#                                "destination_name",   # hotel located city
+#                                "destination_country",# hotel located country
+#                                "room_type",    # room type; e.g., double bed, queen bed
+#                                "adult_count",  # number of adults
+#                                "child_count",  # numbe of children
+#                                "room_rate",    # price per night
+#                                "review_score", # rating
+#                                "other_info",   # any other relevant text
+#                               ]
+        print("Initialing propertyScraper class for ",self.name)
         return None
 
     ''' Function
