@@ -1,73 +1,118 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
+''' Load necessary and sufficient python librairies that are used throughout the class'''
+try:
+    ''' standard python packages '''
+    import os
+    import sys
+    import logging
+    import traceback
+    import configparser
+    import pandas as pd
+    from datetime import datetime, date, timedelta
 
-class otaETL():
 
+    ''' Initialize with default environment variables '''
+    __name__ = "otaUtils"
+    __package__ = "Utils"
+    __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
+    __module_path__ = os.path.join(__root_dir__, 'modules/ota/')
+    __config_path__ = os.path.join(__module_path__, 'app.cfg')
+
+    print("All {0} software packages loaded successfully!".format(__package__))
+
+except Exception as e:
+    print("Some software packages in {0} didn't load\n{1}".format(__package__,e))
+
+
+'''
+    CLASS spefic to providing reusable functions for scraping ota data
+'''
+
+class Utils():
+
+    ''' Function
+            name: __init__
+            parameters:
+
+            procedure: Initialize the class
+            return None
+
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
-        CLASS ETL class will contain the functions required to run the various
-        
-        author(s): <nuwan.waidyanatha@rezgateway.com>
-    '''
+    def __init__(self, desc : str="OTA Utilities Class", **kwargs):
 
+        self.__name__ = __name__
+        self.__package__ = __package__
+        self.__desc__ = desc
+        print(self.__desc__)
 
-    ''' Load necessary and sufficient python librairies that are used throughout the class'''
-    try:
-        ''' standard python packages '''
-        import os
-        import sys
-        import logging
-        import traceback
-        import configparser
-        import pandas as pd
-        from datetime import datetime, date, timedelta
+        ''' Set the wrangler root directory '''
+        self.rootDir = "./wrangler"
+        if "ROOT_DIR" in kwargs.keys():
+            self.rootDir = kwargs['ROOT_DIR']
 
-        ''' inhouse packages '''
-        ROOT_DIR = "~/workspace/rezgate/wrangler"
-        MODULE_PATH = os.path.join(ROOT_DIR, 'modules/ota/')
-        sys.path.insert(1,MODULE_PATH)
-
-        import otaWebScraper as otaws
-
-        ''' read the conicuration data'''
-        CONFIG_PATH = os.path.join(MODULE_PATH, 'app.cfg')
-        CONFIG_PATH = "app.cfg"
+        self.modulePath = os.path.join(self.rootDir, __module_path__)     
+        if "MODULE_PATH" in kwargs.keys():
+            self.modulePath=kwargs['MODULE_PATH']
+        self.configPath = os.path.join(self.modulePath, 'app.cfg')
+        if "CONFIG_PATH" in kwargs.keys():
+            self.configPath=kwargs['CONFIG_PATH']
+        global config
         config = configparser.ConfigParser()
-        config.read(CONFIG_PATH)
+        config.read(self.configPath)
+
+        ''' get the file and path for the logger '''
+        self.logPath = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
+        if not os.path.exists(self.logPath):
+            os.makedirs(self.logPath)
+        self.logFile = os.path.join(self.logPath,config.get('LOGGING','LOGFILE'))
+
+        ''' innitialize the logger '''
+        global logger
+        logger = logging.getLogger(self.__package__)
+        logger.setLevel(logging.DEBUG)
+        if (logger.hasHandlers()):
+            logger.handlers.clear()
+        # create file handler which logs even debug messages
+        fh = logging.FileHandler(self.logFile, config.get('LOGGING','LOGMODE'))
+        fh.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+        ''' set a new logger section '''
+        logger.info('########################################################')
+        logger.info(self.__package__)
+        logger.info('Module Path = %s', self.modulePath)
         ''' get the path to the input and output data '''
-        DATA_PATH = os.path.join(ROOT_DIR,config.get('STORES','DATA'))
-        print("Data files path: ", DATA_PATH)
-        print("All otaETL software packages loaded successfully!")
+#         if "DATA_PATH" in kwargs.keys():
+#             self.dataPath = os.path.join(self.rootDir,kwargs["DATA_PATH"])
+#         else:
+#             self.dataPath = os.path.join(self.rootDir,config.get('STORES','DATA'))
+#        self.path = os.path.join(self.rootDir,config.get('STORES','DATA'))
+#        logger.info("Data store path: %s", self.dataPath)
+        ''' select the storate method '''
+        self.storeMethod = config.get('STORES','METHOD')
         
-        config = configparser.ConfigParser()
-        config.read('app.cfg')
-        print(config['hosts'])
+        ''' set the tmp dir to store large data to share with other functions
+            if self.tmpDIR = None then data is not stored, otherwise stored to
+            given location; typically specified in app.conf
+        '''
+        self.tmpDIR = None
+        if "WRITE_TO_FILE":
+            self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+            if not os.path.exists(self.tmpDIR):
+                os.makedirs(self.tmpDIR)
 
-    except Exception as e:
-        print("Some software packages in otaETL didn't load\n{}".format(e))
+        self.scrape_start_date = date.today()
+        self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
+        self.scrapeTimeGap = 30
 
 
-    def __init__(module,name, **kwards):
-
-        
-        
-        module.name = "ota"
-        if name:
-            module.name = name
-        print(module.name)
-        
+        print("Initialing %s class for %s with instance %s" 
+              % (self.__package__, self.__name__, self.__desc__))
         return None
-
-    class extract():
-        def __init__(self,**kwards):
-            return None
-        
-    class transform():
-        def __init__(self,**kwards):
-            return None
-
-    class transform():
-        def __init__(self,**kwards):
-            return None
 
     ''' Function
             name: get_url_list
@@ -79,13 +124,12 @@ class otaETL():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def load_ota_list(self, dirPath:str, fileName:str):
+    def load_ota_list(self, file_path:str, **kwargs):
 
         import os         # apply directory read functions
         import csv        # to read the csv
         import json       # to read the json file
 
-        url_list = []     # initialize the return parameter
         property_data = {}
         
         _s_fn_id = "function <load_ota_list>"
@@ -94,17 +138,11 @@ class otaETL():
         try:
 
             ''' Get the list of urls from the CSV file '''        
-            if dirPath:
-                self.path = dirPath
-            _l_files = os.listdir(self.path)
-            ''' if fileName is not null check if it is in the director '''
-            if fileName and fileName in _l_files:
-                self.file = fileName
-            else:
-                raise ValueError("Invalid file name %s in dir: %s. Does not exist!" % (fileName, self.path))
+            if not file_path:
+                raise ValueError("Invalid file path to load the ota list of inputs")
 
             ''' read the list of urls from the file '''
-            with open(self.path+"/"+self.file, newline='') as f:
+            with open(file_path, newline='') as f:
                 property_data = json.load(f)
 
         except Exception as err:
@@ -159,7 +197,7 @@ class otaETL():
 
         return ota_param_list #, ota_scrape_tags_df
 
-    ''' Function
+    ''' Function -- TODO --
             name: get_scrape_output_params
             parameters:
                 airline_dict - obtained from loading the property scraping parameters from the JSON
@@ -253,55 +291,64 @@ class otaETL():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def get_search_data_dir_path(self,dirPath, **kwargs):
+    def get_search_data_dir_path(self, data_dir_path:str, parent_dir_name:str, **kwargs):
 
         _SearchDataDir = None
         _search_dt = datetime.now()
+        _search_time_gap = self.scrapeTimeGap
         
-        _s_fn_id = "function <scrape_data_to_csv>"
+        _s_fn_id = "function <get_search_data_dir_path>"
         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
         try:
-            ''' establish the storage block '''
-            if dirPath:
-                self.ratesStoragePath = dirPath
-            ''' add the folder if not exists '''
-            if self.ratesStoragePath[-1] != "/":
-                self.ratesStoragePath +="/"
-#            if not os.path.exists(self.ratesStoragePath):
-#                os.makedirs(self.ratesStoragePath)
+            if 'SCRAPE_TIME_GAP' in kwargs.keys():
+                _search_time_gap = kwargs['SCRAPE_TIME_GAP']
+            _parent_dir_path = os.path.join(data_dir_path, parent_dir_name)
+                
+#             ''' establish the storage block '''
+#             if dirPath:
+#                 self.ratesStoragePath = dirPath
+#             ''' add the folder if not exists '''
+#             if self.ratesStoragePath[-1] != "/":
+#                 self.ratesStoragePath +="/"
 
-            if "searchDateTime" in kwargs.keys():
-                _search_dt = kwargs["searchDateTime"]
+            if "SEARCH_DATETIME" in kwargs.keys():
+                _search_dt = kwargs["SEARCH_DATETIME"]
+            else:
+                _search_dt = datetime.now()
+            _search_dt = _search_dt + (datetime.min - _search_dt) % timedelta(minutes=_search_time_gap)
 
             ''' TODO - change the function to round search datetime to nearest 30 min
                 using _distinct_df['search_datetime']=_distinct_df['search_datetime'].dt.round('30min') '''
             ''' pick the year, month, day, hour, min from search date time ''' 
-            _minute = _search_dt.minute
-            if _minute < 30:
-                _minute = 0
-            else:
-                _minute = 30
+#             _minute = _search_dt.minute
+#             if _minute < 30:
+#                 _minute = 0
+#             else:
+#                 _minute = 30
 
             ''' folder is a concaternation of date hour and minute; where minute < 30 --> 0 and 30 otherwise'''
-            _SearchDataDir = self.ratesStoragePath+\
-                            str(_search_dt.year)+"-"+str(_search_dt.month)+"-"+str(_search_dt.day)\
-                            +"-"+str(_search_dt.hour)+"-"+str(_minute)+"/"     # csv file name
-
+#             _SearchDataDir = self.ratesStoragePath+\
+#                             str(_search_dt.year)+"-"+str(_search_dt.month)+"-"+str(_search_dt.day)\
+#                             +"-"+str(_search_dt.hour)+"-"+str(_minute)+"/"     # csv file name
+            _dt_dir_name = str(_search_dt.year)+"-"+str(_search_dt.month)+"-"+str(_search_dt.day)\
+                            +"-"+str(_search_dt.hour)+"-"+str(_search_dt.minute)+"/"     # csv file name
+            _search_data_save_dir = os.path.join(_parent_dir_path, _dt_dir_name)
             ''' add the folder if not exists '''
-            if kwargs['storageLocation'] == 'local':
-                if not os.path.exists(self.ratesStoragePath):
-                    os.makedirs(self.ratesStoragePath)
-                if not os.path.exists(_SearchDataDir):
-                    os.makedirs(_SearchDataDir)
-            elif kwargs['storageLocation'] == 'AWS_S3':
+            ''' TODO - fix this to check if defined in apps.cfg '''
+            if kwargs['STORAGE_METHOD'] == 'local':
+                if not os.path.exists(_parent_dir_path):
+                    os.makedirs(_parent_dir_path)
+                if not os.path.exists(_search_data_save_dir):
+                    os.makedirs(_search_data_save_dir)
+            elif kwargs['STORAGE_METHOD'] == 'AWS_S3':
                 print("todo")
             else:
                 raise ValueError("%s is an undefined storage location in **kwargs"
                                  % (kwargs['storageLocation']))
 
-            logger.info("Extracting data into %s storage", kwargs['storageLocation'])
-            logger.info("OTA price data storage location: %s", _SearchDataDir)
+#            logger.info("Extracting data into %s storage", kwargs['storageLocation'])
+            logger.info("OTA price data storage location: %s", _search_data_save_dir)
             logger.info("Search datetime set to: %s", str(_search_dt))
 
         except Exception as err:
@@ -309,8 +356,81 @@ class otaETL():
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
-        return _SearchDataDir
+        return _search_data_save_dir
 
+    ''' Function -- TODO --
+            name: scrape_ota_to_csv
+            parameters:
+                url - string comprising the url with place holders
+                **kwargs - contain the plance holder key value pairs
+
+            procedure: build the url by inserting the values from the **kwargs dict
+            return string (url)
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def scrape_data_to_csv(self,url,_scrape_tags_df,file_name, path):
+
+        from bs4 import BeautifulSoup # Import for Beautiful Soup
+        import requests # Import for requests
+        import lxml     # Import for lxml parser
+        import csv
+        from csv import writer
+
+        _s_fn_id = "function <scrape_data_to_csv>"
+        logger.info("Executing %s", _s_fn_id)
+
+        try:
+            if _scrape_tags_df.shape[0] <= 0:
+                raise ValueError("Invalid scrape tags no data scraped")
+            if not file_name:
+                raise ValueError("Invalid file name no data scraped")
+            if not path:
+                raise ValueError("Invalid path name no data scraped")
+
+            ''' define generic header '''
+            headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36'}
+            response = requests.get(url, headers=headers)
+            # Make it a soup
+            soup = BeautifulSoup(response.text,"lxml")
+#            soup = BeautifulSoup(response.text,"html.parser")
+
+            ''' extract the list of values from content block '''
+            _cont_block = (_scrape_tags_df.loc[_scrape_tags_df['variable']=='content_block']).head(1)
+            _l_scrape_text = soup.select(_cont_block.tag.item())
+
+            if len(_l_scrape_text) <= 0:
+                raise ValueError("no content block (area) for %s" %(_cont_block))
+
+            ''' get the attribute list '''
+            _l_col_names = list(_scrape_tags_df.variable)
+            _l_col_names.remove('content_block')
+
+            ''' init dataframe to store the scraped categorical text '''
+            _prop_data_df = pd.DataFrame()
+
+            ''' loop through the list to retrieve values from tags '''
+            for row in _l_scrape_text:
+                _scraped_data_dict = {}
+                for colName in _l_col_names:
+                    _tag = _scrape_tags_df.loc[_scrape_tags_df.variable==colName, 'tag'].item()
+                    _code = _scrape_tags_df.loc[_scrape_tags_df.variable==colName, 'code'].item()
+
+                    try:
+                        _scraped_data_dict[colName] = row.find(_tag, class_ = _code).text
+
+                    except Exception as err:
+                        pass
+                        
+                if _scraped_data_dict:
+                    _prop_data_df = pd.concat([_prop_data_df, pd.DataFrame(_scraped_data_dict, index=[0])])
+
+        except Exception as err:
+            logger.error("%s %s \n", _s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return _prop_data_df
     ''' Function
             name: scrape_url_list
             parameters:
@@ -404,7 +524,7 @@ class otaETL():
         _l_removed_files = []
         try:
             if not path:
-                path = self.path
+                raise ValueError("Undefined path to files, Abort removing files")
 
             for (dirpath, folder_names, files) in os.walk(path):
                 for filename in files:
