@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
+''' Initialize with default environment variables '''
+__name__ = "airlineScrapers"
+__package__ = "AirlineScraper"
+__root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
+__module_dir__ = 'modules/ota/'
+__data_dir__ = 'data/hospitality/bookings/scraper/'
+__conf_fname__ = 'app.cfg'
+__logs_dir__ = 'logs/module/ota/'
+__log_fname__ = 'app.log'
+
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
     ''' standard python packages '''
@@ -12,15 +22,7 @@ try:
     import pandas as pd
     from datetime import datetime, date, timedelta
     
-    ''' Initialize with default environment variables '''
-    __name__ = "airlineScrapers"
-    __package__ = "AirlineScraper"
-    __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-    __module_path__ = os.path.join(__root_dir__, 'modules/ota/')
-    __config_path__ = os.path.join(__module_path__, 'app.cfg')
-    __data_path__ = os.path.join(__root_dir__, 'data/hospitality/bookings/scraper/')
-
-    sys.path.insert(1,__module_path__)
+    sys.path.insert(1,__module_dir__)
     import otaUtils as utils
 
     print("All {0} software packages loaded successfully!".format(__package__))
@@ -58,27 +60,36 @@ class AirlineScraper():
         clsUtil = utils.Utils(desc='Utilities class for property data scraping')
 
         ''' Set the wrangler root directory '''
-        self.rootDir = "./wrangler"
+        self.rootDir = __root_dir__
         if "ROOT_DIR" in kwargs.keys():
             self.rootDir = kwargs['ROOT_DIR']
-#         if self.rootDir[-1] != "/":
-#             self.rootDir +="/"
 
-        self.modulePath = os.path.join(self.rootDir, __module_path__)     
-        if "MODULE_PATH" in kwargs.keys():
-            self.modulePath=kwargs['MODULE_PATH']
-        self.configPath = os.path.join(self.modulePath, 'app.cfg')
+        self.moduleDir = os.path.join(self.rootDir, __module_dir__)     
+        if "MODULE_DIR" in kwargs.keys():
+            self.moduleDir=kwargs['MODULE_DIR']
+        self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
+
         if "CONFIG_PATH" in kwargs.keys():
-            self.configPath=kwargs['CONFIG_PATH']
+            self.confFPath=kwargs['CONFIG_PATH']
         global config
         config = configparser.ConfigParser()
-        config.read(self.configPath)
+        config.read(self.confFPath)
 
         ''' get the file and path for the logger '''
-        self.logPath = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
-        if not os.path.exists(self.logPath):
-            os.makedirs(self.logPath)
-        self.logFile = os.path.join(self.logPath,config.get('LOGGING','LOGFILE'))
+        self.logDir = os.path.join(self.rootDir,__logs_dir__)
+        self.logFPath = os.path.join(self.logDir,__log_fname__)
+        try:
+            self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
+            self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+        except:
+            pass
+        if not os.path.exists(self.logDir):
+            os.makedirs(self.logDir)
+#        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+                
+#         if not os.path.exists(self.logPath):
+#             os.makedirs(self.logPath)
+#        self.logFile = os.path.join(self.logPath,config.get('LOGGING','LOGFILE'))
 
         ''' innitialize the logger '''
         global logger
@@ -87,7 +98,8 @@ class AirlineScraper():
         if (logger.hasHandlers()):
             logger.handlers.clear()
         # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFile, config.get('LOGGING','LOGMODE'))
+        fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
+#        fh = logging.FileHandler(self.logPath, config.get('LOGGING','LOGMODE'))
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -96,18 +108,18 @@ class AirlineScraper():
         ''' set a new logger section '''
         logger.info('########################################################')
         logger.info(self.__package__)
-        logger.info('Module Path = %s', self.modulePath)
+        logger.info('Module Path = %s', self.moduleDir)
         ''' get the path to the input and output data '''
-        if "DATA_PATH" in kwargs.keys():
-            self.dataPath = os.path.join(self.rootDir,kwargs["DATA_PATH"])
+        if "DATA_DIR" in kwargs.keys():
+            self.dataDir = kwargs["DATA_DIR"]
         else:
-            self.dataPath = os.path.join(self.rootDir,config.get('STORES','DATA'))
+            self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
         self.path = os.path.join(self.rootDir,config.get('STORES','DATA'))
-        logger.info("Data store path: %s", self.dataPath)
+        logger.info("Data store path: %s", self.dataDir)
         ''' select the storate method '''
         self.storeMethod = config.get('STORES','METHOD')
         ''' default: ../../data/hospitality/bookings/scraper/rates '''
-        self.ratesStoragePath = self.path+'rates'
+#        self.ratesStoragePath = self.path+'rates'
         self.file = "ota_input_urls.json"
         
         ''' set the tmp dir to store large data to share with other functions
@@ -126,6 +138,8 @@ class AirlineScraper():
 
         print("Initialing %s class for %s with instance %s" 
               % (self.__package__, self.__name__, self.__desc__))
+        print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
+        print("Data path set to %s" % self.dataDir)
         return None
 
 
@@ -364,7 +378,7 @@ class AirlineScraper():
                 parent_dir_name = "itinerary/"
                 
             _prop_search_folder = clsUtil.get_search_data_dir_path(
-                data_dir_path = self.dataPath,
+                data_dir_path = self.dataDir,
                 parent_dir_name = parent_dir_name,
                 **kwargs)
 
@@ -389,6 +403,7 @@ class AirlineScraper():
     '''
     def _scrape_kayak_to_csv(self,
                                 url,   # parameterized url
+                                ota_name,    # ota name
                                 flight_date, # intended flight date
                                 search_dt,    # scrape run date time
                                 departure_port,
@@ -431,6 +446,7 @@ class AirlineScraper():
             ''' extrac strings and cleanup the \n with spaces '''
             for _info in _find_infos:
                 _data_dict = {}
+                _data_dict['ota_name'] = ota_name,
                 _data_dict['search_dt'] = search_dt,
                 _data_dict['depart_port_code'] = departure_port,
                 _data_dict['arrive_port_code'] = arrival_port,

@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
+''' Initialize with default environment variables '''
+__name__ = "otaUtils"
+__package__ = "Utils"
+__root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
+__module_dir__ = 'modules/ota/'
+#__data_dir__ = 'data/hospitality/bookings/scraper/'
+__conf_fname__ = 'app.cfg'
+__logs_dir__ = 'logs/module/ota/'
+__log_fname__ = 'app.log'
+
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
     ''' standard python packages '''
@@ -12,12 +22,12 @@ try:
     from datetime import datetime, date, timedelta
 
 
-    ''' Initialize with default environment variables '''
-    __name__ = "otaUtils"
-    __package__ = "Utils"
-    __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-    __module_path__ = os.path.join(__root_dir__, 'modules/ota/')
-    __config_path__ = os.path.join(__module_path__, 'app.cfg')
+#     ''' Initialize with default environment variables '''
+#     __name__ = "otaUtils"
+#     __package__ = "Utils"
+#     __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
+#     __module_path__ = os.path.join(__root_dir__, 'modules/ota/')
+#     __config_path__ = os.path.join(__module_path__, 'app.cfg')
 
     print("All {0} software packages loaded successfully!".format(__package__))
 
@@ -45,37 +55,44 @@ class Utils():
         self.__name__ = __name__
         self.__package__ = __package__
         self.__desc__ = desc
-        print(self.__desc__)
 
         ''' Set the wrangler root directory '''
-        self.rootDir = "./wrangler"
+        self.rootDir = __root_dir__
         if "ROOT_DIR" in kwargs.keys():
             self.rootDir = kwargs['ROOT_DIR']
 
-        self.modulePath = os.path.join(self.rootDir, __module_path__)     
-        if "MODULE_PATH" in kwargs.keys():
-            self.modulePath=kwargs['MODULE_PATH']
-        self.configPath = os.path.join(self.modulePath, 'app.cfg')
+        self.moduleDir = os.path.join(self.rootDir, __module_dir__)
+        if "MODULE_DIR" in kwargs.keys():
+            self.moduleDir=kwargs['MODULE_DIR']
+
+        self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
         if "CONFIG_PATH" in kwargs.keys():
-            self.configPath=kwargs['CONFIG_PATH']
+            self.confFPath=kwargs['CONFIG_PATH']
         global config
         config = configparser.ConfigParser()
-        config.read(self.configPath)
+        config.read(self.confFPath)
 
         ''' get the file and path for the logger '''
-        self.logPath = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
-        if not os.path.exists(self.logPath):
-            os.makedirs(self.logPath)
-        self.logFile = os.path.join(self.logPath,config.get('LOGGING','LOGFILE'))
+        self.logDir = os.path.join(self.rootDir,__logs_dir__)
+        self.logFPath = os.path.join(self.logDir,__log_fname__)
+        try:
+            self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
+            self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+        except:
+            pass
+        if not os.path.exists(self.logDir):
+            os.makedirs(self.logDir)
+#        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
 
         ''' innitialize the logger '''
         global logger
-        logger = logging.getLogger(self.__package__)
+        logger = logging.getLogger(__package__)
         logger.setLevel(logging.DEBUG)
         if (logger.hasHandlers()):
             logger.handlers.clear()
         # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFile, config.get('LOGGING','LOGMODE'))
+        fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
+#        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -83,18 +100,9 @@ class Utils():
         logger.addHandler(fh)
         ''' set a new logger section '''
         logger.info('########################################################')
-        logger.info(self.__package__)
-        logger.info('Module Path = %s', self.modulePath)
-        ''' get the path to the input and output data '''
-#         if "DATA_PATH" in kwargs.keys():
-#             self.dataPath = os.path.join(self.rootDir,kwargs["DATA_PATH"])
-#         else:
-#             self.dataPath = os.path.join(self.rootDir,config.get('STORES','DATA'))
-#        self.path = os.path.join(self.rootDir,config.get('STORES','DATA'))
-#        logger.info("Data store path: %s", self.dataPath)
-        ''' select the storate method '''
-        self.storeMethod = config.get('STORES','METHOD')
-        
+        logger.info(__name__)
+        logger.info('Module Path = %s', self.moduleDir)
+
         ''' set the tmp dir to store large data to share with other functions
             if self.tmpDIR = None then data is not stored, otherwise stored to
             given location; typically specified in app.conf
@@ -112,6 +120,7 @@ class Utils():
 
         print("Initialing %s class for %s with instance %s" 
               % (self.__package__, self.__name__, self.__desc__))
+        print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
         return None
 
     ''' Function
@@ -186,7 +195,7 @@ class Utils():
                 for detail in inputs_dict[prop_detail]:
                     param_dict['url'] = detail['url']
                     param_dict['inputs'] = detail['inputs']
-#                    param_dict['destinations'] = detail['destinations']
+                    param_dict['destinations'] = detail['destinations']
                     ''' append the input parameters into a list'''
                     ota_param_list.append(param_dict)
       
@@ -291,19 +300,19 @@ class Utils():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def get_search_data_dir_path(self, data_dir_path:str, parent_dir_name:str, **kwargs):
+    def get_extract_data_stored_path(self, data_store_path:str, parent_dir_name:str, **kwargs):
 
-        _SearchDataDir = None
+        _search_data_save_dir = None
         _search_dt = datetime.now()
         _search_time_gap = self.scrapeTimeGap
         
-        _s_fn_id = "function <get_search_data_dir_path>"
+        _s_fn_id = "function <get_extract_data_stored_path>"
         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
         try:
             if 'SCRAPE_TIME_GAP' in kwargs.keys():
                 _search_time_gap = kwargs['SCRAPE_TIME_GAP']
-            _parent_dir_path = os.path.join(data_dir_path, parent_dir_name)
+            _parent_dir_path = os.path.join(data_store_path, parent_dir_name)
                 
 #             ''' establish the storage block '''
 #             if dirPath:

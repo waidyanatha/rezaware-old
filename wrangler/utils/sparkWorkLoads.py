@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
+''' Initialize with default environment variables '''
+__name__ = "sparkWorkLoads"
+__package__ = "SparkWorkLoads"
+__root_dir__ = "/home/nuwan/workspace/rezgate/wrangler/"
+__utils_dir__ = 'utils/'
+#__data_dir__ = 'data/hospitality/bookings/scraper/'
+__conf_fname__ = 'app.cfg'
+__logs_dir__ = 'logs/utils/'
+__log_fname__ = 'app.log'
+
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
     import os
@@ -43,12 +53,15 @@ class SparkWorkLoads():
             author: <nuwan.waidyanatha@rezgateway.com>
 
     '''
-    def __init__(self, name : str="data",   # identifier for the instances
+    def __init__(self, desc : str="spark workloads",   # identifier for the instances
                  sparkPath:str=None,        # directory path to spark insallation
                  **kwargs:dict,   # can contain hostIP and database connection settings
                 ):
 
-        self.name = name
+        self.__name__ = __name__
+        self.__package__ = __package__
+        self.__desc__ = desc
+
         ''' initiate to load app.cfg data '''
         global confApp
         global confUtil
@@ -56,31 +69,31 @@ class SparkWorkLoads():
         confUtil = configparser.ConfigParser()
 
         ''' Set the wrangler root directory '''
-        self.rootDir = "./wrangler"
+        self.rootDir = __root_dir__
         if "ROOT_DIR" in kwargs.keys():
             self.rootDir = kwargs['ROOT_DIR']
-        if self.rootDir[-1] != "/":
-            self.rootDir +="/"
+#         if self.rootDir[-1] != "/":
+#             self.rootDir +="/"
         ''' load the main app and utils config env vars '''
-        self.appConfigPath = os.path.join(self.rootDir, 'app.cfg')
+        self.appConfigPath = os.path.join(self.rootDir, __conf_fname__)
         confApp.read(self.appConfigPath)
-        self.utilsPath = os.path.join(self.rootDir, 'utils/')
-        self.utilsConfigPath = os.path.join(self.utilsPath, 'app.cfg')
-        confUtil.read(self.utilsConfigPath)
+        self.utilsDir = os.path.join(self.rootDir, __utils_dir__)
+        self.utilConfFPath = os.path.join(self.utilsDir, 'app.cfg')
+        confUtil.read(self.utilConfFPath)
 
         ''' get the file and path for the logger '''
-        self.logPath = os.path.join(self.rootDir,confUtil.get('LOGGING','LOGPATH'))
-        if not os.path.exists(self.logPath):
-            os.makedirs(self.logPath)
-        self.logFile = os.path.join(self.logPath,confUtil.get('LOGGING','LOGFILE'))
+        self.logDir = os.path.join(self.rootDir,confUtil.get('LOGGING','LOGPATH'))
+        if not os.path.exists(self.logDir):
+            os.makedirs(self.logDir)
+        self.logFPath = os.path.join(self.logDir,confUtil.get('LOGGING','LOGFILE'))
         ''' innitialize the logger '''
         global logger
-        logger = logging.getLogger('SparkWorkLoads')
+        logger = logging.getLogger(__package__)
         logger.setLevel(logging.DEBUG)
         if (logger.hasHandlers()):
             logger.handlers.clear()
         # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFile, confUtil.get('LOGGING','LOGMODE'))
+        fh = logging.FileHandler(self.logFPath, confUtil.get('LOGGING','LOGMODE'))
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -89,7 +102,7 @@ class SparkWorkLoads():
         ''' set a new logger section '''
         logger.info('########################################################')
         logger.info(__name__)
-        logger.info('Utils Path = %s', self.utilsPath)
+        logger.info('Utils Path = %s', self.utilsDir)
         
         ''' get tmp storage location '''
         self.tmpDIR = None
@@ -220,7 +233,9 @@ class SparkWorkLoads():
             logger.info("Defined spark database connection url: %s" % (self.spark_url))
 
             logger.info("Connection complete! ready to load data.")
-#            print("Connection complete! ready to load data.")
+            print("Initialing %s class for %s with instance %s"
+                  % (self.__package__, self.__name__, self.__desc__))
+            print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <__init__>"
@@ -230,33 +245,33 @@ class SparkWorkLoads():
 
         return None
 
-    ''' Function
-            name: get_spark_session
-            parameters:
-                    @name (str)
-                    @enrich (dict)
-            procedure:
+#     ''' Function
+#             name: get_spark_session
+#             parameters:
+#                     @name (str)
+#                     @enrich (dict)
+#             procedure:
 
-            return DataFrame
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    def DEPRECATED_get_spark_session(self, **kwargs):
+#             return DataFrame
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     def DEPRECATED_get_spark_session(self, **kwargs):
 
-        try:
-            ''' the Spark session should be instantiated as follows '''
-            self.spark_session = SparkSession \
-                                    .builder \
-                                    .appName("rezaware wrangler") \
-                                    .config("spark.jars", self.spark_jar) \
-                                    .getOrCreate()
+#         try:
+#             ''' the Spark session should be instantiated as follows '''
+#             self.spark_session = SparkSession \
+#                                     .builder \
+#                                     .appName("rezaware wrangler") \
+#                                     .config("spark.jars", self.spark_jar) \
+#                                     .getOrCreate()
 
-        except Exception as err:
-            _s_fn_id = "Class <SparkWorkLoads> Function <get_spark_session>"
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+#         except Exception as err:
+#             _s_fn_id = "Class <SparkWorkLoads> Function <get_spark_session>"
+#             logger.error("%s %s \n",_s_fn_id, err)
+#             print("[Error]"+_s_fn_id, err)
+#             print(traceback.format_exc())
 
-        return self.spark_session
+#         return self.spark_session
 
     ''' Function
             name: get_data_from_table
@@ -437,9 +452,9 @@ class SparkWorkLoads():
                 _csv_file_path = filesPath
                 logger.info("File ready to save to %s", _csv_file_path)
             else:
-                fname = "save_sdf_to_csv.csv"
+                fname = __package__+"save_sdf_to.csv"
                 _csv_file_path = os.path.join(self.tmpDIR, fname)
-                logger.info("No file path defined, saving to %s", _csv_file_path)
+                logger.info("No file path defined, saving to default %s", _csv_file_path)
 
             ''' save sdf to csv '''
 #            sdf.write.option("header",True)\

@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
+''' Initialize with default environment variables '''
+__name__ = "propertyScraper"
+__package__ = "PropertyScraper"
+__root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
+__module_dir__ = 'modules/ota/'
+__data_dir__ = 'data/hospitality/bookings/scraper/'
+__conf_fname__ = 'app.cfg'
+__logs_dir__ = 'logs/module/ota/'
+__log_fname__ = 'app.log'
+
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
     ''' standard python packages '''
@@ -12,15 +22,17 @@ try:
     import pandas as pd
     from datetime import datetime, date, timedelta
 
-    ''' Initialize with default environment variables '''
-    __name__ = "propertyScraper"
-    __package__ = "PropertyScraper"
-    __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-    __module_path__ = os.path.join(__root_dir__, 'modules/ota/')
-    __config_path__ = os.path.join(__module_path__, 'app.cfg')
-    __data_path__ = os.path.join(__root_dir__, 'data/hospitality/bookings/scraper/')
+#     ''' Initialize with default environment variables '''
+#     __name__ = "propertyScraper"
+#     __package__ = "PropertyScraper"
+#     __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
+#     __module_dir__ = os.path.join(__root_dir__, 'modules/ota/')
+#     __data_dir__ = os.path.join(__root_dir__, 'data/hospitality/bookings/scraper/')
+#     __conf_fname__ = os.path.join(__module_dir__, 'app.cfg')
+#     __logs_dir__ = os.path.join(__root_dir__, 'logs/module/ota/')
+#     __log_fname__ = 'app.log'
 
-    sys.path.insert(1,__module_path__)
+    sys.path.insert(1,__module_dir__)
     import otaUtils as otau
 
     print("All {0} software packages loaded successfully!".format(__package__))
@@ -58,21 +70,28 @@ class PropertyScraper():
         if "ROOT_DIR" in kwargs.keys():
             self.rootDir = kwargs['ROOT_DIR']
 
-        self.modulePath = os.path.join(self.rootDir, __module_path__)     
-        if "MODULE_PATH" in kwargs.keys():
-            self.modulePath=kwargs['MODULE_PATH']
+        self.moduleDir = os.path.join(self.rootDir, __module_dir__)
+        if "MODULE_DIR" in kwargs.keys():
+            self.moduleDir=kwargs['MODULE_DIR']
 
-        self.configPath = os.path.join(self.modulePath, 'app.cfg')
+        self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
         if "CONFIG_PATH" in kwargs.keys():
-            self.configPath=kwargs['CONFIG_PATH']
+            self.confFPath=kwargs['CONFIG_PATH']
         global config
         config = configparser.ConfigParser()
-        config.read(self.configPath)
+        config.read(self.confFPath)
+
         ''' get the file and path for the logger '''
-        self.logPath = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
-        if not os.path.exists(self.logPath):
-            os.makedirs(self.logPath)
-        self.logFile = os.path.join(self.logPath,config.get('LOGGING','LOGFILE'))
+        self.logDir = os.path.join(self.rootDir,__logs_dir__)
+        self.logFPath = os.path.join(self.logDir,__log_fname__)
+        try:
+            self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
+            self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+        except:
+            pass
+        if not os.path.exists(self.logDir):
+            os.makedirs(self.logDir)
+#        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
 
         ''' innitialize the logger '''
         global logger
@@ -81,7 +100,8 @@ class PropertyScraper():
         if (logger.hasHandlers()):
             logger.handlers.clear()
         # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFile, config.get('LOGGING','LOGMODE'))
+        fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
+#        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -90,27 +110,26 @@ class PropertyScraper():
         ''' set a new logger section '''
         logger.info('########################################################')
         logger.info(__name__)
-        logger.info('Module Path = %s', self.modulePath)
+        logger.info('Module Path = %s', self.moduleDir)
 
         ''' get the path to the input and output data '''
-        self.dataPath = __data_path__
+        self.dataDir = __data_dir__
         try:
-            if "DATA_PATH" in kwargs.keys():
+            if "DATA_DIR" in kwargs.keys():
                 ''' first preference given to kwargs '''
-                self.dataPath = kwargs['DATA_PATH']
-                logger.info("Appending data path from kwargs %s" % self.dataPath)
+                self.dataDir = kwargs['DATA_DIR']
+                logger.info("Appending data path from kwargs %s" % self.dataDir)
             else:
                 ''' next try the app.cfg file '''
-                self.dataPath = os.path.join(self.rootDir,config.get('STORES','DATA'))
-                if not self.dataPath:
-                    raise ValueError("Data location not defined in %s" % self.configPath)
+                self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
+                if not self.dataDir:
+                    raise ValueError("Data location not defined in %s" % self.confFPath)
                 else:
-                    logger.info("Appending data path from configuration %s" % self.dataPath)
+                    logger.info("Appending data path from configuration %s" % self.dataDir)
             
         except Exception as err:
             logger.warning("%s %s \n", _s_fn_id,err)
-            logger.warning("Using default data path %s" % self.dataPath)
-            print("[Warning]"+_s_fn_id, err)
+            logger.warning("Using default data path %s" % self.dataDir)
 
         ''' select the storate method '''
         self.storeMethod = config.get('STORES','METHOD')
@@ -139,15 +158,15 @@ class PropertyScraper():
                          ]
         print("Initialing %s class for %s with instance %s" 
               % (self.__package__, self.__name__, self.__desc__))
-        print("Logging info, warnings, and error to %s" % self.logPath)
-        print("Data path set to %s" % self.dataPath)
+        print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
+        print("Data path set to %s" % self.dataDir)
         return None
 
 
     ''' Function
             name: build_scrape_url_list
             parameters:
-                dir_path - path to the directory with property parameters JSON
+                inp_data_dir - path to the directory with property parameters JSON
                 file_name - JSON file containing those parameters
 
             procedure: use the get_scrape_input_params function to load the the JSON file. 
@@ -162,25 +181,25 @@ class PropertyScraper():
                     Need a better method rather than nested loop because not all OTAs will consist
                     of the same input parameters
     '''
-    def get_destination_ids(self, file_name, dir_path=None, col_name=None):
+    def get_destination_ids(self, file_name, destins_dir=None, col_name=None):
 
         _l_dests = []
 
         _s_fn_id = "function <get_scrape_output_params>"
-#        logger.info("Executing %s", _s_fn_id)
+#        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
         try:
             if not file_name:
                 raise ValueError("Invalid file name")
 
             ''' see if the file exists '''
-            if not dir_path:
-                dir_path = self.dataPath
-            if dir_path[-1] != "/":
-                dir_path +="/"
-            file_path = dir_path+file_name
+            if not destins_dir:
+                destins_dir = self.dataDir
+#             if inp_data_dir[-1] != "/":
+#                 inp_data_dir +="/"
+            file_path = os.path.join(destins_dir,file_name)
             if not os.path.exists(file_path):
-                raise ValueError("File %s does not exisit in folder %s" %(file_name,dir_path))
+                raise ValueError("File %s does not exisit in folder %s" %(file_name,destins_dir))
 
             ''' read the destination ids into the list '''
             dest_df = pd.read_csv(file_path, sep=',', quotechar='"')
@@ -200,7 +219,7 @@ class PropertyScraper():
     ''' Function
             name: build_scrape_url_list
             parameters:
-                dir_path - path to the directory with property parameters JSON
+                inp_data_dir - path to the directory with property parameters JSON
                 file_name - JSON file containing those parameters
 
             procedure: use the get_scrape_input_params function to load the the JSON file. 
@@ -215,7 +234,7 @@ class PropertyScraper():
                     Need a better method rather than nested loop because not all OTAs will consist
                     of the same input parameters
     '''
-    def build_scrape_url_list(self, file_name:str, dir_path=None, **kwargs):
+    def build_scrape_url_list(self, file_name:str, inp_data_dir=None, **kwargs):
 
         _scrape_url_dict = {}
         _ota_parameterized_url_list = [] 
@@ -230,8 +249,10 @@ class PropertyScraper():
             ''' validate and if given the dir path, else revert to defaul '''
             if not file_name:
                 raise ValueError("Invalid file to fetch scraper property dictionary")
-            if not dir_path:
-                dir_path = os.path.join(self.rootDir,config.get('STORES','INPUTDATA'))
+            if not inp_data_dir:
+#                 inp_data_dir = os.path.join(self.rootDir,config.get('STORES','INPUTDATA'))
+                inp_data_dir = self.dataDir
+            logger.info("Directory path for loading input data %s" % inp_data_dir)
             
             ''' check and initialize **kwargs '''
             if 'pageOffset' in kwargs:
@@ -256,16 +277,14 @@ class PropertyScraper():
                 self.checkout_offset = kwargs['checkoutOffset']
 
             ''' set the directory path to csv files with destination ids '''
-            if dir_path[-1] != "/":
-                _dest_dir_path = dir_path+"/"+"destinations"
-            else:
-                _dest_dir_path = dir_path+"destinations"
+            _destins_dir = os.path.join(inp_data_dir, "destinations/")
 
             ''' retrieve OTA input and output property data from json '''
-            property_dict = clsUtil.load_ota_list(os.path.join(dir_path, file_name))
+            property_dict = clsUtil.load_ota_list(os.path.join(inp_data_dir, file_name))
+
             if len(property_dict) <= 0:
                 raise ValueError("No data found with %s with defined scrape properties"
-                                 % os.path.join(dir_path, file_name))
+                                 % os.path.join(inp_data_dir, file_name))
             else:
                 logger.info("Loaded %d properties to begin scraping OTA data.", len(property_dict))
                 print("Loaded %d properties to begin scraping OTA data." % (len(property_dict)))
@@ -284,12 +303,14 @@ class PropertyScraper():
                     if not ota['url']:
                         raise ValueError("Invalid url skip to next")
 
-                    ''' get the list of destination ids '''
+                    ''' get the list of destination ids for the particular OTA'''
                     if "destinations" in ota.keys():
+                        
                         _l_dest = self.get_destination_ids(file_name=ota["destinations"],   # filename with destination ids
-                                                           dir_path=_dest_dir_path,   # path to the desitnation folder
-                                                           col_name="destinationID"  # column name with destination ids
+                                                           destins_dir=_destins_dir,   # path to the desitnation folder
+                                                           col_name="destinationID"    # column name with destination ids
                                                           )
+
                         if len(_l_dest) > 0:
                             self.destination_id = _l_dest
                             logger.info("Loaded %d destnation ids", len(_l_dest))
@@ -352,7 +373,7 @@ class PropertyScraper():
     ''' Function
             name: make_storage_dir
             parameters:
-                dir_path - string with folder path to the csv files
+                inp_data_dir - string with folder path to the csv files
                 **kwargs - contain the plance holder key value pairs
                             columns: list
                             start_date: datetime.date
@@ -377,10 +398,11 @@ class PropertyScraper():
             else:
                 parent_dir_name = "rates/"
                 
-            _prop_search_folder = clsUtil.get_search_data_dir_path(
-                data_dir_path = self.dataPath,
+            _prop_search_folder = clsUtil.get_extract_data_stored_path(
+                data_store_path = self.dataDir,
                 parent_dir_name = parent_dir_name,
                 **kwargs)
+            logger.info("Folder %s ready for storing scraped data" % _prop_search_folder)
 
         except Exception as err:
             logger.error("%s %s \n", _s_fn_id, err)
@@ -396,13 +418,13 @@ class PropertyScraper():
                 url - string comprising the url with place holders
                 **kwargs - contain the plance holder key value pairs
 
-            procedure: build the url by inserting the values from the **kwargs dict
-            return string (url)
+            procedure: specific to bookings.com scrape, extract, and load the data in a csf file
 
             author: <nileka.desilva@rezgateway.com>
     '''
     def _scrape_bookings_to_csv(self,
                                 url,   # parameterized url
+                                ota_name, # ota name
                                 checkin_date, # intended checkin date
                                 search_dt,    # scrape run date time
                                 destination_id, # location searched for
@@ -429,7 +451,7 @@ class PropertyScraper():
             soup = BeautifulSoup(response.text,"lxml")
 
             lists = soup.select(".d20f4628d0")
-            lists2 = soup.select(".c8305f6688")
+#            lists2 = soup.select(".c8305f6688")
 
             saveTo = path+"/"+file_name
 
@@ -437,19 +459,59 @@ class PropertyScraper():
                 raise ValueError("No data received for %s" % (url))
 
             for _list in lists:
+                _data_err = False
                 _data_dict = {}
+                _data_dict['ota_name'] = ota_name,
                 _data_dict['search_dt'] = search_dt,
                 _data_dict['checkin_date'] = checkin_date,
-                _data_dict['property_name'] = _list.find('div', class_='fcab3ed991 a23c043802').text
-                _data_dict['room_type'] = _list.find('span', class_='df597226dd').text
-                _data_dict['room_rate'] = _list.find('span', class_='fcab3ed991 bd73d13072').text
-                _data_dict['review_score'] = _list.find('div', class_='b5cd09854e d10a6220b4').text
                 _data_dict['destination_id'] = destination_id,
-                _data_dict['location_desc'] = _list.find('div', class_='a1fbd102d9').text
-                _data_dict['other_info'] = _list.find('div', class_='d22a7c133b').text
+                try:
+                    _data_dict['property_name'] = _list.find('div', class_='fcab3ed991 a23c043802').text
+                except Exception as text_err:
+                    _data_dict['property_name'] = None
+                    _data_err = True
+                    logger.warning('property_name - %s',text_err)
+                    pass
+                try:
+                    _data_dict['room_type'] = _list.find('span', class_='df597226dd').text
+                except Exception as text_err:
+                    _data_dict['room_type'] = None
+                    _data_err = True
+                    logger.warning('room_type - %s',text_err)
+                    pass
+                try:
+                    _data_dict['room_rate'] = _list.find('span', class_='fcab3ed991 bd73d13072').text
+                except Exception as text_err:
+                    _data_dict['room_rate'] = None
+                    _data_err = True
+                    logger.warning('room_rate - %s',text_err)
+                    pass
+                try:
+                    _data_dict['review_score'] = _list.find('div', class_='b5cd09854e d10a6220b4').text
+                except Exception as text_err:
+                    _data_dict['review_score'] = None
+                    _data_err = True
+                    logger.warning('review_score - %s',text_err)
+                    pass
+                try:
+                    _data_dict['location_desc'] = _list.find('div', class_='a1fbd102d9').text
+                except Exception as text_err:
+                    _data_dict['location_desc'] = None
+                    _data_err = True
+                    logger.warning('location_desc - %s',text_err)
+                    pass
+                try:
+                    _data_dict['other_info'] = _list.find('div', class_='d22a7c133b').text
+                except Exception as text_err:
+                    _data_dict['other_info'] = None
+                    _data_err = True
+                    logger.warning('other_info',text_err)
 
                 if bool(_data_dict):
                     _save_df = pd.concat([_save_df,pd.DataFrame(_data_dict)])
+                if _data_err:
+                    logger.warning("Above text extraction errors were caused by url: \n %s \n",url)
+
 
             if _save_df.shape[0] > 0:
                 if self.storeMethod == 'local':
@@ -487,7 +549,7 @@ class PropertyScraper():
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
 
-    def scrape_url_list(self,otaURLlist, searchDT: datetime, dir_path:str):
+    def scrape_url_list(self,otaURLlist, searchDT: datetime, data_store_dir:str):
 
         saveTo = None   # init file name
         _l_saved_files = []
@@ -515,12 +577,13 @@ class PropertyScraper():
 
                 ''' TODO add search_datetime'''
                 if ota_dict['ota'] == 'booking.com':
-                    saveTo = self._scrape_bookings_to_csv(ota_dict['url'],      # constructed url with parameters
+                    saveTo = self._scrape_bookings_to_csv(ota_dict['url'],   # constructed url with parameters
+                                                          ota_dict['ota'],   # ota name data source
                                                           ota_dict['checkin'],  # booking intended checkin date
                                                           searchDT,   # date & time scraping was executed
                                                           ota_dict['destination_id'],  # destingation id to lookup the name
                                                           _fname,       # csv file name to store in
-                                                          dir_path     # folder name to save the files
+                                                          data_store_dir     # folder name to save the files
                                                          )
                     _l_saved_files.append(saveTo)
 
@@ -535,14 +598,14 @@ class PropertyScraper():
 #     ''' Function DEPRECATED moved to otaUtils class
 #             name: get_url_list
 #             parameters:
-#                 dir_path - the relative or direct path to the file with urls
+#                 inp_data_dir - the relative or direct path to the file with urls
 #                 file_name - the name of the file containing all the urls for scraping
 #             procedure: read the list of urls from the CSV file and compile a list
 #             return list (url_list)
 
 #             author: <nuwan.waidyanatha@rezgateway.com>
 #     '''
-#     def load_ota_list(self, dir_path:str, file_name:str):
+#     def load_ota_list(self, inp_data_dir:str, file_name:str):
 
 #         import os         # apply directory read functions
 #         import csv        # to read the csv
@@ -557,17 +620,17 @@ class PropertyScraper():
 #         try:
 
 #             ''' Get the list of urls from the CSV file '''        
-#             if dir_path:
-#                 self.dataPath = dir_path
-#             _l_files = os.listdir(self.dataPath)
+#             if inp_data_dir:
+#                 self.dataDir = inp_data_dir
+#             _l_files = os.listdir(self.dataDir)
 #             ''' if file_name is not null check if it is in the director '''
 #             if file_name and file_name in _l_files:
 #                 self.file = file_name
 #             else:
-#                 raise ValueError("Invalid file name %s in dir: %s. Does not exist!" % (file_name, self.dataPath))
+#                 raise ValueError("Invalid file name %s in dir: %s. Does not exist!" % (file_name, self.dataDir))
 
 #             ''' read the list of urls from the file '''
-#             with open(self.dataPath+"/"+self.file, newline='') as f:
+#             with open(self.dataDir+"/"+self.file, newline='') as f:
 #                 property_data = json.load(f)
 
 #         except Exception as err:
@@ -702,7 +765,7 @@ class PropertyScraper():
 
 #         return url_w_params
 
-#     def _get_search_data_dir_path(self,dir_path, **kwargs):
+#     def _get_search_data_inp_data_dir(self,inp_data_dir, **kwargs):
 
 #         _SearchDataDir = None
 #         _search_dt = datetime.now()
@@ -717,8 +780,8 @@ class PropertyScraper():
 
 #         try:
 #             ''' establish the storage block '''
-#             if dir_path:
-#                 self.ratesStoragePath = dir_path
+#             if inp_data_dir:
+#                 self.ratesStoragePath = inp_data_dir
 #             ''' add the folder if not exists '''
 #             if self.ratesStoragePath[-1] != "/":
 #                 self.ratesStoragePath +="/"
@@ -841,7 +904,7 @@ class PropertyScraper():
 #     ''' Function  -- DEPRECATED -- moved to otaUtils
 #             name: remove_empty_files
 #             parameters:
-#                 dir_path - string with folder path to the csv files
+#                 inp_data_dir - string with folder path to the csv files
 #                 **kwargs - contain the plance holder key value pairs
 #                             columns: list
 #                             start_date: datetime.date
@@ -862,7 +925,7 @@ class PropertyScraper():
 #         _l_removed_files = []
 #         try:
 #             if not path:
-#                 path = self.dataPath
+#                 path = self.dataDir
             
 # #            print(list(os.walk(path)))
 #             for (dirpath, folder_names, files) in os.walk(path):
@@ -891,7 +954,7 @@ class PropertyScraper():
 #     ''' Function DEPRACATE -- moved to utils/sparkWorkLoads
 #             name: read_folder_csv_to_df
 #             parameters:
-#                 dir_path - string with folder path to the csv files
+#                 inp_data_dir - string with folder path to the csv files
 #                 **kwargs - contain the plance holder key value pairs
 #                             columns: list
 #                             start_date: datetime.date
@@ -904,7 +967,7 @@ class PropertyScraper():
 #             author: <nuwan.waidyanatha@rezgateway.com>
 #     '''
 
-#     def read_folder_csv_to_df(self,dir_path: str, **kwargs):
+#     def read_folder_csv_to_df(self,inp_data_dir: str, **kwargs):
 
 #         ota_rates_df = pd.DataFrame()     # initialize the return var
 #         _tmp_df = pd.DataFrame()
@@ -917,11 +980,11 @@ class PropertyScraper():
 
 #         try:
 #             ''' check if the folder and files exists '''
-#             if not dir_path:
-#                 raise ValueError("Invalid folder path %s" % dir_path)
-#             filelist = os.listdir(dir_path)
+#             if not inp_data_dir:
+#                 raise ValueError("Invalid folder path %s" % inp_data_dir)
+#             filelist = os.listdir(inp_data_dir)
 #             if not (len(filelist) > 0):
-#                 raise ValueError("No data files found in director: %s" % (dir_path))
+#                 raise ValueError("No data files found in director: %s" % (inp_data_dir))
 
 #             ''' extract data from **kwargs if exists '''
 #             if 'columns' in kwargs.keys():
@@ -934,7 +997,7 @@ class PropertyScraper():
 #             '''' loop through files to get the data  '''
 #             for _s_file in filelist:
 #                 if _s_file.endswith(".csv"):
-#                     _s_csv_file = dir_path+_s_file
+#                     _s_csv_file = inp_data_dir+_s_file
 #                     _tmp_df = pd.read_csv(_s_csv_file, 
 #                                           sep=",",
 #                                           quotechar='"',

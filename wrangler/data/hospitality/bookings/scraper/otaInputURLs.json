@@ -2,6 +2,7 @@
     "booking.com": [{
         "url": "https://www.booking.com/searchresults.en-gb.html?ss=Las+Vegas&label=gen173nr-1DCAEoggI46AdIM1gEaIUBiAEBmAEJuAEXyAEM2AED6AEBiAIBqAIDuAK_g7aYBsACAdICJDFiNWFiNzM3LTQ0YmItNDIzOC04NDM0LWRjMDFlNmZhYTUwM9gCBOACAQ&sid=36e124997ccdbec4823b6c98d5931c2e&aid=304142&lang=en-gb&sb=1&src_elem=sb&src=searchresults&dest_id={destinationID}&dest_type=city&checkin={checkIn}&checkout={checkOut}&group_adults=1&no_rooms=1&group_children=0&selected_currency=USD&offset={page}",
         "inputs": ["page", "checkIn", "checkOut", "destinationID"],
+        "destinations": "cityCodesBookingCom.csv",
         "outputs": [
             {"variable": "content_block", "tag": "div", "code": ".d20f4628d0"},
             {"variable": "property_name", "tag": "span", "code": "fcab3ed991 a23c043802"},
@@ -10,7 +11,6 @@
             {"variable": "review_score", "tag": "div", "code": "b5cd09854e d10a6220b4"},
             {"variable": "location", "tag": "div", "code": "a1fbd102d9"},
             {"variable": "Other", "tag": "div", "code": "d22a7c133b"}
-        ],
-        "destinations": "cityCodesBookingCom.csv"
-    }]
+        ]
+    }]    
 }
