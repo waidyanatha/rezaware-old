@@ -187,15 +187,15 @@ class Utils():
             ''' loop through the dict to construct the scraper parameters '''
             ota_param_list = []
             _l_tag=[]
-            for prop_detail in inputs_dict:
+            for input_detail in inputs_dict:
                 param_dict = {}
                 tag_dict = {}
                 ''' create a dict with input params '''
-                param_dict['ota'] = prop_detail
-                for detail in inputs_dict[prop_detail]:
+                param_dict['ota'] = input_detail
+                for detail in inputs_dict[input_detail]:
                     param_dict['url'] = detail['url']
                     param_dict['inputs'] = detail['inputs']
-                    param_dict['destinations'] = detail['destinations']
+                    param_dict['locations'] = detail['locations']
                     ''' append the input parameters into a list'''
                     ota_param_list.append(param_dict)
       
@@ -229,10 +229,10 @@ class Utils():
                 raise ValueError("Invalid properties dictionary")
 
             ''' loop through the dict to construct html tags to retrieve the data elements '''
-            for prop_detail in airline_dict:
-                for _prop_params in airline_dict[prop_detail]:
+            for input_detail in airline_dict:
+                for _prop_params in airline_dict[input_detail]:
                     for _out_vars in _prop_params['outputs']:
-                        _out_vars['ota'] = prop_detail
+                        _out_vars['ota'] = input_detail
                         _scrape_tags_df = pd.concat([_scrape_tags_df,\
                                                      pd.DataFrame([_out_vars.values()], columns=_out_vars.keys())],
                                                    ignore_index=False)

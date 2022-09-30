@@ -5,11 +5,12 @@
 __name__ = "propertyScraper"
 __package__ = "PropertyScraper"
 __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-__module_dir__ = 'modules/ota/'
-__data_dir__ = 'data/hospitality/bookings/scraper/'
-__conf_fname__ = 'app.cfg'
-__logs_dir__ = 'logs/module/ota/'
-__log_fname__ = 'app.log'
+__utils_dir__ = "/home/nuwan/workspace/rezgate/utils/"
+__module_dir__ = "modules/ota/"
+__data_dir__ = "data/hospitality/bookings/scraper/"
+__conf_fname__ = "app.cfg"
+__logs_dir__ = "logs/module/ota/"
+__log_fname__ = "app.log"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -22,18 +23,10 @@ try:
     import pandas as pd
     from datetime import datetime, date, timedelta
 
-#     ''' Initialize with default environment variables '''
-#     __name__ = "propertyScraper"
-#     __package__ = "PropertyScraper"
-#     __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-#     __module_dir__ = os.path.join(__root_dir__, 'modules/ota/')
-#     __data_dir__ = os.path.join(__root_dir__, 'data/hospitality/bookings/scraper/')
-#     __conf_fname__ = os.path.join(__module_dir__, 'app.cfg')
-#     __logs_dir__ = os.path.join(__root_dir__, 'logs/module/ota/')
-#     __log_fname__ = 'app.log'
-
     sys.path.insert(1,__module_dir__)
     import otaUtils as otau
+    sys.path.insert(1,__utils_dir__)
+    import nlp
 
     print("All {0} software packages loaded successfully!".format(__package__))
 
@@ -64,6 +57,8 @@ class PropertyScraper():
         ''' initialize util class to use common functions '''
         global clsUtil
         clsUtil = otau.Utils(desc='Utilities class for property data scraping')
+        global clsNLP
+        clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
 
         ''' Set the wrangler root directory '''
         self.rootDir = __root_dir__
@@ -125,7 +120,7 @@ class PropertyScraper():
                 if not self.dataDir:
                     raise ValueError("Data location not defined in %s" % self.confFPath)
                 else:
-                    logger.info("Appending data path from configuration %s" % self.dataDir)
+                    logger.info("Appending data path from class default value %s" % self.dataDir)
             
         except Exception as err:
             logger.warning("%s %s \n", _s_fn_id,err)
@@ -168,6 +163,8 @@ class PropertyScraper():
             parameters:
                 inp_data_dir - path to the directory with property parameters JSON
                 file_name - JSON file containing those parameters
+                kwargs - 
+                        
 
             procedure: use the get_scrape_input_params function to load the the JSON file. 
                         Thenloop through all the OTAs to extract the input parameters
@@ -176,17 +173,18 @@ class PropertyScraper():
             return: list with the set of urls (scrape_url_list)
 
             author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-09-27
 
             TODO: the nested looping code to add the location, checkin, checkout, page is dirty
                     Need a better method rather than nested loop because not all OTAs will consist
                     of the same input parameters
     '''
-    def get_destination_ids(self, file_name, destins_dir=None, col_name=None):
+    def get_destination_ids(self, file_name:str, destins_dir=None, col_name="destinationID", **kwargs):
 
         _l_dests = []
 
         _s_fn_id = "function <get_scrape_output_params>"
-#        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
         try:
             if not file_name:
@@ -203,8 +201,11 @@ class PropertyScraper():
 
             ''' read the destination ids into the list '''
             dest_df = pd.read_csv(file_path, sep=',', quotechar='"')
-            if not col_name:
-                col_name = "destinationID"
+            if dest_df.shape[0] <=0:
+                raise ValueError("No destination data recovered from %s" %(file_path))
+
+#             if not col_name:
+#                 col_name = "destinationID"
             _l_dests = list(dest_df[col_name])
 
 
@@ -229,6 +230,7 @@ class PropertyScraper():
             return: list with the set of urls (scrape_url_list)
 
             author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-09-27
 
             TODO: the nested looping code to add the location, checkin, checkout, page is dirty
                     Need a better method rather than nested loop because not all OTAs will consist
@@ -304,9 +306,9 @@ class PropertyScraper():
                         raise ValueError("Invalid url skip to next")
 
                     ''' get the list of destination ids for the particular OTA'''
-                    if "destinations" in ota.keys():
+                    if "locations" in ota.keys():
                         
-                        _l_dest = self.get_destination_ids(file_name=ota["destinations"],   # filename with destination ids
+                        _l_dest = self.get_destination_ids(file_name=ota["locations"],   # filename with destination ids
                                                            destins_dir=_destins_dir,   # path to the desitnation folder
                                                            col_name="destinationID"    # column name with destination ids
                                                           )
@@ -384,6 +386,7 @@ class PropertyScraper():
             return string (_s3Storageobj or localhost directory path)
 
             author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-09-22
     '''
     def make_storage_dir(self, **kwargs):
         
@@ -420,7 +423,9 @@ class PropertyScraper():
 
             procedure: specific to bookings.com scrape, extract, and load the data in a csf file
 
-            author: <nileka.desilva@rezgateway.com>
+            author(s): <nileka.desilva@rezgateway.com>
+                        <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-09-10
     '''
     def _scrape_bookings_to_csv(self,
                                 url,   # parameterized url
@@ -447,13 +452,17 @@ class PropertyScraper():
         try:
             headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36'}
             response = requests.get(url, headers=headers)
+            # check the response code
+            if response.status_code != 200:
+                raise RuntimeError("Invalid response with code %d" % response.status_code)
+
             # Make it a soup
             soup = BeautifulSoup(response.text,"lxml")
 
             lists = soup.select(".d20f4628d0")
 #            lists2 = soup.select(".c8305f6688")
 
-            saveTo = path+"/"+file_name
+            saveTo = os.path.join(path, file_name)
 
             if len(lists) <= 0:
                 raise ValueError("No data received for %s" % (url))
@@ -547,6 +556,7 @@ class PropertyScraper():
             return dataframe (ota_bookings_df)
 
             author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-09-20
     '''
 
     def scrape_url_list(self,otaURLlist, searchDT: datetime, data_store_dir:str):
@@ -594,422 +604,140 @@ class PropertyScraper():
 
         return _l_saved_files
 
+    ''' Function
+            name: extract_room_rate
+            parameters:
+                otaURLlist - string with folder path to the csv files
+                **kwargs - contain the plance holder key value pairs
+                            columns: list
+                            start_date: datetime.date
+                            end_date: datetime.date
+            procedure: reads the all the csv files in the entire folder and
+                        appends the data for the relevant columns defined in
+                        the dictionary into a dataframe
+            return dataframe (ota_bookings_df)
 
-#     ''' Function DEPRECATED moved to otaUtils class
-#             name: get_url_list
-#             parameters:
-#                 inp_data_dir - the relative or direct path to the file with urls
-#                 file_name - the name of the file containing all the urls for scraping
-#             procedure: read the list of urls from the CSV file and compile a list
-#             return list (url_list)
+            author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-09-29
+    '''
 
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def load_ota_list(self, inp_data_dir:str, file_name:str):
-
-#         import os         # apply directory read functions
-#         import csv        # to read the csv
-#         import json       # to read the json file
-
-#         url_list = []     # initialize the return parameter
-#         property_data = {}
+    def extract_room_rate(self, 
+                          room_data_df,   # data frame with the room rates
+                          rate_col_name:str="room_rate",   # column name with the room rates
+                          aug_col_name:str="room_price",   # column name to save the room category
+                          curr_col_name:str="currency",   # column to store the currency abbr
+                          **kwargs,       # kwargs = {}
+                         ):
         
-#         _s_fn_id = "function <get_url_list>"
-#         logger.info("Executing %s", _s_fn_id)
+        _s_fn_id = "function <extract_room_rate>"
+        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
-#         try:
+        aug_rate_df = pd.DataFrame()
 
-#             ''' Get the list of urls from the CSV file '''        
-#             if inp_data_dir:
-#                 self.dataDir = inp_data_dir
-#             _l_files = os.listdir(self.dataDir)
-#             ''' if file_name is not null check if it is in the director '''
-#             if file_name and file_name in _l_files:
-#                 self.file = file_name
-#             else:
-#                 raise ValueError("Invalid file name %s in dir: %s. Does not exist!" % (file_name, self.dataDir))
+        try:
+            if room_data_df.shape[0] <= 0:
+                raise ValueError("Invalid dataframe with %d rows" % room_data_df.shape[0])
+            aug_rate_df = room_data_df.copy()
 
-#             ''' read the list of urls from the file '''
-#             with open(self.dataDir+"/"+self.file, newline='') as f:
-#                 property_data = json.load(f)
+            price_regex = r'(?i)(?:(\d+,*\d+))'
+            ''' TODO extract currency abbreviation from the room_rate '''
+            aug_rate_df[curr_col_name] = 'US$'
+            aug_rate_df[aug_col_name] = aug_rate_df[rate_col_name].str.extract(price_regex, expand=False)
+            aug_rate_df[aug_col_name] = aug_rate_df[aug_col_name].str.replace(',','')
+            aug_rate_df[aug_col_name] = aug_rate_df[aug_col_name].astype('float64')
+            logger.debug("room price extracted from %s and stored in %s with currency abbreviation" 
+                         %(rate_col_name,aug_col_name))
 
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id,err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n", _s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
 
-#         return property_data
+        return aug_rate_df
 
-#     ''' Function  DEPRECATED -- moved to otaUtils
-#             name: get_scrape_input_params
-#             parameters:
-#                 url - string comprising the url with place holders
-#                 **kwargs - contain the plance holder key value pairs
+    ''' Function
+            name: categorize_room_type
+            parameters:
+                otaURLlist - string with folder path to the csv files
+                **kwargs - contain the plance holder key value pairs
+                            columns: list
+                            start_date: datetime.date
+                            end_date: datetime.date
+            procedure: reads the all the csv files in the entire folder and
+                        appends the data for the relevant columns defined in
+                        the dictionary into a dataframe
+            return dataframe (ota_bookings_df)
 
-#             procedure: build the url by inserting the values from the **kwargs dict
-#             return string (url)
-            
-#             author: <nuwan.waidyanatha@rezgateway.com>
+            author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-09-29
+    '''
 
-#             TODO - change the ota_scrape_tags_df to a list of dictionaries
-#     '''
-#     def get_scrape_input_params(self, property_dict:dict):
-
-#         _s_fn_id = "function <get_scrape_input_params>"
-#         logger.info("Executing %s", _s_fn_id)
-
-#         try:
-#             ''' check for property dictionary '''
-#             if not property_dict:
-#                 raise ValueError("Invalid properties dictionary")
-
-#             ''' loop through the dict to construct the scraper parameters '''
-#             ota_param_list = []
-#             _l_tag=[]
-#             for prop_detail in property_dict:
-#                 param_dict = {}
-#                 tag_dict = {}
-#                 ''' create a dict with input params '''
-#                 param_dict['ota'] = prop_detail
-#                 for detail in property_dict[prop_detail]:
-#                     param_dict['url'] = detail['url']
-#                     param_dict['inputs'] = detail['inputs']
-#                     param_dict['destinations'] = detail['destinations']
-#                     ''' append the input parameters into a list'''
-#                     ota_param_list.append(param_dict)
-      
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return ota_param_list #, ota_scrape_tags_df
-
-#     ''' Function DEPRECTAED -- moved to otaUtils
-#             name: get_scrape_output_params
-#             parameters:
-#                 property_dict - obtained from loading the property scraping parameters from the JSON
-
-#             procedure: loop through the loaded dictionary to retrieve the output variable names, tags, and values.
-#                         Then construcct and return a dataframe for all corresponding OTAs
-#             return dataframe (_scrape_tags_df)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def get_scrape_html_tags(self, property_dict:dict):
-
-#         _scrape_tags_df = pd.DataFrame()
-
-#         _s_fn_id = "function <get_scrape_output_params>"
-#         logger.info("Executing %s", _s_fn_id)
-
-#         try:
-#             if not property_dict:
-#                 raise ValueError("Invalid properties dictionary")
-
-#             ''' loop through the dict to construct html tags to retrieve the data elements '''
-#             for prop_detail in property_dict:
-#                 for _prop_params in property_dict[prop_detail]:
-#                     for _out_vars in _prop_params['outputs']:
-#                         _out_vars['ota'] = prop_detail
-#                         _scrape_tags_df = pd.concat([_scrape_tags_df,\
-#                                                      pd.DataFrame([_out_vars.values()], columns=_out_vars.keys())],
-#                                                    ignore_index=False)
-
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id,err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return _scrape_tags_df
-
-
-#     ''' Function  DEPRECATED -- moved to otaUtils
-#             name: insert_params_in_url
-#             parameters:
-#                 url - string comprising the url with place holders
-#                 **kwargs - contain the plance holder key value pairs
-
-#             procedure: build the url by inserting the values from the **kwargs dict
-#             return string (url)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def insert_params_in_url(self, url: str, **kwargs ):
-
-#         import re
-
-#         url_w_params = None
-
-#         _s_fn_id = "function <insert_params_in_url>"
-# #        logger.info("Executing %s", _s_fn_id)
-
-#         try:
-#             if not url:
-#                 raise ValueError("Invalid url string %s" % (url))
-#             url_w_params = url
-
-#             ''' match the keys in dict with the placeholder string in the url''' 
-#             for key in kwargs.keys():
-#                 _s_regex = r"{"+key+"}"
-#                 urlRegex = re.compile(_s_regex, re.IGNORECASE)
-#                 param = urlRegex.search(url_w_params)
-#                 if param:
-#                     _s_repl_val = str(kwargs[key]).replace(" ","%20")
-#                     url_w_params = re.sub(_s_regex, _s_repl_val, url_w_params)
-            
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return url_w_params
-
-#     def _get_search_data_inp_data_dir(self,inp_data_dir, **kwargs):
-
-#         _SearchDataDir = None
-#         _search_dt = datetime.now()
+    def categorize_room_type(self, room_data_df, col_name, **kwargs):
         
-#         _s_fn_id = "function <scrape_data_to_csv>"
-#         logger.info("Executing %s", _s_fn_id)
-        
-#         kwargs = {
-#             "PARENT_DIR": "rates",
-#             "SCRAPE_TIME_GAP": 15,
-#         }
+        _s_fn_id = "function <categorize_room_type>"
+        logger.info("Executing %s %s",self.__package__, _s_fn_id)
 
-#         try:
-#             ''' establish the storage block '''
-#             if inp_data_dir:
-#                 self.ratesStoragePath = inp_data_dir
-#             ''' add the folder if not exists '''
-#             if self.ratesStoragePath[-1] != "/":
-#                 self.ratesStoragePath +="/"
-# #            if not os.path.exists(self.ratesStoragePath):
-# #                os.makedirs(self.ratesStoragePath)
+        emb_kwargs = {
+            "LOWER":True,
+            "NO_STOP_WORDS":False,
+            "METRIC":'COSIN',
+            "MAX_SCORES":2,
+        }
+#         aug_rtype_df = pd.DataFrame()
+        sim_scores_df = pd.DataFrame()
+        _assignment_df = pd.DataFrame()
 
-#             if "searchDateTime" in kwargs.keys():
-#                 _search_dt = kwargs["searchDateTime"]
-
-#             ''' TODO - change the function to round search datetime to nearest 30 min
-#                 using _distinct_df['search_datetime']=_distinct_df['search_datetime'].dt.round('30min') '''
-#             ''' pick the year, month, day, hour, min from search date time ''' 
-#             _minute = _search_dt.minute
-#             if _minute < 30:
-#                 _minute = 0
-#             else:
-#                 _minute = 30
-
-#             ''' folder is a concaternation of date hour and minute; where minute < 30 --> 0 and 30 otherwise'''
-#             _SearchDataDir = self.ratesStoragePath+\
-#                             str(_search_dt.year)+"-"+str(_search_dt.month)+"-"+str(_search_dt.day)\
-#                             +"-"+str(_search_dt.hour)+"-"+str(_minute)+"/"     # csv file name
-
-#             ''' add the folder if not exists '''
-#             if kwargs['storageLocation'] == 'local':
-#                 if not os.path.exists(self.ratesStoragePath):
-#                     os.makedirs(self.ratesStoragePath)
-#                 if not os.path.exists(_SearchDataDir):
-#                     os.makedirs(_SearchDataDir)
-#             elif kwargs['storageLocation'] == 'AWS_S3':
-#                 print("todo")
-#             else:
-#                 raise ValueError("%s is an undefined storage location in **kwargs"
-#                                  % (kwargs['storageLocation']))
-
-#             logger.info("Extracting data into %s storage", kwargs['storageLocation'])
-#             logger.info("OTA price data storage location: %s", _SearchDataDir)
-#             logger.info("Search datetime set to: %s", str(_search_dt))
-
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return _SearchDataDir
-
-#     ''' Function
-#             name: scrape_ota_to_csv
-#             parameters:
-#                 url - string comprising the url with place holders
-#                 **kwargs - contain the plance holder key value pairs
-
-#             procedure: build the url by inserting the values from the **kwargs dict
-#             return string (url)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def scrape_data_to_csv(self,url,_scrape_tags_df,file_name, path):
-
-#         from bs4 import BeautifulSoup # Import for Beautiful Soup
-#         import requests # Import for requests
-#         import lxml     # Import for lxml parser
-#         import csv
-#         from csv import writer
-
-#         _s_fn_id = "function <scrape_data_to_csv>"
-#         logger.info("Executing %s", _s_fn_id)
-
-#         try:
-#             if _scrape_tags_df.shape[0] <= 0:
-#                 raise ValueError("Invalid scrape tags no data scraped")
-#             if not file_name:
-#                 raise ValueError("Invalid file name no data scraped")
-#             if not path:
-#                 raise ValueError("Invalid path name no data scraped")
-
-#             ''' define generic header '''
-#             headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36'}
-#             response = requests.get(url, headers=headers)
-#             # Make it a soup
-#             soup = BeautifulSoup(response.text,"lxml")
-# #            soup = BeautifulSoup(response.text,"html.parser")
-
-#             ''' extract the list of values from content block '''
-#             _cont_block = (_scrape_tags_df.loc[_scrape_tags_df['variable']=='content_block']).head(1)
-#             _l_scrape_text = soup.select(_cont_block.tag.item())
-
-#             if len(_l_scrape_text) <= 0:
-#                 raise ValueError("no content block (area) for %s" %(_cont_block))
-
-#             ''' get the attribute list '''
-#             _l_col_names = list(_scrape_tags_df.variable)
-#             _l_col_names.remove('content_block')
-
-#             ''' init dataframe to store the scraped categorical text '''
-#             _prop_data_df = pd.DataFrame()
-
-#             ''' loop through the list to retrieve values from tags '''
-#             for row in _l_scrape_text:
-#                 _scraped_data_dict = {}
-#                 for colName in _l_col_names:
-#                     _tag = _scrape_tags_df.loc[_scrape_tags_df.variable==colName, 'tag'].item()
-#                     _code = _scrape_tags_df.loc[_scrape_tags_df.variable==colName, 'code'].item()
-
-#                     try:
-#                         _scraped_data_dict[colName] = row.find(_tag, class_ = _code).text
-
-#                     except Exception as err:
-#                         pass
-                        
-#                 if _scraped_data_dict:
-#                     _prop_data_df = pd.concat([_prop_data_df, pd.DataFrame(_scraped_data_dict, index=[0])])
-
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return _prop_data_df
-#     ''' Function  -- DEPRECATED -- moved to otaUtils
-#             name: remove_empty_files
-#             parameters:
-#                 inp_data_dir - string with folder path to the csv files
-#                 **kwargs - contain the plance holder key value pairs
-#                             columns: list
-#                             start_date: datetime.date
-#                             end_date: datetime.date
-#             procedure: reads the all the csv files in the entire folder and
-#                         appends the data for the relevant columns defined in
-#                         the dictionary into a dataframe
-#             return dataframe (ota_bookings_df)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-
-#     def remove_empty_files(self,path):
-
-#         _s_fn_id = "function <remove_empty_files>"
-#         logger.info("Executing %s", _s_fn_id)
-
-#         _l_removed_files = []
-#         try:
-#             if not path:
-#                 path = self.dataDir
+        try:
+            if room_data_df.shape[0] <= 0:
+                raise ValueError("Invalid dataframe with %d rows" % room_data_df.shape[0])
+            logger.debug("loaded %d rows property price search data", room_data_df.shape[0])
             
-# #            print(list(os.walk(path)))
-#             for (dirpath, folder_names, files) in os.walk(path):
-#                 for filename in files:
-#                     file_location = dirpath + '/' + filename  #file location is location is the location of the file
-#                     if os.path.isfile(file_location):
-#                         if os.path.getsize(file_location) == 0:#Checking if the file is empty or not
-#                             os.remove(file_location)  #If the file is empty then it is deleted using remove method
-#                             _l_removed_files.append(filename)
-# #                        else:
-# #                            with open(file_location, 'r') as infile, \
-# #                                open(file_location, 'w') as outfile:
-# #                                data = infile.read()
-# #                                data = data.replace("•", " ")
-# #                                outfile.write(data)
+            ''' set the cut-off score for selecting best room type matching '''
+            if 'TOLERANCE' in kwargs.keys():
+                _tolerance = kwargs['TOLERANCE']
+            else:
+                _tolerance = 0.05
+            if 'ROOM_CATE_FNAME' in kwargs.keys():
+                _room_cate_file = kwargs['ROOM_CATE_FNAME']
+            else:
+                _room_cate_file="room_descriptions.csv"
+            
+            ''' get the catergorized room type data '''
+            _room_taxo = pd.read_csv(os.path.join(self.dataDir,_room_cate_file), delimiter=',')
+            logger.debug("loaded %d room descriptors", _room_taxo.shape[0])
+            ''' iterate through each room type to get the similarity scores against the room type taxonomy '''
+            for rowIdx, rowVal in room_data_df.iterrows():
+                ''' get the similarity scores from nlp utils calss'''
+                sim_scores_df = clsNLP.get_similarity_scores(
+                    input_sentences = [rowVal.room_type],   # cannot use list() it will split into letters
+                    lookup_sentences =list(_room_taxo.description),
+                    **emb_kwargs)
+                sim_scores_df=sim_scores_df.reset_index()
+                sim_scores_df.score = sim_scores_df.score.astype('float64')
+                sim_scores_idxmax = sim_scores_df.loc[sim_scores_df.score.idxmax()]
 
+                if sim_scores_idxmax.score > _tolerance:
+                    _guess_dict = {'room_type':sim_scores_idxmax.input_sentence,
+                                   'room_cate':sim_scores_idxmax['lookup sentence'],
+                                   'score':sim_scores_idxmax.score,
+                                  }
+                    logger.debug("%s matches %s with similarity score %s", 
+                                 sim_scores_df.input_sentence,
+                                 sim_scores_idxmax['lookup sentence'],
+                                 str(sim_scores_df.score))
+                else:
+                    _guess_dict = {'room_type':sim_scores_idxmax.room_type,
+                                   'room_cate':"UNKNOWN",
+                                   'score' : sim_scores_idxmax.score,
+                                  }
+                    logger.warning("%s with similarity score %d < tolerated cut-off %d, assigining UNKNOWN",
+                                   rowVal.room_type, sim_scores_idxmax.score, _tolerance)
+                _assignment_df = pd.concat([_assignment_df,pd.DataFrame([_guess_dict])])
 
-#         except Exception as err:
-#             logger.error("%s %s", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n", _s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
 
-#         return _l_removed_files
+        return _assignment_df
 
-    
-#     ''' Function DEPRACATE -- moved to utils/sparkWorkLoads
-#             name: read_folder_csv_to_df
-#             parameters:
-#                 inp_data_dir - string with folder path to the csv files
-#                 **kwargs - contain the plance holder key value pairs
-#                             columns: list
-#                             start_date: datetime.date
-#                             end_date: datetime.date
-#             procedure: reads the all the csv files in the entire folder and
-#                         appends the data for the relevant columns defined in
-#                         the dictionary into a dataframe
-#             return dataframe (ota_bookings_df)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-
-#     def read_folder_csv_to_df(self,inp_data_dir: str, **kwargs):
-
-#         ota_rates_df = pd.DataFrame()     # initialize the return var
-#         _tmp_df = pd.DataFrame()
-#         _start_dt = None
-#         _end_dt = None
-#         _l_cols = []
-
-#         _s_fn_id = "function <read_folder_csv_to_df>"
-#         logger.info("Executing %s", _s_fn_id)
-
-#         try:
-#             ''' check if the folder and files exists '''
-#             if not inp_data_dir:
-#                 raise ValueError("Invalid folder path %s" % inp_data_dir)
-#             filelist = os.listdir(inp_data_dir)
-#             if not (len(filelist) > 0):
-#                 raise ValueError("No data files found in director: %s" % (inp_data_dir))
-
-#             ''' extract data from **kwargs if exists '''
-#             if 'columns' in kwargs.keys():
-#                 self.scrape_columns = kwargs['columns']
-#             if 'start_datetime' in kwargs.keys():
-#                 _start_dt = kwargs['start_datetime']
-#             if 'end_datetime' in kwargs.keys():
-#                 _start_dt = kwargs['end_datetime']
-
-#             '''' loop through files to get the data  '''
-#             for _s_file in filelist:
-#                 if _s_file.endswith(".csv"):
-#                     _s_csv_file = inp_data_dir+_s_file
-#                     _tmp_df = pd.read_csv(_s_csv_file, 
-#                                           sep=",",
-#                                           quotechar='"',
-#                                           skip_blank_lines=True,
-#                                          )
-#                     ota_rates_df = pd.concat([ota_rates_df,_tmp_df])
-#             ota_rates_df.columns = self.scrape_columns
-#             ota_rates_df.reset_index(drop=True)
-
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return ota_rates_df

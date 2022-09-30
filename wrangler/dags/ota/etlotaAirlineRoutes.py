@@ -35,7 +35,8 @@ import logging
 ### environment variables to load inhouse libraries
 ROOT_DIR = "/home/nuwan/workspace/rezgate/wrangler/"
 MODULE_PATH = os.path.join(ROOT_DIR, 'modules/ota/')
-UTILS_PATH = os.path.join(ROOT_DIR, 'utils/')
+#UTILS_PATH = os.path.join(ROOT_DIR, 'utils/')
+UTILS_PATH = "/home/nuwan/workspace/rezgate/utils/"
 DATA_PATH = os.path.join(ROOT_DIR, 'data/transport/airlines/scraper/')
 dir_args = {
     'ROOT_DIR':ROOT_DIR,
@@ -47,8 +48,8 @@ sys.path.insert(1,MODULE_PATH)
 import airlineScrapers as airWS
 sys.path.insert(1, UTILS_PATH)
 import sparkWorkLoads as spark
-clsScraper = airWS.AirlineScraper(name="kayak and momondo ota scrapes",**dir_args)
-clsSparkWL = spark.SparkWorkLoads(name="ota prices", **dir_args)
+clsScraper = airWS.AirlineScraper(desc="kayak and momondo ota scrapes",**dir_args)
+clsSparkWL = spark.SparkWorkLoads(desc="ota prices", **dir_args)
 
 ### pyspark libraries for the transform task
 from pyspark.sql.functions import substring,lit,col,trim
@@ -94,7 +95,7 @@ with DAG(
     description='scrape ota airline web data and stage in database',
     schedule_interval=timedelta(hours=2),
     #start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
-    start_date=datetime(2022, 9, 18),
+    start_date=datetime(2022, 9, 27),
     catchup=False,
     tags=['wrangler','ota','scrape','airline','stage', 'ETL'],
 ) as dag:
@@ -116,17 +117,17 @@ with DAG(
         ''' Initialize args to start parameterizing urls '''
         file = "airOTAInputURLs.json"
         start_date = date.today()
-        end_date = start_date + timedelta(days=10)
-        airportCodefile = "airportUSACities.csv"
+        end_date = start_date + timedelta(days=30)
+#         airportCodefile = "airportUSACities.csv"
         filePath=os.path.join(DATA_PATH, airportCodefile)
 
         ota_args = {
             "startDate": start_date,
             "endDate" : end_date,
-            'airportsFile' : airportCodefile,
+#             'airportsFile' : airportCodefile,
             'codeColName' : 'airportCode',
-#            'departAirportCode': ['LAX','NYC','BOS'],
-#            'arriveAirportCode': ['LAS'],
+            'departAirportCode': ['LAX','NYC','BOS'],
+            'arriveAirportCode': ['LAS'],
         }
         _fname, _ota_url_parameterized_list  = clsScraper.build_scrape_url_info(\
                                                         fileName=file,\
@@ -189,7 +190,7 @@ with DAG(
 
         ti = kwargs['ti']
         _otaURLfilePath=ti.xcom_pull(key='url_list_file')
-        logging.info("[function extract] xcom pull file path to parameterized urls %s", _otaURLfilePath)
+        logging.debug("[function extract] xcom pull file path to parameterized urls %s", _otaURLfilePath)
         _search_dt=ti.xcom_pull(key='search_datetime')
         logging.info("[function extract] xcom pull search datetime %s", str(_search_dt))
         _save_dir_path = ti.xcom_pull(key='storage_location')
@@ -229,9 +230,9 @@ with DAG(
         ''' reset data types to match table '''
         _search_sdf = _search_sdf.withColumn("booking_price",col("booking_price").cast(FloatType())) \
                                 .withColumn("search_dt",col("search_dt").cast(DateType()))
-        ''' reset data types to match table '''
-        _search_sdf = _search_sdf.withColumn("booking_price",col("booking_price").cast(FloatType())) \
-                                .withColumn("search_dt",col("search_dt").cast(DateType()))
+#         ''' reset data types to match table '''
+#         _search_sdf = _search_sdf.withColumn("booking_price",col("booking_price").cast(FloatType())) \
+#                                 .withColumn("search_dt",col("search_dt").cast(DateType()))
         logging.info("Data type reset and column drops complete!")
         
         ''' Get destination id dictionary '''

@@ -6,10 +6,11 @@ __name__ = "airlineScrapers"
 __package__ = "AirlineScraper"
 __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
 __module_dir__ = 'modules/ota/'
-__data_dir__ = 'data/hospitality/bookings/scraper/'
+__data_dir__ = 'data/transport/airlines/scraper/'
 __conf_fname__ = 'app.cfg'
 __logs_dir__ = 'logs/module/ota/'
 __log_fname__ = 'app.log'
+__inputs_file_name__ = "ota_input_urls.json"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -23,7 +24,7 @@ try:
     from datetime import datetime, date, timedelta
     
     sys.path.insert(1,__module_dir__)
-    import otaUtils as utils
+    import otaUtils as otau
 
     print("All {0} software packages loaded successfully!".format(__package__))
 
@@ -56,8 +57,11 @@ class AirlineScraper():
         self.__package__ = __package__
         self.__desc__ = desc
 
+#         ''' initialize util class to use common functions '''
+#         clsUtil = utils.Utils(desc='Utilities class for property data scraping')
         ''' initialize util class to use common functions '''
-        clsUtil = utils.Utils(desc='Utilities class for property data scraping')
+        global clsUtil
+        clsUtil = otau.Utils(desc='Inheriting Utilities class for airline itinerary scraping')
 
         ''' Set the wrangler root directory '''
         self.rootDir = __root_dir__
@@ -109,18 +113,37 @@ class AirlineScraper():
         logger.info('########################################################')
         logger.info(self.__package__)
         logger.info('Module Path = %s', self.moduleDir)
+
         ''' get the path to the input and output data '''
-        if "DATA_DIR" in kwargs.keys():
-            self.dataDir = kwargs["DATA_DIR"]
-        else:
-            self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
-        self.path = os.path.join(self.rootDir,config.get('STORES','DATA'))
-        logger.info("Data store path: %s", self.dataDir)
+#         if "DATA_DIR" in kwargs.keys():
+#             self.dataDir = kwargs["DATA_DIR"]
+#         else:
+#             self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
+#         self.path = os.path.join(self.rootDir,config.get('STORES','DATA'))
+#         logger.info("Data store path: %s", self.dataDir)
+        self.dataDir = __data_dir__
+        try:
+            if "DATA_DIR" in kwargs.keys():
+                ''' first preference given to kwargs '''
+                self.dataDir = kwargs['DATA_DIR']
+                logger.info("Appending data path from kwargs %s" % self.dataDir)
+            else:
+                ''' next try the app.cfg file '''
+                self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
+                if not self.dataDir:
+                    raise ValueError("Data location not defined in %s" % self.confFPath)
+                else:
+                    logger.info("Appending data path from class default value %s" % self.dataDir)            
+
+        except Exception as err:
+            logger.warning("%s %s \n", _s_fn_id,err)
+            logger.warning("Using default data path %s" % self.dataDir)
+
         ''' select the storate method '''
         self.storeMethod = config.get('STORES','METHOD')
         ''' default: ../../data/hospitality/bookings/scraper/rates '''
 #        self.ratesStoragePath = self.path+'rates'
-        self.file = "ota_input_urls.json"
+        self.inpParamsFile = __inputs_file_name__
         
         ''' set the tmp dir to store large data to share with other functions
             if self.tmpDIR = None then data is not stored, otherwise stored to
@@ -144,7 +167,7 @@ class AirlineScraper():
 
 
     ''' Function
-            name: get_flight_sectors
+            name: get_flight_segments
             parameters:
                 dir_path - path to the directory with property parameters JSON
                 file_name - JSON file containing those parameters
@@ -165,18 +188,33 @@ class AirlineScraper():
                     Need a better method rather than nested loop because not all OTAs will consist
                     of the same input parameters
     '''
-    def get_flight_sectors(self, file_path:str, **kwargs):
+    def get_flight_segments(self, file_name:str, segments_dir=None, **kwargs):
 
-        _l_sectors = []
+        _l_segments = []
 
-        _s_fn_id = "function <get_flight_sectors>"
+        _s_fn_id = "function <get_flight_segments>"
         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
         try:
-            if not os.path.exists(file_path):
-                raise ValueError("File %s does not exisit" %(file_path))
+            if not file_name:
+                raise ValueError("Invalid file name")
 
             ''' see if the file exists '''
+            if not segments_dir:
+                segments_dir = self.dataDir
+#             if inp_data_dir[-1] != "/":
+#                 inp_data_dir +="/"
+            file_path = os.path.join(segments_dir,file_name)
+            if not os.path.exists(file_path):
+                raise ValueError("File %s does not exisit in folder %s" %(file_name,segments_dir))
+
+#             if not destins_dir:
+#                 destins_dir = self.dataDir
+
+#             if not os.path.exists(file_path):
+#                 raise ValueError("File %s does not exisit" %(file_path))
+
+#             ''' see if the file exists '''
 #            if not dir_path:
 #                dir_path = self.path
 #             if dir_path[-1] != "/":
@@ -186,7 +224,7 @@ class AirlineScraper():
             ''' read the destination ids into the list '''
             airports_df = pd.read_csv(file_path, sep=',', quotechar='"')
             if airports_df.shape[0] <=0:
-                raise ValueError("No airport data found in %s" %(file_path))
+                raise ValueError("No airport segments data recovered from %s" %(file_path))
             ''' set the airport column name '''
             if "codeColName" in kwargs.keys():
                 col_name = kwargs["codeColName"]
@@ -194,22 +232,22 @@ class AirlineScraper():
                 col_name = "airportCode"
             ''' if given in kwargs set depart and arrive columns from list '''
             if "departAirportCode" in kwargs.keys():
-                _l_depart_cols = kwargs['departAirportCode']
+                _l_depart_codes = kwargs['departAirportCode']
             else:
-                _l_depart_cols = list(airports_df[col_name])
+                _l_depart_codes = list(airports_df[col_name])
             if "arriveAirportCode" in kwargs.keys():
-                _l_arrive_cols = kwargs['arriveAirportCode']
+                _l_arrive_codes = kwargs['arriveAirportCode']
             else:
-                _l_arrive_cols = list(airports_df[col_name])
-            print(_l_depart_cols,_l_arrive_cols)
+                _l_arrive_codes = list(airports_df[col_name])
+            print(_l_depart_codes,_l_arrive_codes)
             ''' create a tuples of depart arrive combinations from the list '''
-            for departure in _l_depart_cols:
-                for arrival in _l_arrive_cols:
+            for departure in _l_depart_codes:
+                for arrival in _l_arrive_codes:
                     if departure != arrival:
-                        _l_sectors.append(tuple([departure,arrival]))
+                        _l_segments.append(tuple([departure,arrival]))
 
-            if len(_l_sectors) > 0:
-                logger.info("Create %d departure and arrival sector tuples" % len(_l_sectors))
+            if len(_l_segments) > 0:
+                logger.info("Create %d departure and arrival sector tuples" % len(_l_segments))
             else:
                 raise ValueError("No destination and arrival tuples created!")
 
@@ -218,7 +256,7 @@ class AirlineScraper():
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
-        return _l_sectors
+        return _l_segments
 
 
     ''' Function
@@ -239,7 +277,7 @@ class AirlineScraper():
                     Need a better method rather than nested loop because not all OTAs will consist
                     of the same input parameters
     '''
-    def build_scrape_url_info(self, file_name:str, dir_path=None, **kwargs):
+    def build_scrape_url_info(self, file_name:str, inp_data_dir=None, **kwargs):
 
         _scrape_url_dict = {}
         _ota_parameterized_url_info = [] 
@@ -251,10 +289,16 @@ class AirlineScraper():
         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
         try:
+#             if not file_name:
+#                 raise ValueError("Invalid file to fetch scraper property dictionary")
+#             if not dir_path:
+#                 dir_path = os.path.join(self.rootDir,config.get('STORES','INPUTDATA'))
+            ''' validate and if given the dir path, else revert to defaul '''
             if not file_name:
                 raise ValueError("Invalid file to fetch scraper property dictionary")
-            if not dir_path:
-                dir_path = os.path.join(self.rootDir,config.get('STORES','INPUTDATA'))
+            if not inp_data_dir:
+                inp_data_dir = self.dataDir
+            logger.info("Directory path for loading input data %s" % inp_data_dir)
             
             ''' check and initialize **kwargs '''
             if 'startDate' in kwargs:
@@ -274,30 +318,34 @@ class AirlineScraper():
             if 'returnFlightOffset' in kwargs:
                 self.return_flight_offset = kwargs['returnFlightOffset']
 
+            ''' set the directory path to csv files with destination ids '''
+            _segments_dir = os.path.join(inp_data_dir, "segments/")
+
             ''' retrieve OTA input and output property data from json '''
 #            airline_dict = self.load_ota_info(os.path.join(dir_path, file_name))
-            airline_dict = clsUtil.load_ota_list(os.path.join(dir_path, file_name))
+            airline_dict = clsUtil.load_ota_list(os.path.join(inp_data_dir, file_name))
             if len(airline_dict) <= 0:
                 raise ValueError("No data found with %s with defined scrape airline"
-                                 % os.path.join(dir_path, file_name))
+                                 % os.path.join(inp_data_dir, file_name))
             else:
                 logger.info("Loaded %d airline agencies to begin scraping OTA data.", len(airline_dict))
                 print("Loaded %d airline agencies to begin scraping OTA data." % (len(airline_dict)))
 
-            ''' set the directory path to csv files with airport codes '''
-            if "airportsFile" in kwargs.keys():
-                airports_file_path = os.path.join(dir_path,kwargs["airportsFile"])
-                logger.info("Airports code file path set to %s" % airports_file_path)
-            else:
-                raise ValueError("No csv file with airport codes defined in **kwargs")
-            ''' get the tuples of departure and arrival airport code combinations '''
-            _l_flight_sectors = self.get_flight_sectors(file_path=airports_file_path, **kwargs)
-            logger.info("Airport codes with %d combinations loaded successfully." % len(_l_flight_sectors))
-
+#             ''' set the directory path to csv files with airport codes '''
+#             if "airportsFile" in kwargs.keys():
+#                 airports_file_path = os.path.join(dir_path,kwargs["airportsFile"])
+#                 logger.info("Airports code file path set to %s" % airports_file_path)
+#             else:
+#                 raise ValueError("No csv file with airport codes defined in **kwargs")
+            
             ''' get the input parameters from the properties file '''
             _ota_input_param_info = clsUtil.get_scrape_input_params(airline_dict)
             logger.info("Input parameter list loaded successfully.")
             
+#             ''' get the tuples of departure and arrival airport code combinations '''
+#             _l_flight_segments = self.get_flight_segments(file_path=airports_file_path, **kwargs)
+#             logger.info("Airport codes with %d combinations loaded successfully." % len(_l_flight_segments))
+
             ''' loop through the  ota list to create the url list for each ota '''
             for ota in _ota_input_param_info:
                 logger.info("Processing %s ...", ota['ota'])
@@ -308,8 +356,20 @@ class AirlineScraper():
                     if not ota['url']:
                         raise ValueError("Invalid url skip to next")
 
+                    ''' get the list of destination ids for the particular OTA'''
+                    if "locations" in ota.keys():
+                        _l_flight_segments = self.get_flight_segments(
+                            file_name=ota["locations"],    # filename with destination ids
+                            segments_dir=_segments_dir,   # path to the desitnation folder
+                            **kwargs,
+#                            col_name="airportCode"    # column name with destination ids
+                        )
+
+                        if len(_l_flight_segments) <= 0:
+                            raise ValueError("No flight segments received for %s" % ota['ota'])
+
                     ''' build the dictionary to replace the values in the url place holder '''
-                    for _flight_sector in _l_flight_sectors:
+                    for _flight_sector in _l_flight_segments:
                         _inert_param_dict['departurePort'] = _flight_sector[0]
                         _inert_param_dict['arrivalPort'] = _flight_sector[1]
 
@@ -377,8 +437,8 @@ class AirlineScraper():
             else:
                 parent_dir_name = "itinerary/"
                 
-            _prop_search_folder = clsUtil.get_search_data_dir_path(
-                data_dir_path = self.dataDir,
+            _prop_search_folder = clsUtil.get_extract_data_stored_path(
+                data_store_path = self.dataDir,
                 parent_dir_name = parent_dir_name,
                 **kwargs)
 
@@ -399,7 +459,8 @@ class AirlineScraper():
             procedure: build the url by inserting the values from the **kwargs dict
             return string (url)
 
-            author: <nileka.desilva@rezgateway.com>
+            author(s): <nileka.desilva@rezgateway.com>
+                        <nuwan.waidyanatha@rezgateway.com>
     '''
     def _scrape_kayak_to_csv(self,
                                 url,   # parameterized url
@@ -428,20 +489,21 @@ class AirlineScraper():
         try:
             headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36'}
             response = requests.get(url, headers=headers)
+            logger.debug("response status code: %d" % response.status_code)
             # check the response code
             if response.status_code != 200:
                 raise RuntimeError("Invalid response with code %d" % response.status_code)
 
             # Make it a soup
             soup = BeautifulSoup(response.text,"lxml")
-
             _find_infos = soup.select(".resultWrapper")
 
+            logger.debug("Number of results received from the response: %d" % len(_find_infos))
             if len(_find_infos) <= 0:
                 raise ValueError("No data received for %s" % (url))
 
             ''' name of the csv file to save scraped data to '''
-            saveTo = path+"/"+file_name
+            saveTo = os.path.join(path, file_name)
 
             ''' extrac strings and cleanup the \n with spaces '''
             for _info in _find_infos:
@@ -451,30 +513,65 @@ class AirlineScraper():
                 _data_dict['depart_port_code'] = departure_port,
                 _data_dict['arrive_port_code'] = arrival_port,
                 ''' departure and arrival times '''
-                _flight_times = _info.find('div', class_='section times').text,
-                _data_dict['flight_times'] = re.sub('\n+', ' ', (_flight_times[0]).lstrip().rstrip())
+                try:
+                    _flight_times = _info.find('div', class_='section times').text,
+                    _data_dict['flight_times'] = re.sub('\n+', ' ', (_flight_times[0]).lstrip().rstrip())
+                except Exception as text_err:
+                    _data_dict['flight_times'] = None
+                    _data_err = True
+                    logger.warning('flight_times - %s',text_err)
+                    pass
                 ''' number of stops '''
-                num_stops = _info.find('div', class_='section stops').text,
-                _data_dict['num_stops'] = re.sub('\n+', ' ', (num_stops[0]).lstrip().rstrip())
+                try:
+                    num_stops = _info.find('div', class_='section stops').text,
+                    _data_dict['num_stops'] = re.sub('\n+', ' ', (num_stops[0]).lstrip().rstrip())
+                except Exception as text_err:
+                    _data_dict['num_stops'] = None
+                    _data_err = True
+                    logger.warning('num_stops - %s',text_err)
+                    pass
                 ''' flight travel time '''
-                _duration = _info.find('div', class_='section duration allow-multi-modal-icons').text,
-                _data_dict['duration'] = re.sub('\n+', ' ', (_duration[0]).lstrip().rstrip())
+                try:
+                    _duration = _info.find('div', class_='section duration allow-multi-modal-icons').text,
+                    _data_dict['duration'] = re.sub('\n+', ' ', (_duration[0]).lstrip().rstrip())
+                except Exception as text_err:
+                    _data_dict['duration'] = None
+                    _data_err = True
+                    logger.warning('duration - %s',text_err)
+                    pass
                 ''' trip price '''
-                _unit_rate = _info.find('span', class_='price-text').text,
-                _data_dict['booking_rate'] = re.sub('\n+', ' ', (_unit_rate[0]).lstrip().rstrip())
-                _data_dict['num_passengers'] = 1
+                try:
+                    _unit_rate = _info.find('span', class_='price-text').text,
+                    _data_dict['booking_rate'] = re.sub('\n+', ' ', (_unit_rate[0]).lstrip().rstrip())
+                    _data_dict['num_passengers'] = 1
+                except Exception as text_err:
+                    _data_dict['booking_rate'] = None
+                    _data_err = True
+                    logger.warning('booking_rate - %s',text_err)
+                    pass
                 ''' cabin type '''
-                _flight_type = _info.find('div', class_='above-button').text,
-                _data_dict['cabin_type'] = re.sub('\n+', ' ', (_flight_type[0]).lstrip().rstrip())
+                try:
+                    _flight_type = _info.find('div', class_='above-button').text,
+                    _data_dict['cabin_type'] = re.sub('\n+', ' ', (_flight_type[0]).lstrip().rstrip())
+                except Exception as text_err:
+                    _data_dict['cabin_type'] = None
+                    _data_err = True
+                    logger.warning('cabin_type - %s',text_err)
+                    pass
                 ''' airline name '''
-                _airline = _info.find('span', class_='name-only-text').text,
-                _data_dict['airline_name'] = re.sub('\n+', ' ', (_airline[0]).lstrip().rstrip())
+                try:
+                    _airline = _info.find('span', class_='name-only-text').text,
+                    _data_dict['airline_name'] = re.sub('\n+', ' ', (_airline[0]).lstrip().rstrip())
+                except Exception as text_err:
+                    _data_dict['airline_name'] = None
+                    _data_err = True
+                    logger.warning('airline_name - %s',text_err)
+                    pass
 
                 if bool(_data_dict):
                     _save_df = pd.concat([_save_df,pd.DataFrame(_data_dict)])
 
             if _save_df.shape[0] > 0:
-
                 ''' split the departure and arrival times '''
                 _save_df.flight_times = _save_df.flight_times.replace(r'\s+', ' ', regex=True)
                 dtime_regex = "(?i)(\d?\d:\d\d (a|p)m)"
@@ -490,11 +587,11 @@ class AirlineScraper():
                 ''' extract the booking price '''
                 _save_df.booking_rate = _save_df.booking_rate.replace(r'\s+', ' ', regex=True)
 #                price_regex = "(?i)(\d+)"
-                price_regex = "(?i)(?:\d+,*\d+)"
-                _save_df['booking_price'] = _save_df.booking_rate.str.extract(price_regex, expand=False)
+                price_regex = r'(?i)(?:(\d+,*\d+))'
+                _save_df['booking_price'] = _save_df['booking_rate'].str.extract(price_regex, expand=False)
                 _save_df['currency'] = 'US$'
 
-                ''' save using storage method 
+                ''' save using storage method
                     TODO -- move this to libOTAETL to handle storage '''
                 if self.storeMethod == 'local':
                     _save_df.to_csv(saveTo,index=False, sep=',')
@@ -530,7 +627,7 @@ class AirlineScraper():
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
 
-    def scrape_url_info(self,otaURLlist, searchDT: datetime, dir_path:str):
+    def scrape_url_info(self,otaURLlist, searchDT: datetime, data_store_dir:str):
 
         saveTo = None   # init file name
         _l_saved_files = []
@@ -563,12 +660,13 @@ class AirlineScraper():
                 if ota_dict['ota'] in ['kayak.com','momondo.com']:
                     saveTo = self._scrape_kayak_to_csv(
                         url=ota_dict['url'],   # constructed url with parameters
+                        ota_name=ota_dict['ota'],   # ota name data source
                         flight_date=ota_dict['flightDate'],  # intended departure date
                         search_dt=searchDT,    # date & time scraping was executed
                         departure_port=ota_dict['departurePort'],  # departure airport code
                         arrival_port=ota_dict['arrivalPort'],      # arrival airport code
                         file_name=_fname,        # csv file name to store in
-                        path=dir_path,           # folder name to save the files
+                        path=data_store_dir,           # folder name to save the files
                                                          )
                     _l_saved_files.append(saveTo)
 

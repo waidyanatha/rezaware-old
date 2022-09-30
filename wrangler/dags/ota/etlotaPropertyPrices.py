@@ -35,9 +35,10 @@ import logging
 
 ### environment variables to load inhouse libraries
 ROOT_DIR = "/home/nuwan/workspace/rezgate/wrangler"
+#UTILS_PATH = os.path.join(ROOT_DIR, 'utils/')
+UTILS_PATH = "/home/nuwan/workspace/rezgate/utils/"
 MODULE_DIR = os.path.join(ROOT_DIR, 'modules/ota/')
 DATA_DIR = os.path.join(ROOT_DIR, 'data/hospitality/bookings/scraper')
-UTILS_PATH = os.path.join(ROOT_DIR, 'utils/')
 #DATA_PATH = os.path.join(ROOT_DIR, 'data/')
 #kwargs = {"ROOT_DIR":ROOT_DIR}
 prop_kwargs = {
@@ -234,6 +235,11 @@ with DAG(
 #        _search_sdf = _search_sdf.distinct()
         logging.info("Spark loaded %d rows", _search_sdf.count())
 
+        ''' enrich the data with: 
+            (1) matching city names to the codes 
+            (2) categorizing the room types based on the taxonomy
+            (3) setting the data types of the columns
+            using a transform function in the properties class '''
         _search_sdf=_search_sdf.withColumn("currency", lit("US$"))
         _search_sdf=_search_sdf.withColumn('room_rate', substring('room_rate', 4,10))
 

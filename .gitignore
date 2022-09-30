@@ -10,10 +10,13 @@ wrangler/modules/ota/__init__.py
 wrangler/modules/ota/__pycache__/
 wrangler/notebooks/.ipynb_checkpoints/
 wrangler/notebooks/hospitality/.ipynb_checkpoints/
+### Utils
 wrangler/utils/__pycache__/
+utils/__pycache__
 wrangler/notebooks/utils/.ipynb_checkpoints/
-wrangler/notebooks/transportation/.ipynb_checkpoints
-wrangler/notebooks/transport/.ipynb_checkpoints/
 wrangler/data/transport/airlines/scraper/itinerary/
 wrangler/db/backups/
 wrangler/notebooks/hospitality/wrangler/
+wrangler/notebooks/transport/.ipynb_checkpoints/*
+utils/__pycache__/*
+wrangler/notebooks/transport/.ipynb_checkpoints

@@ -11,8 +11,7 @@
             {"variable": "flight_type", "tag": "div", "code": "above-button"},
             {"variable": "site", "tag": "span", "code": "name-only-text"}
         ],
-        "arrivalDestinations": "arrivalCityCodesAirlineSchedule.csv",
-        "departureDestinations": "departureCityCodesAirlineSchedule.csv"
+        "locations": "airportUSACities.csv"
     }],
     "momondo.com": [{
         "url": "https://www.momondo.com/flight-search/{arrivalPort}-{departurePort}/{flightDate}?a&fs=cfc=1;bfc=1;transportation=transportation_plane",
@@ -26,7 +25,6 @@
             {"variable": "flight_type", "tag": "div", "code": "above-button"},
             {"variable": "site", "tag": "span", "code": "name-only-text"}
         ],
-        "arrivalDestinations": "arrivalCityCodesAirlineSchedule.csv",
-        "departureDestinations": "departureCityCodesAirlineSchedule.csv"
+        "locations": "airportUSACities.csv"
     }]
 }

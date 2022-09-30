@@ -37,8 +37,55 @@ class DataEnrichment():
     '''
     def __init__(self, name : str="data", **kwargs:dict):
 
-        self.name = name
-        
+        self.__name__ = __name__
+        self.__package__ = __package__
+        self.__desc__ = desc
+        _s_fn_id = "Function <__init__>"
+
+        try:
+            ''' initiate to load app.cfg data '''
+            global confUtil
+            confUtil = configparser.ConfigParser()
+
+            ''' Set the utils root directory, it can be changed using kwargs '''
+            self.utilsDir = __utils_dir__
+            if "UTILS_DIR" in kwargs.keys():
+                self.utilsDir = kwargs['UTILS_DIR']
+            ''' load the utils config env vars '''
+            self.utilConfFPath = os.path.join(self.utilsDir, __conf_fname__)
+            confUtil.read(self.utilConfFPath)
+
+            ''' get the file and path for the logger '''
+            self.logDir = os.path.join(self.utilsDir,confUtil.get('LOGGING','LOGPATH'))
+            if not os.path.exists(self.logDir):
+                os.makedirs(self.logDir)
+            self.logFPath = os.path.join(self.logDir,confUtil.get('LOGGING','LOGFILE'))
+            ''' innitialize the logger '''
+            global logger
+            logger = logging.getLogger(__package__)
+            logger.setLevel(logging.DEBUG)
+            if (logger.hasHandlers()):
+                logger.handlers.clear()
+            # create file handler which logs even debug messages
+            fh = logging.FileHandler(self.logFPath, confUtil.get('LOGGING','LOGMODE'))
+            fh.setLevel(logging.DEBUG)
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            fh.setFormatter(formatter)
+            logger.addHandler(fh)
+            ''' set a new logger section '''
+            logger.info('########################################################')
+            logger.info(__name__)
+            logger.info('Utils Path = %s', self.utilsDir)
+
+            ''' set tmp storage location from app.cfg '''
+            self.tmpDIR = os.path.join(self.utilsDir,confUtil.get('STORES','TMPDATA'))
+            ''' override if defined in kwargs '''
+            if "TMP_DIR" in kwargs.keys():
+                self.tmpDIR = kwargs['TMP_DIR']
+            if not os.path.exists(self.tmpDIR):
+                os.makedirs(self.tmpDIR)
+
         ''' Dictionary of column augmentations '''
         self._aug_dict = { "DateTime" :
                           ["ALL",     # apply all cleaning processes and will ignore other flags
@@ -62,9 +109,17 @@ class DataEnrichment():
                         "sorted_by" : ["YYYY","MM","DD"]   # sort dataframe by Year, Month, and Day
                        }
 
-        print("Initialing DataEnrichment class for ",self.name)
-        return None
+            logger.info("Connection complete! ready to load data.")
+            print("Initialing %s class for %s with instance %s"
+                  % (self.__package__, self.__name__, self.__desc__))
+            print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
 
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return None
 
     ''' Function - 
             name: get_enriched_data
@@ -332,6 +387,55 @@ class DataEnrichment():
         return _augmented_dt_df
 
 
+    ''' Function - 
+            name: get_unit_converted_data (public)
+            procedure: specify the 
+
+            return DataFrame
+
+    '''
+    def get_unit_converted_data(self,
+                                df,
+                                data_catalog, 
+                                cols, # : list=["all"],
+                                units, # : dict= self.convertions,
+                                **kwargs):
+        pass
+
+    ''' Function - 
+            name: convert_currency
+            procedure: 
+
+            return DataFrame
+
+    '''
+    def convert_currency(self,df,
+                         from_currency, # : str= self.to_currency,
+                         to_currency, # : str= self.to_currency,
+                         **kwargs):
+        pass
+
+    ''' Function - 
+            name: convert_imperial_to_metric
+            procedure: 
+
+            return DataFrame
+
+    '''
+    def convert_imperial_to_metric(self,
+                                   df,
+                                   from_unit_type, #: str= self.from_unit,
+                                   to_unity_type, # : str= self.to_unit,
+                                   **kwargs):
+        pass
+
+    ''' Function - 
+            name: drop_empty_cols
+            procedure: 
+
+            return DataFrame
+
+    '''
     ''' Function - 
             name: set_multi_currency
             procedure: 
