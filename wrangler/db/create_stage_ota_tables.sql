@@ -10,13 +10,14 @@ CREATE TABLE lakehouse.ota_property_prices
   checkout_date  timestamp without time zone,
   room_type character varying,
   room_cate character varying,
+  similarity double precision,
   room_rate character varying(20),
   room_price double precision,
   currency character varying(3),
   review_score double precision,
   destination_id character varying(10),
-  destination_name character varying,
-  destination_Lx character varying,
+  dest_lx_name character varying (100),
+  dest_lx_type character varying (100),
   location_desc  character varying,
   other_info character varying,
   data_source character varying(100),
@@ -32,13 +33,26 @@ CREATE TABLE lakehouse.ota_property_prices
 WITH (
   OIDS=FALSE
 );
-comment on lakehouse.ota_property_prices.room_type is 'room type description given by the OTA';
-comment on lakehouse.ota_property_prices.room_cate is 'room category matching rezgate definition';
-comment on lakehouse.ota_property_prices.room_rate is 'per room value given with currency e.g. US$10.00';
-comment on lakehouse.ota_property_prices.room_price is 'price in decimals extracet from room_rate';
-comment on lakehouse.ota_property_prices.destination_id is 'unique identifier for the property location; e.g. city code';
-comment on lakehouse.ota_property_prices.destination_name is 'human readable name of the destination';
-comment on lakehouse.ota_property_prices.destination_Lx is 'Location administrative name; .e.g city, state, province';
+comment on column lakehouse.ota_property_prices.uuid is '[optional] a UUID to identify the record';
+comment on column lakehouse.ota_property_prices.ota_name is 'ota unique name (e.g. booking.com';
+comment on column lakehouse.ota_property_prices.search_dt is 'data search and scrape date time stamp with timezone';
+comment on column lakehouse.ota_property_prices.property_name is 'hotel or facility name displayed in ota';
+comment on column lakehouse.ota_property_prices.checkin_date is 'booking checkin date time stamp with time zone';
+comment on column lakehouse.ota_property_prices.checkout_date is 'booking checkout date time stamp with time zone';
+comment on column lakehouse.ota_property_prices.room_type is 'room type description given by the OTA';
+comment on column lakehouse.ota_property_prices.room_cate is 'room category matching rezgate definition';
+comment on column lakehouse.ota_property_prices.similarity is 'the similarity score between the room type and category';
+comment on column lakehouse.ota_property_prices.room_rate is 'per room value given with currency e.g. US$10.00';
+comment on column lakehouse.ota_property_prices.room_price is 'price in decimals extracet from room_rate';
+comment on column lakehouse.ota_property_prices.currency is 'currency ISO standard three letted abbreviation';
+comment on column lakehouse.ota_property_prices.review_score is 'score on a scale of 1-10 indicated for the property by the ota';
+comment on column lakehouse.ota_property_prices.destination_id is 'unique identifier for the property location; e.g. city code';
+comment on column lakehouse.ota_property_prices.dest_lx_name is 'location administrative boundary name; e.g. Los Angeles';
+comment on column lakehouse.ota_property_prices.dest_lx_type is 'Location administrative boundary type; .e.g city, state';
+comment on column lakehouse.ota_property_prices.location_desc is 'description about the location proximity to landmarks';
+comment on column lakehouse.ota_property_prices.other_info is 'other information provided by the ota about the property';
+comment on column lakehouse.ota_property_prices.data_source is 'the url or api that the data is coming from';
+comment on column lakehouse.ota_property_prices.data_owner is 'the ota that produces and owns the data';
 
 /* tables for staging property OTA scrapped data */
 DROP TABLE IF EXISTS lakehouse.ota_airline_routes;

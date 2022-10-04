@@ -19,7 +19,7 @@ try:
     findspark.init()
     from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
 #    import pyspark
-#    import pandas as pd
+    import pandas as pd
 #    from pandas.api.types import is_datetime64_any_dtype as is_datetime
 #    import calendar
     import configparser    
@@ -340,6 +340,9 @@ class SparkWorkLoads():
         _num_records_saved = 0
         
         try:
+            ''' convert pandas to spark dataframe '''
+            if isinstance(save_sdf,pd.DataFrame):
+                save_sdf = self.spark_session.createDataFrame(save_sdf) 
             ''' validate sdf have data '''
             if save_sdf.count() <= 0:
                 raise ValueError("Invalid spark dataframe with %d records" % (save_sdf.count())) 
@@ -406,9 +409,9 @@ class SparkWorkLoads():
             ''' check if the folder and files exists '''
             if not filesPath:
                 raise ValueError("Invalid folder path %s" % filesPath)
-            filelist = os.listdir(filesPath)
-            if not (len(filelist) > 0):
-                raise ValueError("No data files found in director: %s" % (filesPath))
+#             filelist = os.listdir(filesPath)
+#             if not (len(filelist) > 0):
+#                 raise ValueError("No data files found in director: %s" % (filesPath))
 
             ''' extract data from **kwargs if exists '''
             if 'schema' in kwargs.keys():
@@ -454,8 +457,10 @@ class SparkWorkLoads():
 
         _s_fn_id = "function <read_folder_csv_to_sdf>"
         logger.info("Executing %s in %s",_s_fn_id, __name__)
-        
+
         try:
+            if isinstance(sdf,pd.DataFrame):
+                sdf = self.spark_session.createDataFrame(sdf) 
             ''' data exists? '''
             if sdf.count() <= 0:
                 raise ValueError("No data for input dataframe to save")
@@ -465,7 +470,7 @@ class SparkWorkLoads():
                 _csv_file_path = filesPath
                 logger.info("File ready to save to %s", _csv_file_path)
             else:
-                fname = __package__+"save_sdf_to.csv"
+                fname = __package__+"_"+"save_sdf_to.csv"
                 _csv_file_path = os.path.join(self.tmpDIR, fname)
                 logger.info("No file path defined, saving to default %s", _csv_file_path)
 

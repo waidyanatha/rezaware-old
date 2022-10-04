@@ -27,6 +27,7 @@ try:
     import otaUtils as otau
     sys.path.insert(1,__utils_dir__)
     import nlp
+    import sparkwls as spark
 
     print("All {0} software packages loaded successfully!".format(__package__))
 
@@ -59,6 +60,8 @@ class PropertyScraper():
         clsUtil = otau.Utils(desc='Utilities class for property data scraping')
         global clsNLP
         clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
+        global clsSparkWL
+        clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
 
         ''' Set the wrangler root directory '''
         self.rootDir = __root_dir__
@@ -656,7 +659,7 @@ class PropertyScraper():
         return aug_rate_df
 
     ''' Function
-            name: categorize_room_type
+            name: merge_similar_room_cate
             parameters:
                 otaURLlist - string with folder path to the csv files
                 **kwargs - contain the plance holder key value pairs
@@ -672,9 +675,9 @@ class PropertyScraper():
             modified: 2022-09-29
     '''
 
-    def categorize_room_type(self, room_data_df, col_name, **kwargs):
+    def merge_similar_room_cate(self, room_data_df, col_name, **kwargs):
         
-        _s_fn_id = "function <categorize_room_type>"
+        _s_fn_id = "function <merge_similar_room_cate>"
         logger.info("Executing %s %s",self.__package__, _s_fn_id)
 
         emb_kwargs = {
@@ -684,8 +687,9 @@ class PropertyScraper():
             "MAX_SCORES":2,
         }
 #         aug_rtype_df = pd.DataFrame()
-        sim_scores_df = pd.DataFrame()
-        _assignment_df = pd.DataFrame()
+        sim_scores_df = pd.DataFrame()    # to get the similarity with maximum score
+        _assignment_df = pd.DataFrame()   # concat the simiarity mappings
+        _merged_room_cate_df = pd.DataFrame()   # merge the similarity with main dataset
 
         try:
             if room_data_df.shape[0] <= 0:
@@ -719,7 +723,7 @@ class PropertyScraper():
                 if sim_scores_idxmax.score > _tolerance:
                     _guess_dict = {'room_type':sim_scores_idxmax.input_sentence,
                                    'room_cate':sim_scores_idxmax['lookup sentence'],
-                                   'score':sim_scores_idxmax.score,
+                                   'similarity':sim_scores_idxmax.score,
                                   }
                     logger.debug("%s matches %s with similarity score %s", 
                                  sim_scores_df.input_sentence,
@@ -728,16 +732,145 @@ class PropertyScraper():
                 else:
                     _guess_dict = {'room_type':sim_scores_idxmax.room_type,
                                    'room_cate':"UNKNOWN",
-                                   'score' : sim_scores_idxmax.score,
+                                   'similarity' : sim_scores_idxmax.score,
                                   }
                     logger.warning("%s with similarity score %d < tolerated cut-off %d, assigining UNKNOWN",
                                    rowVal.room_type, sim_scores_idxmax.score, _tolerance)
                 _assignment_df = pd.concat([_assignment_df,pd.DataFrame([_guess_dict])])
+                
+            if _assignment_df.shape[0] > 0:
+                _merged_room_cate_df = room_data_df.merge(_assignment_df,
+                                                          how='left', 
+                                                          left_on=['room_type'], 
+                                                          right_on=['room_type'])
+                logger.info(("Merged %d rows with categorized room type information"
+                             % _assignment_df.shape[0]))
+            else:
+                raise ValueError("No similarity room categories assigned")
 
         except Exception as err:
             logger.error("%s %s \n", _s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
-        return _assignment_df
+        return _merged_room_cate_df
 
+    ''' Function
+            name: assign_lx_name
+            parameters:
+                otaURLlist - string with folder path to the csv files
+                **kwargs - contain the plance holder key value pairs
+                            columns: list
+                            start_date: datetime.date
+                            end_date: datetime.date
+            procedure: reads the all the csv files in the entire folder and
+                        appends the data for the relevant columns defined in
+                        the dictionary into a dataframe
+            return dataframe (ota_bookings_df)
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-10-03
+            
+    '''
+
+    def assign_lx_name(self, data_df,   # pandas dataframe with room price data
+                       dest_dir_name:str="destinations/",   # set to default in folder
+                       **kwargs):
+
+        import glob
+
+        _s_fn_id = "function <assign_lx_name>"
+        logger.info("Executing %s %s",self.__package__, _s_fn_id)
+
+        _lx_assign_df = pd.DataFrame()
+        _dest_df = pd.DataFrame()
+
+        try:
+            ''' check if dataframe is null '''
+            if data_df.shape[0] <= 0:
+                raise ValueError("Invalid dataframe with % rows" % data_df.shape[0])
+
+            ''' set the directory path to csv files with destination ids '''
+            _destins_dir = os.path.join(self.dataDir, dest_dir_name)
+#             if dest_dir_name:
+#                 _destins_dir = os.path.join(self.dataDir, dest_dir_name)
+            ''' read all the destination files in dir '''   
+#             file_path = os.path.join(destins_dir,file_name)
+            if not os.path.exists(_destins_dir):
+                raise ValueError("Folder %s does not exisit" %(_destins_dir))
+
+            ''' read the destination ids into the list '''
+            all_files = glob.glob(os.path.join(_destins_dir,"*.csv"))
+#             dest_df = pd.read_csv(file_path, sep=',', quotechar='"')
+            _dest_df = pd.concat((pd.read_csv(_fname, sep=',', quotechar='"') for _fname in all_files))
+            if _dest_df.shape[0] <=0:
+                raise ValueError("No destination data recovered from %s" %(file_path))
+            _lx_assign_df = data_df.merge(_dest_df,
+                                          how='left',
+                                          left_on=['destination_id'], 
+                                          right_on=['destinationID'])
+            logger.info(("Merged %d rows with destination information"
+                         % _lx_assign_df.shape[0]))
+            ''' drop columns state and destinationID '''
+            ''' TODO pass all the column names as **kwargs '''
+            _lx_assign_df.drop(['state','destinationID'],axis=1,inplace=True)
+            _lx_assign_df.rename(columns={'city':"dest_lx_name"},inplace=True)
+            _lx_assign_df["dest_lx_type"] = "city"
+
+        except Exception as err:
+            logger.error("%s %s \n", _s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return _lx_assign_df
+
+
+    ''' Function
+            name: save_to_db
+            parameters:
+                otaURLlist - string with folder path to the csv files
+                **kwargs - contain the plance holder key value pairs
+                            columns: list
+                            start_date: datetime.date
+                            end_date: datetime.date
+            procedure: reads the all the csv files in the entire folder and
+                        appends the data for the relevant columns defined in
+                        the dictionary into a dataframe
+            return dataframe (ota_bookings_df)
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-10-03
+            
+       TODO - build the function and use it in the notebook
+    '''
+
+    def save_to_db(self, data_df, table_name:str="ota_property_prices", **kwargs):
+        
+        _s_fn_id = "function <merge_similar_room_cate>"
+        logger.info("Executing %s %s",self.__package__, _s_fn_id)
+
+        count = 0
+
+        try:
+            if data_df.shape[0] <= 0:
+                raise ValueError("Invalid dataframe with % rows" % data_df.shape[0])
+
+            if "data_source" in data_df.columns:
+                data_df.loc[data_df["data_source"].isnull(),'data_source'] = data_df.ota_name
+            if "data_owner" in data_df.columns:
+                data_df.loc[data_df["data_owner"].isnull(),'data_owner'] = data_df.ota_name
+            data_df["created_dt"] = date.today()
+            data_df["created_by"] = os.getlogin()             
+            data_df["created_proc"] = self.__package__
+
+            ''' save dataframe with spark '''
+            count = clsSparkWL.insert_sdf_into_table(save_sdf=data_df, dbTable=table_name)
+            # print("%d rows saved to %s" % (aug_search_sdf.count(), _tmp_fname))
+            logger.info("Data %d rows loaded into %s table",count,table_name)
+
+        except Exception as err:
+            logger.error("%s %s \n", _s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return count, data_df
