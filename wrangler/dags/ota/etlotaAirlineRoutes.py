@@ -47,7 +47,7 @@ dir_args = {
 sys.path.insert(1,MODULE_PATH)
 import airlineScrapers as airWS
 sys.path.insert(1, UTILS_PATH)
-import sparkWorkLoads as spark
+import sparkwls as spark
 clsScraper = airWS.AirlineScraper(desc="kayak and momondo ota scrapes",**dir_args)
 clsSparkWL = spark.SparkWorkLoads(desc="ota prices", **dir_args)
 

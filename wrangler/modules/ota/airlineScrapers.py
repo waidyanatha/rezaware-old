@@ -627,7 +627,7 @@ class AirlineScraper():
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
 
-    def scrape_url_info(self,otaURLlist, searchDT: datetime, data_store_dir:str):
+    def scrape_url_info(self,otaURLlist, searchDT, data_store_dir:str):
 
         saveTo = None   # init file name
         _l_saved_files = []

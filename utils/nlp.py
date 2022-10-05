@@ -4,6 +4,7 @@
 ''' Initialize with default environment variables '''
 __name__ = "nlp"
 __package__ = "NatLanWorkLoads"
+# __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler/"   # need for logger path
 __utils_dir__ = '/home/nuwan/workspace/rezgate/utils/'
 __conf_fname__ = 'app.cfg'
 __logs_dir__ = 'logs/'

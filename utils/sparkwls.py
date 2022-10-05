@@ -396,6 +396,7 @@ class SparkWorkLoads():
             return DataFrame
 
             author: <nuwan.waidyanatha@rezgateway.com>
+            
     '''
     def read_csv_to_sdf(self,filesPath: str, **kwargs):
 
@@ -405,13 +406,16 @@ class SparkWorkLoads():
         _end_dt = None
         _sdf_cols = []
         _l_cols = []
+        _traceback = None
+
         try:
             ''' check if the folder and files exists '''
             if not filesPath:
                 raise ValueError("Invalid folder path %s" % filesPath)
-#             filelist = os.listdir(filesPath)
-#             if not (len(filelist) > 0):
-#                 raise ValueError("No data files found in director: %s" % (filesPath))
+            if "IS_FOLDER" in kwargs.keys() and kwargs['IS_FOLDER']:
+                filelist = os.listdir(filesPath)
+                if not (len(filelist) > 0):
+                    raise ValueError("No data files found in director: %s" % (filesPath))
 
             ''' extract data from **kwargs if exists '''
             if 'schema' in kwargs.keys():
@@ -437,9 +441,10 @@ class SparkWorkLoads():
             _s_fn_id = "Class <SparkWorkLoads> Function <read_folder_csv_to_sdf>"
             logger.error("%s %s \n",_s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
+            _traceback = traceback.format_exc()
             print(traceback.format_exc())
 
-        return _csv_to_sdf
+        return _csv_to_sdf, _traceback
         
     ''' Function
             name: read_csv_to_sdf

@@ -15,7 +15,7 @@ The dag is setup to scrape hotel prices from online travel agency websites
 author(s): <nuwan.waidyanatha@rezgateway.com>
 modified : 2022-09-24
 """
-
+### utility packages
 import json
 from textwrap import dedent
 
@@ -33,33 +33,38 @@ from datetime import datetime, date, timedelta
 import traceback
 import logging
 
-### environment variables to load inhouse libraries
+########## set the parameters before starting the runs ##############
+
+__search_window_days__ = 1   # set the search window length 
+__page_offset__ = 1         # set the page offset for building urls
+__page_upper_limit__ = 3   # maximum number of pages for building urls
+__schedule_interval__ = 5   # number of hours between runs 
+
+########## set environment directory path variables before runs #####
+
 ROOT_DIR = "/home/nuwan/workspace/rezgate/wrangler"
-#UTILS_PATH = os.path.join(ROOT_DIR, 'utils/')
-UTILS_PATH = "/home/nuwan/workspace/rezgate/utils/"
+UTILS_DIR = "/home/nuwan/workspace/rezgate/utils/"
 MODULE_DIR = os.path.join(ROOT_DIR, 'modules/ota/')
 DATA_DIR = os.path.join(ROOT_DIR, 'data/hospitality/bookings/scraper')
-#DATA_PATH = os.path.join(ROOT_DIR, 'data/')
-#kwargs = {"ROOT_DIR":ROOT_DIR}
 prop_kwargs = {
     "ROOT_DIR":ROOT_DIR,   # absolute path to the wrangler dir
     "MODULE_DIR":MODULE_DIR,   # absolute path to the ota module
     "DATA_DIR":DATA_DIR, # absolute path to the scraper data dir
 }
 
+#####################################################################
+
 ### inhouse libraries to initialize, extract, transform, and load
 sys.path.insert(1,MODULE_DIR)
 import propertyScrapers as ps
-#import otaWebScraper as otaws
-sys.path.insert(1, UTILS_PATH)
-import sparkWorkLoads as sparkwl
-### pyspark libraries for the transform task
-#clsScraper = otaws.OTAWebScraper(name="ota prices", **prop_kwargs)
+sys.path.insert(1, UTILS_DIR)
+import sparkwls as spark
+''' executing the property scraper '''
 clsScraper = ps.PropertyScraper(desc='scrape hotel prices data from OTAs', **prop_kwargs)
-clsSparkWL = sparkwl.SparkWorkLoads(desc="airflow ETL property room prices", **prop_kwargs)
+clsSparkWL = spark.SparkWorkLoads(desc="airflow ETL property room prices", **prop_kwargs)
 ### must be declared after importing sparkWorkLoads
-from pyspark.sql.functions import substring,lit,col
-from pyspark.sql.types import StringType,BooleanType,DateType,DecimalType,FloatType, IntegerType,LongType, ShortType, TimestampType
+# from pyspark.sql.functions import substring,lit,col
+# from pyspark.sql.types import StringType,BooleanType,DateType,DecimalType,FloatType, IntegerType,LongType, ShortType, TimestampType
 
 
 '''
@@ -79,7 +84,7 @@ with DAG(
     # These args will get passed on to each operator
     # You can override them on a per-task basis during operator initialization
     default_args={
-        'depends_on_past': False,
+        'depends_on_past': True,
         'email': ['admin.rezaware@rezgateway.com'],
         'email_on_failure': False,
         'email_on_retry': False,
@@ -100,9 +105,9 @@ with DAG(
     },
 
     description='scrape ota property web data and stage in database',
-    schedule_interval=timedelta(hours=1),
+    schedule_interval=timedelta(hours=__schedule_interval__),
     #start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
-    start_date=datetime(2022, 9, 23),
+    start_date=datetime(2022, 10, 5),
     catchup=False,
     tags=['wrangler','ota','properties','scrape', 'stage'],
 ) as dag:
@@ -124,13 +129,15 @@ with DAG(
         ''' Initialize args to start parameterizing urls '''
         file = "otaInputURLs.json"
         start_date = date.today()
-        end_date = start_date + timedelta(days=1)
+        end_date = start_date + timedelta(days=__search_window_days__)
         
-        urls_kwargs = {"pageOffset":10,
-              "pageUpperLimit":550,
+        urls_kwargs = {"pageOffset":__page_offset__,
+              "pageUpperLimit":__page_upper_limit__,
               "startDate": start_date,
               "endDate" : end_date,
              }
+        logging.debug("[parameterize_urls] building url list for %s start datetime and %d days search window"\
+                      ,str(start_date),__search_window_days__)
         _fname, _ota_url_parameterized_list = clsScraper.build_scrape_url_list(
             file_name=file,  # mandatory to give the inputs json file
             dir_path=None,   # optional to be used iff required
@@ -139,7 +146,7 @@ with DAG(
         ''' define XCOM parameters for downstream tasks '''
         ti = kwargs['ti']
         ti.xcom_push(key='url_list_file', value=_fname)
-        logging.info("[function parameterize_urls] push url stored file %s to xcom", _fname)
+        logging.debug("[parameterize_urls] push url stored file %s to xcom", _fname)
 
 
     ''' Function
@@ -162,24 +169,19 @@ with DAG(
         _search_dt = _search_dt + (datetime.min - _search_dt) % timedelta(minutes=15)
         ''' include the timezone '''
         _search_dt = (_search_dt.replace(tzinfo=timezone.utc)).isoformat()
-        ''' '''
-#         fnargs = {'searchDateTime': _search_dt,
-#                   'storageLocation': "local",   # values can be "local" or "AWS_S3"
-#                  }
+        logging.debug("[initi_storage] search datetime set to %s", str(_search_dt))
+
         storage_kwargs = {
 #             'SEARCH_DATETIME': _search_dt,
             'STORAGE_METHOD': "local",   # values can be "local" or "AWS_S3"
         }
 
-#         ''' include the timezone '''
-#         _search_dt = (_search_dt.replace(tzinfo=timezone.utc)).isoformat()
-
         _search_data_store = clsScraper.make_storage_dir(**storage_kwargs)
         ti = kwargs['ti']
         ti.xcom_push(key='storage_location', value=_search_data_store)
-        logging.info("[function init_storage]push storage location %s to xcom", _search_data_store)
+        logging.debug("[init_storage]push storage location %s to xcom", _search_data_store)
         ti.xcom_push(key='search_datetime', value=_search_dt)
-        logging.info("[function init_storage] push search datetime %s to xcom", str(_search_dt))
+        logging.debug("[init_storage] push search datetime %s to xcom", str(_search_dt))
 
     ''' Function
             name: extract
@@ -199,13 +201,12 @@ with DAG(
 
         ti = kwargs['ti']
         _otaURLfilePath=ti.xcom_pull(key='url_list_file')
-        logging.info("[function extract] xcom pull file path to parameterized urls %s", _otaURLfilePath)
+        logging.debug("[extract] xcom pull file path to parameterized urls %s", _otaURLfilePath)
         _search_dt=ti.xcom_pull(key='search_datetime')
-        logging.info("[function extract] xcom pull search datetime %s", str(_search_dt))
+        logging.debug("[extract] xcom pull search datetime %s", str(_search_dt))
         _save_dir_path = ti.xcom_pull(key='storage_location')
-        logging.info("[function extract] xcom pull folder path to storage location %s", _save_dir_path)
+        logging.debug("[extract] xcom pull folder path to storage location %s", _save_dir_path)
         
-#        if _otaURLfilePath:
         urlDF = pd.read_csv(_otaURLfilePath, sep=",")
         _otaURLParamDictList = urlDF.to_dict('records')
 
@@ -213,7 +214,7 @@ with DAG(
             otaURLlist =_otaURLParamDictList,
             searchDT = _search_dt,
             data_store_dir = _save_dir_path)
-        logging.info("%d csv files with scraped property data saved to %s", len(_l_saved_files), _save_dir_path)
+        logging.info("[extract] %d csv files with scraped property data saved to %s", len(_l_saved_files), _save_dir_path)
 
 
     ''' Function
@@ -227,51 +228,60 @@ with DAG(
     '''
     def transform(**kwargs):
 
+        ''' to be used for testing only and should get file name from kwargs'''
+#          _saved_ota_prices_fpath = os.path.join(DATA_DIR, "rates/2022-10-5-3-0/")
+        ''' for normal runs get storage location directory from xcom '''
         ti = kwargs['ti']
         _saved_ota_prices_fpath = ti.xcom_pull(key='storage_location')
-#        _saved_ota_prices_fpath = "/home/nuwan/workspace/rezgate/wrangler/data/hospitality/bookings/scraper/rates/2022-9-14-21-0/"
-        logging.info("[function extract] xcom pull folder path to storage location %s", _saved_ota_prices_fpath)
-        _search_sdf = clsSparkWL.read_csv_to_sdf(filesPath=_saved_ota_prices_fpath)
-#        _search_sdf = _search_sdf.distinct()
-        logging.info("Spark loaded %d rows", _search_sdf.count())
+        logging.info("[transform] xcom pull folder path to storage location %s", _saved_ota_prices_fpath)
+        spark_kwargs = {"TO_PANDAS":True,   # change spark dataframe to pandas
+                        "IS_FOLDER":True,   # if folder then check if folder is empty
+                       }
+        _search_sdf, traceback = clsSparkWL.read_csv_to_sdf(filesPath=_saved_ota_prices_fpath, **spark_kwargs)
+        if not traceback:
+            logging.info("[transform] Spark loaded %d rows", _search_sdf.shape[0])
+        else:
+            logging.info("No data loaded by spark; process failed!")
 
         ''' enrich the data with: 
             (1) matching city names to the codes 
             (2) categorizing the room types based on the taxonomy
             (3) setting the data types of the columns
             using a transform function in the properties class '''
-        _search_sdf=_search_sdf.withColumn("currency", lit("US$"))
-        _search_sdf=_search_sdf.withColumn('room_rate', substring('room_rate', 4,10))
 
-        ''' reset data types to match table '''
-        _search_sdf = _search_sdf.withColumn("destination_id",col("destination_id").cast(StringType())) \
-                        .withColumn("room_rate",col("room_rate").cast(FloatType()))
-
-        logging.info("Split and Extraction complete!")
+        ''' define room price column to extrac number'''
+        logging.debug("[transform] Begin extracting room prices for %d rows", _search_sdf.shape[0])
+        rate_col_name = "room_rate"
+        aug_col_name = "room_price"
+        ''' extract the price value from room rate'''
+        _search_sdf = clsScraper.extract_room_rate(_search_sdf,rate_col_name,aug_col_name)
+        logging.debug("[transform] Room prices extraction complete for %d rows", _search_sdf.shape[0])
         
-        ''' Get destination id dictionary '''
-        destfilesPath = os.path.join(DATA_DIR, 'destinations/')
-#        destfilesPath = "../../data/hospitality/bookings/scraper/destinations/"
-        destinations_sdf = clsSparkWL.read_csv_to_sdf(filesPath=destfilesPath)
-        logging.info("Loaded %d rows from %s to replace destination ids with names", destinations_sdf.count(), destfilesPath)
+        ''' categorize the room types '''
+        logging.debug("[transform] Begin categorizing room types for %d rows", _search_sdf.shape[0])
+        emb_kwargs = {
+            'LOWER':True,
+            'NO_STOP_WORDS':False,
+            'METRIC':"COSIN",
+            'MAX_SCORES':2,
+            'TOLERANCE':0.7,
+            'ROOM_CATE_FNAME':"room_descriptions.csv",
+        }
+        _categorized_room_df = clsScraper.merge_similar_room_cate(_search_sdf,emb_kwargs)
+        _room_cate_count = len(_categorized_room_df.room_cate.unique())
+        logging.debug("[transform] Assigned %d room categories", _room_cate_count)
+
         ''' Lookup & replace destination name '''
-        destinations_sdf = destinations_sdf.selectExpr("city as destination_name", \
-                                                       "destinationID as destination_id")
-        ''' set data types '''
-#         destinations_sdf = destinations_sdf.withColumn("destination_name",col("destination_name").cast(StringType())) \
-#                                             .withColumn("destination_id",col("destination_id").cast(StringType()))
-        logging.info("Set data types for: destination_name, destination_id")
-        ''' augment destination id in dataframe ''' 
-#         aug_search_sdf = destinations_sdf.join(_search_sdf,"destination_id")
-        aug_search_sdf = _search_sdf.join(destinations_sdf,
-                                          _search_sdf.destination_id == destinations_sdf.destination_id,
-                                          how='leftouter').drop(_search_sdf.destination_id)
-        logging.info("Destination names & id augmented to dataframe.")
+        logging.debug("[transform] Begin lookup and assign destination Lx")
+        _aug_dest_df = clsScraper.assign_lx_name(data_df=_categorized_room_df)
+        _room_dest_count = len(_aug_dest_df.dest_lx_name.unique())
+        logging.info("[transform] Merged %d rows with %d destination name and type"\
+                     , _aug_dest_df.shap[0], _room_dest_count)
         ''' save data to tmp file '''
-        _tmp_fname = clsSparkWL.save_sdf_to_csv(aug_search_sdf)
-        logging.info("Cleaned data saved to %s",_tmp_fname)
+        _tmp_fname = clsSparkWL.save_sdf_to_csv(_aug_dest_df)
+        logging.info("[transform] Cleaned data saved to %s",_tmp_fname)
         ti.xcom_push(key='tmp_data_file', value=_tmp_fname)
-        logging.info("[transform] xcom push file name to %s", ti) 
+        logging.debug("[transform] xcom push file name to %s", ti) 
 
     ''' Function
             name: load
@@ -288,14 +298,14 @@ with DAG(
         ''' pull the tmp file path from xcom '''
         ti = kwargs['ti']
         _tmp_fname = ti.xcom_pull(key='tmp_data_file')
+        logging.debug("[load] pulled tmp_fname from xcom %s", ti) 
         ''' retrieve the data into a dataframe '''
         _get_tmp_sdf = clsSparkWL.read_csv_to_sdf(filesPath=_tmp_fname)
-        logging.info("Retrieved %d records from %s", _get_tmp_sdf.count(), _tmp_fname)
+        logging.info("[load] Retrieved %d records from %s", _get_tmp_sdf.count(), _tmp_fname)
         ''' save data to table '''
         _s_tbl_name = "ota_property_prices"
-        count = clsSparkWL.insert_sdf_into_table(save_sdf=_get_tmp_sdf, dbTable=_s_tbl_name)
+        count, saved_df = clsScraper.save_to_db(data_df=_aug_dest_df,table_name = _tbl_name)
         logging.info("%d records saved to %s", count, _s_tbl_name)
-
 
     ''' Function (TODO)
             name: clear_tmp_files
@@ -382,3 +392,4 @@ with DAG(
 
     ''' get url and storage location to pass as inputs to the ETL '''
     [get_urls_task, init_storage_task] >> extract_task >> transform_task >> load_task
+#     transform_task >> load_task
