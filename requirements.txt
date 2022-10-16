@@ -21,6 +21,8 @@ beautifulsoup4==4.11.1
 billiard==3.6.4.0
 bleach==5.0.1
 blinker==1.5
+#conda install -c conda-forge boto3
+boto3
 cachelib==0.9.0
 cattrs==22.1.0
 celery==5.2.7

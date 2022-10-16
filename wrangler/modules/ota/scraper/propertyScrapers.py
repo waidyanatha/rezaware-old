@@ -23,9 +23,9 @@ try:
     import pandas as pd
     from datetime import datetime, date, timedelta
 
-    sys.path.insert(1,__module_dir__)
-    import otaUtils as otau
-    sys.path.insert(1,__utils_dir__)
+#     sys.path.insert(1,__module_dir__)
+    import scraperUtils as otau
+#     sys.path.insert(1,__utils_dir__)
     import nlp
     import sparkwls as spark
 

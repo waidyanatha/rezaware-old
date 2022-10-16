@@ -7,6 +7,7 @@ The README file is intended for Rezgateway affiilates working on rezAWARE projec
 ## Introduction
 
 The rezAWARE tools and processes will support an organization to mature from descriptive to cognitive analytics. For such data being the key ingrediant, the rezAWARE core components offer:
+1. _Utils_ - set of common utility packages that can be used with any of the below apps
 1. _Wrangler_ - for processing data extract, transform, and load automated pipelines
 1. _Mining_ - Arificial Intelligence (AI) and Machine Learning (ML) analytical methods
 1. _Visuals_ - interactive dashboards with visual analytics for Business Intelligence (BI)
@@ -14,13 +15,15 @@ The rezAWARE tools and processes will support an organization to mature from des
 ## Getting Started
 
 ### Prerequisits
-To get started with a working environment to execute the librabries, the following packages are required.<br>
+It is recommended to setup a clean [Anaconda3](https://www.anaconda.com/) environment with Python 3.8 to avoid any distutils issues. To get started with a working environment to execute the librabries, the following packages are required.<br>
 ___Please note that the getting started steps have not been tested and should be revised with missing steps.___
 
 #### Required Packages
-* Python >= 3.8
+* conda >= 4.14
+* python >= 3.8
 * postgresql >= 13.5 and above
 * pyspark >= 2.3.4
+* airflow >= 2.3.4
 
 #### Run requirements.txt
 Run ```python3 -m pip install -r requirements.txt``` to install the remaining dependencies.
