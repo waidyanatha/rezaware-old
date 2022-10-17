@@ -3,7 +3,8 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "propertyScraper"
-__package__ = "PropertyScraper"
+__package__ = "scraper"
+__module__ = "ota"
 __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
 __utils_dir__ = "/home/nuwan/workspace/rezgate/utils/"
 __module_dir__ = "modules/ota/"
@@ -23,11 +24,12 @@ try:
     import pandas as pd
     from datetime import datetime, date, timedelta
 
-#     sys.path.insert(1,__module_dir__)
-    import scraperUtils as otau
-#     sys.path.insert(1,__utils_dir__)
-    import nlp
-    import sparkwls as spark
+#     cwd=os.path.dirname(__file__)
+#     sys.path.insert(1,cwd)
+#     import scraperUtils as otau
+# #     sys.path.insert(1,__utils_dir__)
+#     import nlp
+#     import sparkwls as spark
 
     print("All {0} software packages loaded successfully!".format(__package__))
 
@@ -56,7 +58,22 @@ class PropertyScraper():
 
         self.__name__ = __name__
         self.__package__ = __package__
+        self.__module__ = __module__
         self.__desc__ = desc
+
+        self.cwd=os.path.dirname(__file__)
+        sys.path.insert(1,self.cwd)
+        import scraperUtils as otau
+
+        global config
+        config = configparser.ConfigParser()
+        config.read(self.confFPath)
+
+        
+        
+#     sys.path.insert(1,__utils_dir__)
+        import nlp
+        import sparkwls as spark
 
         ''' initialize util class to use common functions '''
         global clsUtil
@@ -78,9 +95,9 @@ class PropertyScraper():
         self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
         if "CONFIG_PATH" in kwargs.keys():
             self.confFPath=kwargs['CONFIG_PATH']
-        global config
-        config = configparser.ConfigParser()
-        config.read(self.confFPath)
+#         global config
+#         config = configparser.ConfigParser()
+#         config.read(self.confFPath)
 
         ''' get the file and path for the logger '''
         self.logDir = os.path.join(self.rootDir,__logs_dir__)

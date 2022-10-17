@@ -5,6 +5,7 @@
 __name__ = "app"
 __package__ = "rezaware"
 __conf_file__ = "app.cfg"
+__ini_fname__ = "app.ini"
 
 try:
     ''' Load necessary and sufficient python librairies that are used throughout the class'''
@@ -67,12 +68,13 @@ class App:
     logs = object
     modules = []
 
-    def __init__(self, container, **kwargs):
+    def __init__(self, container, module=None, package=None, **kwargs):
 
         self.__package__ = __package__
         self.confFile = __conf_file__
+        self.iniFile = __ini_fname__
         self.config = None
-        self.conf_data = None
+        self.confData = None
 
         try:
             print("Initializing %s" % self.__package__)
@@ -92,6 +94,9 @@ class App:
             self.cwd = os.path.dirname(__file__)
             self.container_path = os.path.join(self.cwd,self.container)
 
+            self.module = module
+            self.package = package
+
         except Exception as e:
             print("Failed to initialize {0} with error:\n{1}".format(__package__,e))
             print(traceback.format_exc())
@@ -99,16 +104,26 @@ class App:
 
     def get_ini_data(self) -> list:
 
-        self.conf_data = Config.set_conf_ini_conf(self.container_path,self.confFile)
-        return self.conf_data
+        self.confData = Config.set_conf_ini_conf(self.container_path,self.confFile)
+        return self.confData
 
 
     def make_ini_files(self) -> str:
-        self.get_ini_data()
-        self.conf_data,self.ini_file_list = Config.set_conf_ini_conf(
-            self.container_path,
-            self.confFile)
-        return self.conf_data,self.ini_file_list
+#         self.get_ini_data()
+        self.container_path = os.path.join(self.cwd,self.container)
+        self.confData,self.ini_file_list = Config.set_conf_ini_conf(
+            reza_cwd=self.cwd,
+            container=self.container,
+            container_path=self.container_path,
+            conf_file=self.confFile)
+        return self.confData,self.ini_file_list
+
+    def get_package_logger(self):
+        return Logger.get_logger(self.cwd,
+                                 self.container,
+                                 self.module,
+                                 self.package,
+                                 self.iniFile)
 
     def configure(Config):
         
@@ -131,16 +146,31 @@ class App:
 
 class Config(ConfigParser):
 
-    def get_config_file(container,fName) -> ConfigParser:
+    def get_config(cwd:str,
+                   container:str=None,
+                   module:str=None,
+                   package:str=None,
+                   fName:str=None) -> ConfigParser:
 
         config = None
         try:
-            containerPath = os.path.join(container, fName)
+            if not fName:
+                raise ValueError("Undefined config file name %s. Must be specified" % fName)
+#             _conf_file_path = os.path.join(container, fName)
+            if container:
+                _conf_file_path = os.path.join(cwd,container)
+            if module:
+                _conf_file_path = os.path.join(_conf_file_path, "modules",module)
+                if package:
+                    _conf_file_path = os.path.join(_conf_file_path, package)
+#             _conf_file_path = os.path.join(_conf_file_path, fName)
             ''' check if config container exists in folder path '''
-            if not os.path.exists(containerPath):
-                raise FileNotFoundError("%s No config file found in container:" % containerPath)
+            if not os.path.exists(_conf_file_path):
+                raise FileNotFoundError("%s No config file %s found in:"
+                                        % (fName,_conf_file_path))
+
             config = ConfigParser()
-            config.read(containerPath)
+            config.read(os.path.join(_conf_file_path,fName))
             return config
 
         except Exception as e:
@@ -148,11 +178,15 @@ class Config(ConfigParser):
             print(traceback.format_exc())
             return None
 
-    def set_conf_ini_conf(container_path, conf_file) -> list:
+    def set_conf_ini_conf(reza_cwd,
+                          container,
+                          container_path,
+                          conf_file) -> list:
 
         try:
-            conf_data = Config.get_config_file(
-                container=container_path,
+            conf_data = Config.get_config(
+                cwd=reza_cwd,
+                container=container,
                 fName = conf_file,
             )
 
@@ -167,35 +201,42 @@ class Config(ConfigParser):
                             .strip().replace(' ',' - ')
 
             _modules_path = os.path.join(container_path,"modules")
-            _mod_conf = Config.get_config_file(
-                container=_modules_path,
-                fName = conf_file,
-            )
+#             _mod_conf = Config.get_config(
+#                 container=container,
+#                 fName = conf_file,
+#             )
 
-            if not "MODULES" in _mod_conf.sections():
+            if not "MODULES" in conf_data.sections():
                 raise ValueError("No MODULES section found in %s" % 
-                                 os.path.join(_mod_conf))
+                                 os.path.join(conf_data))
             _config_list=[]
             _ini_conf_file_list = []
-            for module in _mod_conf['MODULES']:
-                _sub_modules = _mod_conf['MODULES'][module].split(',')
+#             for module in _mod_conf['MODULES']:
+#                 _sub_modules = _mod_conf['MODULES'][module].split(',')
+            for module in conf_data['MODULES']:
+                _sub_modules = conf_data['MODULES'][module].split(',')
                 _modules_list=[]
                 for pkg in _sub_modules:
-                    _pkg_list=[]
-                    _ini_conf = ConfigParser()
-                    with open(os.path.join(
-                        _modules_path,
-                        module,
-                        pkg,
-                        '__init__.py'),"w") as f:
-                              f.write("#!/usr/bin/env python3\n# -*- coding: UTF-8 -*-")
-                    ini_file_path = os.path.join(
-                        _modules_path,
-                        module,
-                        pkg,
-                        'app.ini')
-#                     if not os.path.exists(ini_file_path):
+                    _pkg_path = os.path.join(_modules_path,module,pkg)
+                    ''' create the __init__ file with python header '''
+                    with open(os.path.join(_pkg_path,'__init__.py'),"w") as f:
+                        f.write("#!/usr/bin/env python3\n# -*- coding: UTF-8 -*-")
+                    f.close()
+
+                    ''' open app.ini file to save in module structure ''' 
+                    ini_file_path = os.path.join(_pkg_path,__ini_fname__)
                     _ini_conf_file = open(ini_file_path, "w")
+
+                    ''' new configParser instance for each package creation '''
+                    _ini_conf = ConfigParser()
+                    ''' add the current package working directory path '''
+                    _ini_conf.add_section("CWDS")
+                    _ini_conf.set("CWDS",str("rezaware"), str(reza_cwd))
+                    _ini_conf.set("CWDS",str(container), str(container_path))
+                    _ini_conf.set("CWDS",str(pkg), str(_pkg_path))
+                    
+                    ''' construct package configuration data '''
+                    _pkg_list=[]
                     if pkg and pkg.strip():
                         ''' create the logger parameters and file path'''
                         _logs_path = os.path.join(
@@ -205,16 +246,16 @@ class Config(ConfigParser):
                             pkg,
                             log_file_name,
                         )
-                        log = {'logPath':_logs_path,
-                               'logLevel':log_level,
-                               'logMode':log_mode,
-                               'logFormat':log_format,
+                        log = {'Path':_logs_path,
+                               'Level':log_level,
+                               'Mode':log_mode,
+                               'Format':log_format,
                               }
                         _ini_conf.add_section("LOGGER")
-                        _ini_conf.set("LOGGER","logPath", str(_logs_path))
-                        _ini_conf.set("LOGGER",'logLevel',str(log_level))
-                        _ini_conf.set("LOGGER",'logMode',str(log_mode))
-                        _ini_conf.set("LOGGER",'logFormat',str(log_format))
+                        _ini_conf.set("LOGGER","PATH", str(_logs_path))
+                        _ini_conf.set("LOGGER",'LEVEL',str(log_level))
+                        _ini_conf.set("LOGGER",'MODE',str(log_mode))
+                        _ini_conf.set("LOGGER",'FORMAT',str(log_format))
 
                         ''' create the data paths '''
                         data_path = os.path.join(
@@ -225,7 +266,7 @@ class Config(ConfigParser):
                         )
                         data = {'dataPath':data_path}
                         _ini_conf.add_section("DATA")
-                        _ini_conf.set("DATA","DATAPATH", str(data_path))
+                        _ini_conf.set("DATA","PATH", str(data_path))
 
                         file_list = []
                         _ini_conf.add_section("MODULES")
@@ -257,27 +298,13 @@ class Config(ConfigParser):
                 _config_list.append({module:_modules_list})
 
         except Exception as e:
-            print("Failed to initialize {0} with error:\n{1}".format(__package__,e))
+            print("Error set_conf_ini_conf {0} with error:\n{1}".format(__package__,e))
             print(traceback.format_exc())
 
         return _config_list, [*set(_ini_conf_file_list)]
 
-#     def make_ini_files(conf_data):
-
-#         try:
-#             if not len(conf_data) > 0:
-#                 raise RuntimeError("No config data to make the ini file")
-
-#             for module in conf_data:
-#                 print(module)
             
-#         except Exception as e:
-#             print("Config had error:\n{0}".format(e))
-#             print(traceback.format_exc())
-
-#         return None
-            
-class Logger:
+class Logger():
     
 #     import logging
 #     logger = logging.getLogger(__package__)
@@ -288,21 +315,59 @@ class Logger:
         
         return fHandler
     
-    def get_logger():
+    def get_logger(cwd:str,container:str, module:str, package:str, ini_file):
 
+        ''' TODO logging.formatter string is hard coded until the error
+            can be resolved with getting format string from app.ini'''
+
+        _log_format = '[%(levelname)s] - %(asctime)s - %(name)s - %(message)s'
         try:
-            logger = logging.getLogger(__package__)
-            logger.setLevel(logging.DEBUG)
+            if not ini_file:
+                ini_file = __ini_fname__
+
+            if not cwd:
+                raise ValueError("Undefined CWD (current working dir) - parameter set using clsHandler.cwd")
+
+            if not container:
+                raise ValueError("Undefined CONTAINER parameter set using clsHandler.container")
+
+            if not module:
+                raise ValueError("Undefined MODULE parameter set using clsHandler.module")
+
+            if not package:
+                raise ValueError("Undefined PACKAGE parameter set using clsHandler.module")
+
+            _pkg_path = os.path.join(cwd,container,"modules",module,package)
+            pkg_conf = Config.get_config(
+                cwd=cwd,
+                container=container,
+                module=module,
+                package=package,
+                fName = ini_file,
+            )
+#             pkg_conf = Config.get_config(
+#                 container=os.path.dirname(__file__),
+#                 fName = ini_file,
+#             )
+            logger = logging.getLogger(module)
+            logger.setLevel(pkg_conf.get('LOGGER','LEVEL'))
             if (logger.hasHandlers()):
                 logger.handlers.clear()
             # create file handler which logs even debug messages
-            fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
-        #        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
-            fh.setLevel(logging.DEBUG)
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            _log_fpath = pkg_conf.get('LOGGER','PATH')
+            if not os.path.dirname(_log_fpath):
+                os.makedirs(os.path.dirname(_log_fpath))
+            if not os.path.exists(_log_fpath):
+                with open(_log_fpath, 'w') as fp:
+                    pass
+            fh = logging.FileHandler(_log_fpath,pkg_conf.get('LOGGER','MODE'))
+            fh.setLevel(pkg_conf.get('LOGGER','LEVEL'))
+#             _log_format = str(pkg_conf['LOGGER']['FORMAT'])
+#             formatter = logging.Formatter(_log_format)
+            formatter = logging.Formatter(_log_format)
             fh.setFormatter(formatter)
             logger.addHandler(fh)
+            return logger
 
         except Exception as e:
             print("Config had error:\n{0}".format(e))
