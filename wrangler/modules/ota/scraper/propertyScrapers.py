@@ -5,13 +5,15 @@
 __name__ = "propertyScraper"
 __package__ = "scraper"
 __module__ = "ota"
-__root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-__utils_dir__ = "/home/nuwan/workspace/rezgate/utils/"
-__module_dir__ = "modules/ota/"
-__data_dir__ = "data/hospitality/bookings/scraper/"
-__conf_fname__ = "app.cfg"
-__logs_dir__ = "logs/module/ota/"
-__log_fname__ = "app.log"
+__container__ = "wrangler"
+# __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
+# __utils_dir__ = "/home/nuwan/workspace/rezgate/utils/"
+# __module_dir__ = "modules/ota/"
+# __data_dir__ = "data/hospitality/bookings/scraper/"
+# __conf_fname__ = "app.cfg"
+__conf_fname__ = "app.ini"
+# __logs_dir__ = "logs/module/ota/"
+# __log_fname__ = "app.log"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -26,7 +28,7 @@ try:
 
 #     cwd=os.path.dirname(__file__)
 #     sys.path.insert(1,cwd)
-#     import scraperUtils as otau
+#     import scraperUtils as otasu
 # #     sys.path.insert(1,__utils_dir__)
 #     import nlp
 #     import sparkwls as spark
@@ -59,98 +61,116 @@ class PropertyScraper():
         self.__name__ = __name__
         self.__package__ = __package__
         self.__module__ = __module__
+        self.__container__ = __container__
+        self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
         self.cwd=os.path.dirname(__file__)
         sys.path.insert(1,self.cwd)
-        import scraperUtils as otau
+        import scraperUtils as otasu
 
         global config
         config = configparser.ConfigParser()
-        config.read(self.confFPath)
+        config.read(os.path.join(self.cwd,__conf_fname__))
 
-        
-        
-#     sys.path.insert(1,__utils_dir__)
-        import nlp
-        import sparkwls as spark
+        self.rezHome = config.get("CWDS","REZAWARE")
+        sys.path.insert(1,self.rezHome)
+        from rezaware import Logger as logs
+        from utils.modules.etl.load import sparkwls as spark
+        from utils.modules.ml.natlang import nlp
+
+# #     sys.path.insert(1,__utils_dir__)
+#         import nlp
+#         import sparkwls as spark
 
         ''' initialize util class to use common functions '''
+#         global clsRezLog
+#         clsRezLog = rezaware.Logger()
         global clsUtil
-        clsUtil = otau.Utils(desc='Utilities class for property data scraping')
+        clsUtil = otasu.Utils(desc='Utilities class for property data scraping')
         global clsNLP
         clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
         global clsSparkWL
         clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
 
         ''' Set the wrangler root directory '''
-        self.rootDir = __root_dir__
-        if "ROOT_DIR" in kwargs.keys():
-            self.rootDir = kwargs['ROOT_DIR']
+        self.pckgDir = config.get("CWDS",self.__package__)
+        self.containerDir = config.get("CWDS",self.__container__)
+        ''' get the path to the input and output data '''
+        self.dataDir = config.get("CWDS","DATA")
+#         if "ROOT_DIR" in kwargs.keys():
+#             self.containerDir = kwargs['ROOT_DIR']
 
-        self.moduleDir = os.path.join(self.rootDir, __module_dir__)
-        if "MODULE_DIR" in kwargs.keys():
-            self.moduleDir=kwargs['MODULE_DIR']
+#         self.moduleDir = os.path.join(self.containerDir, __module_dir__)
+#         if "MODULE_DIR" in kwargs.keys():
+#             self.moduleDir=kwargs['MODULE_DIR']
 
-        self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
-        if "CONFIG_PATH" in kwargs.keys():
-            self.confFPath=kwargs['CONFIG_PATH']
+#         self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
+#         if "CONFIG_PATH" in kwargs.keys():
+#             self.confFPath=kwargs['CONFIG_PATH']
 #         global config
 #         config = configparser.ConfigParser()
 #         config.read(self.confFPath)
 
-        ''' get the file and path for the logger '''
-        self.logDir = os.path.join(self.rootDir,__logs_dir__)
-        self.logFPath = os.path.join(self.logDir,__log_fname__)
-        try:
-            self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
-            self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
-        except:
-            pass
-        if not os.path.exists(self.logDir):
-            os.makedirs(self.logDir)
-#        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+#         ''' get the file and path for the logger '''
+#         self.logDir = os.path.join(self.containerDir,__logs_dir__)
+#         self.logFPath = os.path.join(self.logDir,__log_fname__)
+#         try:
+#             self.logDir = os.path.join(self.containerDir,config.get('LOGGING','LOGPATH'))
+#             self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+#         except:
+#             pass
+#         if not os.path.exists(self.logDir):
+#             os.makedirs(self.logDir)
+# #        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
 
         ''' innitialize the logger '''
         global logger
-        logger = logging.getLogger(__package__)
-        logger.setLevel(logging.DEBUG)
-        if (logger.hasHandlers()):
-            logger.handlers.clear()
-        # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
-#        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
-        fh.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        logger.addHandler(fh)
+        logger = logs.get_logger(
+            cwd=self.rezHome,
+            container=self.__container__, 
+            module=self.__module__,
+            package=self.__package__,
+            ini_file=self.__conf_fname__)
+#         logger = logging.getLogger(__package__)
+#         logger.setLevel(logging.DEBUG)
+#         if (logger.hasHandlers()):
+#             logger.handlers.clear()
+#         # create file handler which logs even debug messages
+#         fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
+# #        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
+#         fh.setLevel(logging.DEBUG)
+#         formatter = logging.Formatter(
+#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#         fh.setFormatter(formatter)
+#         logger.addHandler(fh)
         ''' set a new logger section '''
         logger.info('########################################################')
         logger.info(__name__)
-        logger.info('Module Path = %s', self.moduleDir)
+        logger.info('Package Path = %s', self.pckgDir)
 
-        ''' get the path to the input and output data '''
-        self.dataDir = __data_dir__
-        try:
-            if "DATA_DIR" in kwargs.keys():
-                ''' first preference given to kwargs '''
-                self.dataDir = kwargs['DATA_DIR']
-                logger.info("Appending data path from kwargs %s" % self.dataDir)
-            else:
-                ''' next try the app.cfg file '''
-                self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
-                if not self.dataDir:
-                    raise ValueError("Data location not defined in %s" % self.confFPath)
-                else:
-                    logger.info("Appending data path from class default value %s" % self.dataDir)
+#         ''' get the path to the input and output data '''
+#         self.dataDir = __data_dir__
+#         try:
+#             if "DATA_DIR" in kwargs.keys():
+#                 ''' first preference given to kwargs '''
+#                 self.dataDir = kwargs['DATA_DIR']
+#                 logger.info("Appending data path from kwargs %s" % self.dataDir)
+#             else:
+#                 ''' next try the app.cfg file '''
+#                 self.dataDir = os.path.join(self.containerDir,config.get('STORES','DATA'))
+#                 if not self.dataDir:
+#                     raise ValueError("Data location not defined in %s" % self.confFPath)
+#                 else:
+#                     logger.info("Appending data path from class default value %s" % self.dataDir)
             
-        except Exception as err:
-            logger.warning("%s %s \n", _s_fn_id,err)
-            logger.warning("Using default data path %s" % self.dataDir)
+#         except Exception as err:
+#             logger.warning("%s %s \n", _s_fn_id,err)
+#             logger.warning("Using default data path %s" % self.dataDir)
 
         ''' select the storate method '''
-        self.storeMethod = config.get('STORES','METHOD')
+#         self.storeMethod = config.get('STORES','METHOD')
+        self.storeMethod = "local"
         
         ''' set the tmp dir to store large data to share with other functions
             if self.tmpDIR = None then data is not stored, otherwise stored to
@@ -158,7 +178,8 @@ class PropertyScraper():
         '''
         self.tmpDIR = None
         if "WRITE_TO_FILE":
-            self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+#             self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+            self.tmpDIR = os.path.join(self.dataDir,"tmp/")
             if not os.path.exists(self.tmpDIR):
                 os.makedirs(self.tmpDIR)
 
@@ -176,7 +197,7 @@ class PropertyScraper():
                          ]
         print("Initialing %s class for %s with instance %s" 
               % (self.__package__, self.__name__, self.__desc__))
-        print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
+#         print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
         print("Data path set to %s" % self.dataDir)
         return None
 
@@ -275,7 +296,7 @@ class PropertyScraper():
             if not file_name:
                 raise ValueError("Invalid file to fetch scraper property dictionary")
             if not inp_data_dir:
-#                 inp_data_dir = os.path.join(self.rootDir,config.get('STORES','INPUTDATA'))
+#                 inp_data_dir = os.path.join(self.containerDir,config.get('STORES','INPUTDATA'))
                 inp_data_dir = self.dataDir
             logger.info("Directory path for loading input data %s" % inp_data_dir)
             
@@ -568,7 +589,7 @@ class PropertyScraper():
     ''' Function
             name: scrape_url_list
             parameters:
-                otaURLlist - string with folder path to the csv files
+                otasuRLlist - string with folder path to the csv files
                 **kwargs - contain the plance holder key value pairs
                             columns: list
                             start_date: datetime.date
@@ -582,7 +603,7 @@ class PropertyScraper():
             modified: 2022-09-20
     '''
 
-    def scrape_url_list(self,otaURLlist, searchDT: datetime, data_store_dir:str):
+    def scrape_url_list(self,otasuRLlist, searchDT: datetime, data_store_dir:str):
 
         saveTo = None   # init file name
         _l_saved_files = []
@@ -591,14 +612,14 @@ class PropertyScraper():
         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
         try:
-            if len(otaURLlist) > 0:
-                logger.info("loading parameterized urls from list %d records", len(otaURLlist))
-                print("loading parameterized urls from list %d records" % len(otaURLlist))
+            if len(otasuRLlist) > 0:
+                logger.info("loading parameterized urls from list %d records", len(otasuRLlist))
+                print("loading parameterized urls from list %d records" % len(otasuRLlist))
             else:
                 raise ValueError("List of URLs required to proceed; non defined in list.")
 
             ''' loop through the list of urls to scrape and save the data'''
-            for ota_dict in otaURLlist:
+            for ota_dict in otasuRLlist:
 
                 ''' file name is concaternation of ota name + location + checkin date + page offset and .csv file extension'''
                 _fname = str(ota_dict['ota'])+"."+\
@@ -630,7 +651,7 @@ class PropertyScraper():
     ''' Function
             name: extract_room_rate
             parameters:
-                otaURLlist - string with folder path to the csv files
+                otasuRLlist - string with folder path to the csv files
                 **kwargs - contain the plance holder key value pairs
                             columns: list
                             start_date: datetime.date
@@ -681,7 +702,7 @@ class PropertyScraper():
     ''' Function
             name: merge_similar_room_cate
             parameters:
-                otaURLlist - string with folder path to the csv files
+                otasuRLlist - string with folder path to the csv files
                 **kwargs - contain the plance holder key value pairs
                             columns: list
                             start_date: datetime.date
@@ -778,7 +799,7 @@ class PropertyScraper():
     ''' Function
             name: assign_lx_name
             parameters:
-                otaURLlist - string with folder path to the csv files
+                otasuRLlist - string with folder path to the csv files
                 **kwargs - contain the plance holder key value pairs
                             columns: list
                             start_date: datetime.date
@@ -848,7 +869,7 @@ class PropertyScraper():
     ''' Function
             name: save_to_db
             parameters:
-                otaURLlist - string with folder path to the csv files
+                otasuRLlist - string with folder path to the csv files
                 **kwargs - contain the plance holder key value pairs
                             columns: list
                             start_date: datetime.date

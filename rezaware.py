@@ -153,6 +153,8 @@ class Config(ConfigParser):
                    fName:str=None) -> ConfigParser:
 
         config = None
+        _conf_file_path = None
+
         try:
             if not fName:
                 raise ValueError("Undefined config file name %s. Must be specified" % fName)
@@ -349,7 +351,7 @@ class Logger():
 #                 container=os.path.dirname(__file__),
 #                 fName = ini_file,
 #             )
-            logger = logging.getLogger(module)
+            logger = logging.getLogger(package)
             logger.setLevel(pkg_conf.get('LOGGER','LEVEL'))
             if (logger.hasHandlers()):
                 logger.handlers.clear()

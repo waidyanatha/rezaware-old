@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 ''' Initialize with default environment variables '''
-__name__ = "otaUtils"
-__package__ = "otaUtils"
-__root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-__module_dir__ = 'modules/ota/'
+__name__ = "scraperUtils"
+__package__ = "scraper"
+# __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
+# __module_dir__ = 'modules/ota/'
+__module__ = "ota"
+__container__ = "wrangler"
 #__data_dir__ = 'data/hospitality/bookings/scraper/'
-__conf_fname__ = 'app.cfg'
-__logs_dir__ = 'logs/module/ota/'
-__log_fname__ = 'app.log'
+# __conf_fname__ = "app.cfg"
+__conf_fname__ = "app.ini"
+# __logs_dir__ = 'logs/module/ota/'
+# __log_fname__ = 'app.log'
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -30,7 +33,7 @@ try:
 #     __config_path__ = os.path.join(__module_path__, 'app.cfg')
 
     print("All {0} in {1} software packages loaded successfully!"\
-          .format(__package__,__module_dir__))
+          .format(__package__,__module__))
 
 except Exception as e:
     print("Some software packages in {0} didn't load\n{1}".format(__package__,e))
@@ -55,54 +58,82 @@ class Utils():
 
         self.__name__ = __name__
         self.__package__ = __package__
+        self.__module__ = __module__
+        self.__container__ = __container__
+        self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
-        ''' Set the wrangler root directory '''
-        self.rootDir = __root_dir__
-        if "ROOT_DIR" in kwargs.keys():
-            self.rootDir = kwargs['ROOT_DIR']
+#         ''' Set the wrangler root directory '''
+#         self.rootDir = __root_dir__
+#         if "ROOT_DIR" in kwargs.keys():
+#             self.rootDir = kwargs['ROOT_DIR']
 
-        self.moduleDir = os.path.join(self.rootDir, __module_dir__)
-        if "MODULE_DIR" in kwargs.keys():
-            self.moduleDir=kwargs['MODULE_DIR']
+#         self.moduleDir = os.path.join(self.rootDir, __module_dir__)
+#         if "MODULE_DIR" in kwargs.keys():
+#             self.moduleDir=kwargs['MODULE_DIR']
 
-        self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
-        if "CONFIG_PATH" in kwargs.keys():
-            self.confFPath=kwargs['CONFIG_PATH']
+#         self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
+#         if "CONFIG_PATH" in kwargs.keys():
+#             self.confFPath=kwargs['CONFIG_PATH']
+#         global config
+#         config = configparser.ConfigParser()
+#         config.read(self.confFPath)
+
+        self.cwd=os.path.dirname(__file__)
         global config
         config = configparser.ConfigParser()
-        config.read(self.confFPath)
+        config.read(os.path.join(self.cwd,__conf_fname__))
 
-        ''' get the file and path for the logger '''
-        self.logDir = os.path.join(self.rootDir,__logs_dir__)
-        self.logFPath = os.path.join(self.logDir,__log_fname__)
-        try:
-            self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
-            self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
-        except:
-            pass
-        if not os.path.exists(self.logDir):
-            os.makedirs(self.logDir)
-#        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+        self.rezHome = config.get("CWDS","REZAWARE")
+        sys.path.insert(1,self.rezHome)
+        from rezaware import Logger as logs
+
+#         global clsRezLog
+#         clsRezLog = logs.Logger()
+
+#         ''' get the file and path for the logger '''
+#         self.logDir = os.path.join(self.rootDir,__logs_dir__)
+#         self.logFPath = os.path.join(self.logDir,__log_fname__)
+#         try:
+#             self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
+#             self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+#         except:
+#             pass
+#         if not os.path.exists(self.logDir):
+#             os.makedirs(self.logDir)
+# #        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+
+        self.pckgDir = config.get("CWDS",self.__package__)
+        self.containerDir = config.get("CWDS",self.__container__)
+        ''' get the path to the input and output data '''
+        self.dataDir = config.get("CWDS","DATA")
 
         ''' innitialize the logger '''
         global logger
-        logger = logging.getLogger(__package__)
-        logger.setLevel(logging.DEBUG)
-        if (logger.hasHandlers()):
-            logger.handlers.clear()
-        # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
-#        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
-        fh.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        logger.addHandler(fh)
+        logger = logs.get_logger(
+            cwd=self.rezHome,
+            container=self.__container__, 
+            module=self.__module__,
+            package=self.__package__,
+            ini_file=self.__conf_fname__)
+
+#         global logger
+#         logger = logging.getLogger(__package__)
+#         logger.setLevel(logging.DEBUG)
+#         if (logger.hasHandlers()):
+#             logger.handlers.clear()
+#         # create file handler which logs even debug messages
+#         fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
+# #        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
+#         fh.setLevel(logging.DEBUG)
+#         formatter = logging.Formatter(
+#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#         fh.setFormatter(formatter)
+#         logger.addHandler(fh)
         ''' set a new logger section '''
         logger.info('########################################################')
-        logger.info(__name__)
-        logger.info('Module Path = %s', self.moduleDir)
+        logger.info(self.__name__)
+        logger.info('Module Path = %s', self.pckgDir)
 
         ''' set the tmp dir to store large data to share with other functions
             if self.tmpDIR = None then data is not stored, otherwise stored to
@@ -110,7 +141,8 @@ class Utils():
         '''
         self.tmpDIR = None
         if "WRITE_TO_FILE":
-            self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+#             self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+            self.tmpDIR = os.path.join(self.dataDir,"tmp/")
             if not os.path.exists(self.tmpDIR):
                 os.makedirs(self.tmpDIR)
 
@@ -121,7 +153,7 @@ class Utils():
 
         print("Initialing %s class for %s with instance %s" 
               % (self.__package__, self.__name__, self.__desc__))
-        print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
+#         print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
         return None
 
     ''' Function
