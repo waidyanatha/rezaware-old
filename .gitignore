@@ -1,23 +1,35 @@
+### ALL ###
+###
+__init__.py
+app.ini
+deprecated_*
+__pycache__
+DEPRECATED_
+
+### UTILS ###
+###
+utils/__pycache__/*
+utils/logs/*
+### WRANGLER ###
+###
 wrangler/data/hospitality/bookings/scraper/rates/*
 wrangler/__pycache__/*
 mining/notebooks/hospitality/.ipynb_checkpoints/*
 nohup.out
 wrangler/__pycache__/*
-wrangler/data/hospitality/bookings/scraper/rates/
+wrangler/data/ota/scraper/hospitality/bookings/rates/*
 wrangler/data/tmp/*
 wrangler/logs/*
 wrangler/modules/ota/__init__.py
 wrangler/modules/ota/__pycache__/*
 wrangler/notebooks/.ipynb_checkpoints/*
 wrangler/notebooks/hospitality/.ipynb_checkpoints/*
-### Utils
-wrangler/utils/__pycache__/*
-utils/__pycache__
+wrangler/notebooks/transport/.ipynb_checkpoints/*
+wrangler/notebooks/ota/scraper/hospitality/.ipynb_checkpoints/*
+wrangler/notebooks/ota/.ipynb_checkpoints/*
 wrangler/notebooks/utils/.ipynb_checkpoints/*
 wrangler/data/transport/airlines/scraper/itinerary/*
 wrangler/db/backups/
 wrangler/notebooks/hospitality/wrangler/
 wrangler/notebooks/transport/.ipynb_checkpoints/*
 utils/__pycache__/*
-wrangler/notebooks/transport/.ipynb_checkpoints/*
-wrangler/notebooks/ota/scraper/hospitality/.ipynb_checkpoints/*
