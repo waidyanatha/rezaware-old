@@ -5,7 +5,7 @@
 __name__ = "app"
 __module__ = "rezaware"
 __package__ = "rezaware"
-# __conf_file__ = "app.cfg"
+__conf_file__ = "app.cfg"
 __ini_fname__ = "app.ini"
 __log_fname__ = "app.log"
 
@@ -62,7 +62,7 @@ class App:
         data and logging. 
     '''
 
-    container = "utils"   # utils, wrangler, mining, visuals
+    app_name = "utils"   # utils, wrangler, mining, visuals
     storeMethod = None  # dir, s3bucket,
     dataStore = object
     confData = None
@@ -70,18 +70,18 @@ class App:
     logs = object
     modules = []
 
-    def __init__(self, container, module=None, package=None, **kwargs):
+    def __init__(self, app_name, module=None, package=None, **kwargs):
 
         self.__package__ = __package__
-#         self.confFile = __conf_file__
+        self.confFile = __conf_file__
         self.iniFile = __ini_fname__
         self.config = None
         self.confData = None
 
         try:
-            if not container in ['mining','utils','visuals','wrangler']:
-                raise ValueError("Invalid app name".format(self.container))
-            self.container = container
+            if not app_name in ['mining','utils','visuals','wrangler']:
+                raise ValueError("Invalid app name".format(self.appName))
+            self.appName = app_name
             self.module = __module__
             if module:
                 self.module = module
@@ -90,49 +90,40 @@ class App:
                 self.package = package
 
             self.cwd = os.path.dirname(__file__)
-            self.container_path = os.path.join(self.cwd,self.container)
+            self.appPath = os.path.join(self.cwd,self.appName)
 
             global logger
-            logger=Logger.get_logger(self.cwd,self.container,None,None,self.iniFile)
+            if not os.path.dirname(os.path.join(self.appPath,"logs/")):
+                os.makedirs(os.path.dirname(os.path.join(self.appPath,"logs/")))                
+            logger=Logger.get_logger(self.cwd,self.appName,None,None,self.confFile)
             logger.info("Initializing %s", self.__package__)
             print("Initializing %s" % self.__package__)
 
-#             if self.container == "mining":
-#                 from wrangler import dags, logs, modules
-#             elif self.container == "utils":
-#                 import utils
-#             elif self.container == "visuals":
-#                 import visuals
-#             elif self.container == "wrangler":
-#                 import visuals
-#             else:
-#                 pass
-
         except Exception as e:
-            print("{0} container - {1} module - failed to initialize {2} with error:\n{3}".
-                  format(self.container,self.module,self.package,e))
+            print("{0} app - {1} module - failed to initialize {2} with error:\n{3}".
+                  format(self.appName,self.module,self.package,e))
             print(traceback.format_exc())
 
 
     def get_ini_data(self) -> list:
 
-        self.confData = Config.set_conf_ini_conf(self.container_path,self.confFile)
+        self.confData = Config.set_conf_ini_conf(self.appPath,self.confFile)
         return self.confData
 
 
     def make_ini_files(self) -> str:
 #         self.get_ini_data()
-        self.container_path = os.path.join(self.cwd,self.container)
+        self.appPath = os.path.join(self.cwd,self.appName)
         self.confData,self.ini_file_list = Config.set_conf_ini_conf(
             reza_cwd=self.cwd,
-            container=self.container,
-            container_path=self.container_path,
-            conf_file=self.iniFile)
+            container=self.appName,
+            container_path=self.appPath,
+            conf_file=self.confFile)
         return self.confData,self.ini_file_list
 
     def get_package_logger(self):
         return Logger.get_logger(self.cwd,
-                                 self.container,
+                                 self.appName,
                                  self.module,
                                  self.package,
                                  self.iniFile)
@@ -377,10 +368,9 @@ class Logger():
                 if package:
                     _log_fpath = os.path.join(_log_fpath,package)
 
-            if not os.path.dirname(_log_fpath):
-                os.makedirs(os.path.dirname(_log_fpath))
-            if not os.path.isfile(_log_fpath) and os.path.isdir(_log_fpath):
-                _log_fpath = os.path.join(_log_fpath,logFName)
+            if not os.path.isdir(_log_fpath):
+                os.makedirs(_log_fpath)
+            _log_fpath = os.path.join(_log_fpath,logFName)
             if not os.path.exists(_log_fpath):
                 with open(_log_fpath, 'w') as fp:
                     pass
