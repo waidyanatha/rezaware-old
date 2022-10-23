@@ -62,7 +62,7 @@ class App:
         data and logging. 
     '''
 
-    app_name = "utils"   # utils, wrangler, mining, visuals
+#     app_name = "utils"   # utils, wrangler, mining, visuals
     storeMethod = None  # dir, s3bucket,
     dataStore = object
     confData = None
@@ -72,6 +72,8 @@ class App:
 
     def __init__(self, app_name, module=None, package=None, **kwargs):
 
+        print("Attempt to initializing:",app_name)
+        self.__name__ = __name__
         self.__package__ = __package__
         self.confFile = __conf_file__
         self.iniFile = __ini_fname__
@@ -82,13 +84,14 @@ class App:
             if not app_name in ['mining','utils','visuals','wrangler']:
                 raise ValueError("Invalid app name".format(self.appName))
             self.appName = app_name
-            self.module = __module__
-            if module:
-                self.module = module
-            self.package = __package__
-            if package:
-                self.package = package
-
+            self.module = module
+#             self.module = __module__
+#             if module:
+#                 self.module = module
+            self.package = package
+#             self.package = __package__
+#             if package:
+#                 self.package = package
             self.cwd = os.path.dirname(__file__)
             self.appPath = os.path.join(self.cwd,self.appName)
 
@@ -96,8 +99,10 @@ class App:
             if not os.path.dirname(os.path.join(self.appPath,"logs/")):
                 os.makedirs(os.path.dirname(os.path.join(self.appPath,"logs/")))                
             logger=Logger.get_logger(self.cwd,self.appName,None,None,self.confFile)
-            logger.info("Initializing %s", self.__package__)
-            print("Initializing %s" % self.__package__)
+            logger.info("%s Initialization complete for %s %s",
+                        self.__name__,self.__package__,self.appName)
+            print("%s Initialization complete for %s %s"
+                  % (self.__name__,self.__package__,self.appName))
 
         except Exception as e:
             print("{0} app - {1} module - failed to initialize {2} with error:\n{3}".
