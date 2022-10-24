@@ -3,13 +3,11 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "sparkwls"
-__package__ = "SparkWorkLoads"
-# __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler/"
-__utils_dir__ = '/home/nuwan/workspace/rezgate/utils/'
-#__data_dir__ = 'data/hospitality/bookings/scraper/'
-__conf_fname__ = 'app.cfg'
-__logs_dir__ = 'logs/'
-__log_fname__ = 'app.log'
+__module__ = "etl"
+__package__ = "load"
+__app__ = "utils"
+__ini_fname__ = "app.ini"
+__conf_fname__ = "app.cfg"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -18,14 +16,10 @@ try:
     import findspark
     findspark.init()
     from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
-#    import pyspark
     import pandas as pd
-#    from pandas.api.types import is_datetime64_any_dtype as is_datetime
-#    import calendar
     import configparser    
     import logging
     import traceback
-
 
     print("All packages in %s loaded successfully!" % __package__)
 
@@ -61,60 +55,87 @@ class SparkWorkLoads():
 
         self.__name__ = __name__
         self.__package__ = __package__
+        self.__module__ = __module__
+        self.__app__ = __app__
+        self.__ini_fname__ = __ini_fname__
+        self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
+        _s_fn_id = "__init__"
 
         ''' initiate to load app.cfg data '''
-        global confApp
-        global confUtil
-        confApp = configparser.ConfigParser()
-        confUtil = configparser.ConfigParser()
+        global logger
+        global pkgConf
+        global appConf
 
+        self.cwd=os.path.dirname(__file__)
+        pkgConf = configparser.ConfigParser()
+        pkgConf.read(os.path.join(self.cwd,__ini_fname__))
+
+        self.rezHome = pkgConf.get("CWDS","REZAWARE")
+        sys.path.insert(1,self.rezHome)
+        from rezaware import Logger as logs
+
+        ''' Set the wrangler root directory '''
+        self.pckgDir = pkgConf.get("CWDS",self.__package__)
+        self.appDir = pkgConf.get("CWDS",self.__app__)
+        ''' get the path to the input and output data '''
+        self.dataDir = pkgConf.get("CWDS","DATA")
+
+        appConf = configparser.ConfigParser()
+        appConf.read(os.path.join(self.appDir, self.__conf_fname__))
+        
 #         ''' Set the wrangler root directory '''
 #         self.rootDir = __root_dir__
 #         if "ROOT_DIR" in kwargs.keys():
 #             self.rootDir = kwargs['ROOT_DIR']
 #         if self.rootDir[-1] != "/":
 #             self.rootDir +="/"
-        ''' Set the utils root directory '''
-        self.utilsDir = __utils_dir__
-        if "UTILS_DIR" in kwargs.keys():
-            self.utilsDir = kwargs['UTILS_DIR']
-        ''' load the utils config env vars '''
+#         ''' Set the utils root directory '''
+#         self.utilsDir = __utils_dir__
+#         if "UTILS_DIR" in kwargs.keys():
+#             self.utilsDir = kwargs['UTILS_DIR']
+#         ''' load the utils config env vars '''
 #         self.appConfigPath = os.path.join(self.rootDir, __conf_fname__)
 #         confApp.read(self.appConfigPath)
 #         self.utilsDir = os.path.join(self.rootDir, __utils_dir__)
-        self.utilConfFPath = os.path.join(self.utilsDir, __conf_fname__)
-        confUtil.read(self.utilConfFPath)
+#         self.utilConfFPath = os.path.join(self.utilsDir, __conf_fname__)
+#         confUtil.read(self.utilConfFPath)
 
-        ''' get the file and path for the logger '''
-        self.logDir = os.path.join(self.utilsDir,confUtil.get('LOGGING','LOGPATH'))
-        if not os.path.exists(self.logDir):
-            os.makedirs(self.logDir)
-        self.logFPath = os.path.join(self.logDir,confUtil.get('LOGGING','LOGFILE'))
+#         ''' get the file and path for the logger '''
+#         self.logDir = os.path.join(self.utilsDir,confUtil.get('LOGGING','LOGPATH'))
+#         if not os.path.exists(self.logDir):
+#             os.makedirs(self.logDir)
+#         self.logFPath = os.path.join(self.logDir,confUtil.get('LOGGING','LOGFILE'))
+#         ''' innitialize the logger '''
+#         logger = logging.getLogger(__package__)
+#         logger.setLevel(logging.DEBUG)
+#         if (logger.hasHandlers()):
+#             logger.handlers.clear()
+#         # create file handler which logs even debug messages
+#         fh = logging.FileHandler(self.logFPath, confUtil.get('LOGGING','LOGMODE'))
+#         fh.setLevel(logging.DEBUG)
+#         formatter = logging.Formatter(
+#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#         fh.setFormatter(formatter)
+#         logger.addHandler(fh)
         ''' innitialize the logger '''
-        global logger
-        logger = logging.getLogger(__package__)
-        logger.setLevel(logging.DEBUG)
-        if (logger.hasHandlers()):
-            logger.handlers.clear()
-        # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFPath, confUtil.get('LOGGING','LOGMODE'))
-        fh.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        logger.addHandler(fh)
+        logger = logs.get_logger(
+            cwd=self.rezHome,
+            app=self.__app__, 
+            module=self.__module__,
+            package=self.__package__,
+            ini_file=self.__ini_fname__)
         ''' set a new logger section '''
         logger.info('########################################################')
-        logger.info(__name__)
-        logger.info('Utils Path = %s', self.utilsDir)
+        logger.info(self.__name__,self.__package__)
         
         ''' get tmp storage location '''
         self.tmpDIR = None
-        self.tmpDIR = os.path.join(self.utilsDir,confUtil.get('STORES','TMPDATA'))
-        if not os.path.exists(self.tmpDIR):
-            os.makedirs(self.tmpDIR)
-
+        if "WRITE_TO_FILE" in kwargs.keys():
+#             self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+            self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+            if not os.path.exists(self.tmpDIR):
+                os.makedirs(self.tmpDIR)
 
         ''' Initialize the DB connection parameters '''
         self.db_port = None
@@ -138,8 +159,8 @@ class SparkWorkLoads():
             self.host_ip = None
             if "hostIP" in kwargs.keys():
                 self.host_ip = kwargs['hostIP']
-            elif confUtil.get('HOSTS','HOSTIP'):
-                self.host_ip = confUtil.get('HOSTS','HOSTIP')
+            elif appConf.get('HOSTS','HOSTIP'):
+                self.host_ip = appConf.get('HOSTS','HOSTIP')
             else:
                 raise ConnectionError("Undefined host IP. Set the host_ip in app.cfg")
 
@@ -147,63 +168,63 @@ class SparkWorkLoads():
             self.db_type = None
             if "dbType" in kwargs.keys():
                 self.db_type = kwargs['dbType']
-            elif confUtil.get('DATABASE','DBTYPE'):
-                self.db_type = confUtil.get('DATABASE','DBTYPE')
+            elif appConf.get('DATABASE','DBTYPE'):
+                self.db_type = appConf.get('DATABASE','DBTYPE')
             else:
                 raise ConnectionError("Undefined database type. Set the db_type in app.cfg")
 
             ''' set the database port '''
             if "dbPort" in kwargs.keys():
                 self.db_port = kwargs['dbPort']
-            elif confUtil.get('DATABASE','DBPORT'):
-                self.db_port = confUtil.get('DATABASE','DBPORT')
+            elif appConf.get('DATABASE','DBPORT'):
+                self.db_port = appConf.get('DATABASE','DBPORT')
             else:
                 raise ConnectionError("Undefined database port. Set the db_port in app.cfg")
 
             ''' set the database driver '''
             if "dbDriver" in kwargs.keys():
                 self.db_driver = kwargs['dbDriver']
-            elif confUtil.get('DATABASE','DBDRIVER'):
-                self.db_driver = confUtil.get('DATABASE','DBDRIVER')
+            elif appConf.get('DATABASE','DBDRIVER'):
+                self.db_driver = appConf.get('DATABASE','DBDRIVER')
             else:
                 raise ConnectionError("Undefined database password. Set the db_driver in app.cfg")
 
             ''' set the database name '''
             if "dbName" in kwargs.keys():
                 self.db_name = kwargs['dbName']
-            elif confUtil.get('DATABASE','DBNAME'):
-                self.db_name = confUtil.get('DATABASE','DBNAME')
+            elif appConf.get('DATABASE','DBNAME'):
+                self.db_name = appConf.get('DATABASE','DBNAME')
             else:
                 raise ConnectionError("Undefined database name. Set the db_name in app.cfg")
 
             ''' set the database schema '''
             if "dbSchema" in kwargs.keys():
                 self.db_schema = kwargs['dbSchema']
-            elif confUtil.get('DATABASE','DBSCHEMA'):
-                self.db_schema = confUtil.get('DATABASE','DBSCHEMA')
+            elif appConf.get('DATABASE','DBSCHEMA'):
+                self.db_schema = appConf.get('DATABASE','DBSCHEMA')
             else:
                 raise ConnectionError("Undefined database schema. Set the db_schema in app.cfg")
 
             ''' set the database username '''
             if "dbUser" in kwargs.keys():
                 self.db_user = kwargs['dbUser']
-            elif confUtil.get('DATABASE','DBUSER'):
-                self.db_user = confUtil.get('DATABASE','DBUSER')
+            elif appConf.get('DATABASE','DBUSER'):
+                self.db_user = appConf.get('DATABASE','DBUSER')
             else:
                 raise ConnectionError("Undefined database username. Set the db_user in app.cfg")
 
             ''' set the database password '''
             if "dbPswd" in kwargs.keys():
                 self.db_pswd = kwargs['DBPSWD']
-            elif confUtil.get('DATABASE','DBPORT'):
-                self.db_pswd = confUtil.get('DATABASE','DBPSWD')
+            elif appConf.get('DATABASE','DBPORT'):
+                self.db_pswd = appConf.get('DATABASE','DBPSWD')
             else:
                 raise ConnectionError("Undefined database password. Set the db_pswd in app.cfg")
 
 
             ''' --- SPARK ---
                 set the spark home directory '''
-            if not (sparkPath or confUtil.get('SPARK','SPARKHOMEDIR')):
+            if not (sparkPath or appConf.get('SPARK','SPARKHOMEDIR')):
                 raise ValueError("Spark directory required to proceed. \
                                 Must be specified in app_config.py or \
                                 spark_path %s must be valid" % sparkPath)
@@ -212,16 +233,16 @@ class SparkWorkLoads():
                 ''' TODO validate spark_dir '''
                 self.spark_dir = sparkPath
             else:
-                self.spark_dir = confUtil.get('SPARK','SPARKHOMEDIR')
+                self.spark_dir = appConf.get('SPARK','SPARKHOMEDIR')
             
             findspark.init(self.spark_dir)
             from pyspark.sql import SparkSession
             logger.info("Importing %s library from spark dir: %s" % (SparkSession.__name__, self.spark_dir))
 
             ''' set the db_type specific jar '''
-            if not confUtil.get('SPARK','SPARKJARDIR'):
+            if not appConf.get('SPARK','SPARKJARDIR'):
                 raise ConnectionError("Spark requires a valid jar file to use with %s" % self.db_type)
-            self.spark_jar = confUtil.get('SPARK','SPARKJARDIR')
+            self.spark_jar = appConf.get('SPARK','SPARKJARDIR')
             logger.info("Defining Spark Jar dir: %s" % (self.spark_jar))
 
             ''' the Spark session should be instantiated as follows '''
@@ -237,9 +258,12 @@ class SparkWorkLoads():
             logger.info("Defined spark database connection url: %s" % (self.spark_url))
 
             logger.info("Connection complete! ready to load data.")
-            print("Initialing %s class for %s with instance %s"
-                  % (self.__package__, self.__name__, self.__desc__))
-            print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
+            logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
+                         %(self.__app__,
+                           self.__module__,
+                           self.__package__,
+                           self.__name__,
+                           self.__desc__))
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <__init__>"

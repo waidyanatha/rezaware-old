@@ -3,17 +3,11 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "propertyScraper"
-__package__ = "scraper"
 __module__ = "ota"
-__container__ = "wrangler"
-# __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-# __utils_dir__ = "/home/nuwan/workspace/rezgate/utils/"
-# __module_dir__ = "modules/ota/"
-# __data_dir__ = "data/hospitality/bookings/scraper/"
-# __conf_fname__ = "app.cfg"
-__conf_fname__ = "app.ini"
-# __logs_dir__ = "logs/module/ota/"
-# __log_fname__ = "app.log"
+__package__ = "scraper"
+__app__ = "wrangler"
+__ini_fname__ = "app.ini"
+__bookings_data__ = "hospitality/bookings/"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -25,13 +19,6 @@ try:
     import configparser
     import pandas as pd
     from datetime import datetime, date, timedelta
-
-#     cwd=os.path.dirname(__file__)
-#     sys.path.insert(1,cwd)
-#     import scraperUtils as otasu
-# #     sys.path.insert(1,__utils_dir__)
-#     import nlp
-#     import sparkwls as spark
 
     print("All {0} software packages loaded successfully!".format(__package__))
 
@@ -61,17 +48,23 @@ class PropertyScraper():
         self.__name__ = __name__
         self.__package__ = __package__
         self.__module__ = __module__
-        self.__container__ = __container__
-        self.__conf_fname__ = __conf_fname__
+        self.__app__ = __app__
+        self.__ini_fname__ = __ini_fname__
         self.__desc__ = desc
+        _s_fn_id = "__init__"
+
+        global config
+        global logger
+        global clsUtil
+        global clsNLP
+        global clsSparkWL
 
         self.cwd=os.path.dirname(__file__)
         sys.path.insert(1,self.cwd)
         import scraperUtils as otasu
 
-        global config
         config = configparser.ConfigParser()
-        config.read(os.path.join(self.cwd,__conf_fname__))
+        config.read(os.path.join(self.cwd,__ini_fname__))
 
         self.rezHome = config.get("CWDS","REZAWARE")
         sys.path.insert(1,self.rezHome)
@@ -79,97 +72,28 @@ class PropertyScraper():
         from utils.modules.etl.load import sparkwls as spark
         from utils.modules.ml.natlang import nlp
 
-# #     sys.path.insert(1,__utils_dir__)
-#         import nlp
-#         import sparkwls as spark
-
         ''' initialize util class to use common functions '''
-#         global clsRezLog
-#         clsRezLog = rezaware.Logger()
-        global clsUtil
         clsUtil = otasu.Utils(desc='Utilities class for property data scraping')
-        global clsNLP
         clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
-        global clsSparkWL
         clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
 
         ''' Set the wrangler root directory '''
         self.pckgDir = config.get("CWDS",self.__package__)
-        self.containerDir = config.get("CWDS",self.__container__)
+        self.containerDir = config.get("CWDS",self.__app__)
         ''' get the path to the input and output data '''
-        self.dataDir = config.get("CWDS","DATA")
-#         if "ROOT_DIR" in kwargs.keys():
-#             self.containerDir = kwargs['ROOT_DIR']
-
-#         self.moduleDir = os.path.join(self.containerDir, __module_dir__)
-#         if "MODULE_DIR" in kwargs.keys():
-#             self.moduleDir=kwargs['MODULE_DIR']
-
-#         self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
-#         if "CONFIG_PATH" in kwargs.keys():
-#             self.confFPath=kwargs['CONFIG_PATH']
-#         global config
-#         config = configparser.ConfigParser()
-#         config.read(self.confFPath)
-
-#         ''' get the file and path for the logger '''
-#         self.logDir = os.path.join(self.containerDir,__logs_dir__)
-#         self.logFPath = os.path.join(self.logDir,__log_fname__)
-#         try:
-#             self.logDir = os.path.join(self.containerDir,config.get('LOGGING','LOGPATH'))
-#             self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
-#         except:
-#             pass
-#         if not os.path.exists(self.logDir):
-#             os.makedirs(self.logDir)
-# #        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
-
+        self.dataDir = os.path.join(config.get("CWDS","DATA"),__bookings_data__)
         ''' innitialize the logger '''
-        global logger
         logger = logs.get_logger(
             cwd=self.rezHome,
-            container=self.__container__, 
+            app=self.__app__, 
             module=self.__module__,
             package=self.__package__,
-            ini_file=self.__conf_fname__)
-#         logger = logging.getLogger(__package__)
-#         logger.setLevel(logging.DEBUG)
-#         if (logger.hasHandlers()):
-#             logger.handlers.clear()
-#         # create file handler which logs even debug messages
-#         fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
-# #        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
-#         fh.setLevel(logging.DEBUG)
-#         formatter = logging.Formatter(
-#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-#         fh.setFormatter(formatter)
-#         logger.addHandler(fh)
+            ini_file=self.__ini_fname__)
         ''' set a new logger section '''
         logger.info('########################################################')
-        logger.info(__name__)
-        logger.info('Package Path = %s', self.pckgDir)
-
-#         ''' get the path to the input and output data '''
-#         self.dataDir = __data_dir__
-#         try:
-#             if "DATA_DIR" in kwargs.keys():
-#                 ''' first preference given to kwargs '''
-#                 self.dataDir = kwargs['DATA_DIR']
-#                 logger.info("Appending data path from kwargs %s" % self.dataDir)
-#             else:
-#                 ''' next try the app.cfg file '''
-#                 self.dataDir = os.path.join(self.containerDir,config.get('STORES','DATA'))
-#                 if not self.dataDir:
-#                     raise ValueError("Data location not defined in %s" % self.confFPath)
-#                 else:
-#                     logger.info("Appending data path from class default value %s" % self.dataDir)
-            
-#         except Exception as err:
-#             logger.warning("%s %s \n", _s_fn_id,err)
-#             logger.warning("Using default data path %s" % self.dataDir)
+        logger.info(self.__name__,self.__package__)
 
         ''' select the storate method '''
-#         self.storeMethod = config.get('STORES','METHOD')
         self.storeMethod = "local"
         
         ''' set the tmp dir to store large data to share with other functions
@@ -177,9 +101,9 @@ class PropertyScraper():
             given location; typically specified in app.conf
         '''
         self.tmpDIR = None
-        if "WRITE_TO_FILE":
-#             self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+        if "WRITE_TO_FILE" in kwargs.keys():
             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+            logger.debug("Set tmp file storage path to %s",self.tmpDIR)
             if not os.path.exists(self.tmpDIR):
                 os.makedirs(self.tmpDIR)
 
@@ -195,9 +119,14 @@ class PropertyScraper():
 #                          "Boston, USA",
 #                          "Colombo, Sri Lanka",
                          ]
+        logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
+                     %(self.__app__,
+                       self.__module__,
+                       self.__package__,
+                       self.__name__,
+                       self.__desc__))
         print("Initialing %s class for %s with instance %s" 
               % (self.__package__, self.__name__, self.__desc__))
-#         print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
         print("Data path set to %s" % self.dataDir)
         return None
 
@@ -298,7 +227,7 @@ class PropertyScraper():
             if not inp_data_dir:
 #                 inp_data_dir = os.path.join(self.containerDir,config.get('STORES','INPUTDATA'))
                 inp_data_dir = self.dataDir
-            logger.info("Directory path for loading input data %s" % inp_data_dir)
+            logger.debug("Directory path for loading input data %s" % inp_data_dir)
             
             ''' check and initialize **kwargs '''
             if 'pageOffset' in kwargs:
@@ -401,6 +330,7 @@ class PropertyScraper():
                 logger.info("Build %s completed %d error ota urls", _s_fn_id, err_count)
                 logger.info("Parameterized %d urls.",len(_ota_parameterized_url_list))
                 if len(_ota_parameterized_url_list) > 0 and self.tmpDIR:
+                    print(len(_ota_parameterized_url_list))
                     tmpDF = pd.DataFrame(_ota_parameterized_url_list)
 #                    _tmpFPath = os.path.join(self.tmpDIR,"build_scrape_url_list.csv")
                     _tmp_fname = self.__package__+"-"+"build-scrape-url-list.csv"

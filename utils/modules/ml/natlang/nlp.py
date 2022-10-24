@@ -3,12 +3,14 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "nlp"
-__package__ = "NatLanWorkLoads"
+__package__ = "natlang"
+__module__ = "ml"   # machine learning
+__app__ = "utils"
 # __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler/"   # need for logger path
-__utils_dir__ = '/home/nuwan/workspace/rezgate/utils/'
-__conf_fname__ = 'app.cfg'
-__logs_dir__ = 'logs/'
-__log_fname__ = 'app.log'
+# __utils_dir__ = '/home/nuwan/workspace/rezgate/utils/'
+__ini_fname__ = "app.ini"
+# __logs_dir__ = 'logs/'
+# __log_fname__ = 'app.log'
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -58,63 +60,51 @@ class NatLanWorkLoads():
 
         self.__name__ = __name__
         self.__package__ = __package__
+        self.__module__ = __module__
+        self.__app__ = __app__
+        self.__ini_fname__ = __ini_fname__
         self.__desc__ = desc
         _s_fn_id = "__init__"
 
+        global config
+        global logger
         try:
-            print("Initialing %s class for %s with instance %s"
-                  % (self.__package__, self.__name__, self.__desc__))
-            ''' initiate to load app.cfg data '''
-            global confUtil
-            confUtil = configparser.ConfigParser()
+            self.cwd=os.path.dirname(__file__)
 
-            ''' Set the utils root directory, it can be changed using kwargs '''
-            self.utilsDir = __utils_dir__
-            if "UTILS_DIR" in kwargs.keys():
-                self.utilsDir = kwargs['UTILS_DIR']
-            ''' load the utils config env vars '''
-            self.utilConfFPath = os.path.join(self.utilsDir, __conf_fname__)
-            confUtil.read(self.utilConfFPath)
+            config = configparser.ConfigParser()
+            config.read(os.path.join(self.cwd,__ini_fname__))
+            self.pckgDir = config.get("CWDS",self.__package__)
+            self.containerDir = config.get("CWDS",self.__app__)
+            ''' get the path to the input and output data '''
+            self.dataDir = config.get("CWDS","DATA")
 
-            ''' get the file and path for the logger '''
-            self.logDir = os.path.join(self.utilsDir,confUtil.get('LOGGING','LOGPATH'))
-            if not os.path.exists(self.logDir):
-                os.makedirs(self.logDir)
-            self.logFPath = os.path.join(self.logDir,confUtil.get('LOGGING','LOGFILE'))
+            self.rezHome = config.get("CWDS","REZAWARE")
+            sys.path.insert(1,self.rezHome)
+            from rezaware import Logger as logs
             ''' innitialize the logger '''
-            global logger
-            logger = logging.getLogger(__package__)
-            self.logLevel = confUtil.get('LOGGING','LOGLEVEL')
-            if self.logLevel == 'debug':
-                logger.setLevel(logging.DEBUG)
-            elif self.logLevel == 'info':
-                logger.setLevel(logging.info)
-            else:
-                logger.setLevel(logging.DEBUG)
-            if (logger.hasHandlers()):
-                logger.handlers.clear()
-            # create file handler which logs even debug messages
-            fh = logging.FileHandler(self.logFPath, confUtil.get('LOGGING','LOGMODE'))
-            fh.setLevel(logging.DEBUG)
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            fh.setFormatter(formatter)
-            logger.addHandler(fh)
+            logger = logs.get_logger(
+                cwd=self.rezHome,
+                app=self.__app__, 
+                module=self.__module__,
+                package=self.__package__,
+                ini_file=self.__ini_fname__)
             ''' set a new logger section '''
             logger.info('########################################################')
-            logger.info(__name__)
-            logger.info('Utils Path = %s', self.utilsDir)
+            logger.info(self.__name__,self.__package__)
 
             ''' set tmp storage location from app.cfg '''
-            self.tmpDIR = os.path.join(self.utilsDir,confUtil.get('STORES','TMPDATA'))
-            ''' override if defined in kwargs '''
-            if "TMP_DIR" in kwargs.keys():
-                self.tmpDIR = kwargs['TMP_DIR']
-            if not os.path.exists(self.tmpDIR):
-                os.makedirs(self.tmpDIR)
+            self.tmpDIR = None
+            if "WRITE_TO_FILE" in kwargs.keys():
+                self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+                if not os.path.exists(self.tmpDIR):
+                    os.makedirs(self.tmpDIR)
 
-            logger.debug("Connection complete! ready to load data.")
-            print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
+            logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
+                         %(self.__app__,
+                           self.__module__,
+                           self.__package__,
+                           self.__name__,
+                           self.__desc__))
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <__init__>"

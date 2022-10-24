@@ -42,23 +42,30 @@ __schedule_interval__ = 5   # number of hours between runs
 
 ########## set environment directory path variables before runs #####
 
-ROOT_DIR = "/home/nuwan/workspace/rezgate/wrangler"
-UTILS_DIR = "/home/nuwan/workspace/rezgate/utils/"
-MODULE_DIR = os.path.join(ROOT_DIR, 'modules/ota/')
-DATA_DIR = os.path.join(ROOT_DIR, 'data/hospitality/bookings/scraper')
-prop_kwargs = {
-    "ROOT_DIR":ROOT_DIR,   # absolute path to the wrangler dir
-    "MODULE_DIR":MODULE_DIR,   # absolute path to the ota module
-    "DATA_DIR":DATA_DIR, # absolute path to the scraper data dir
-}
+# ROOT_DIR = "/home/nuwan/workspace/rezgate/wrangler"
+# UTILS_DIR = "/home/nuwan/workspace/rezgate/utils/"
+# MODULE_DIR = os.path.join(ROOT_DIR, 'modules/ota/')
+# DATA_DIR = os.path.join(ROOT_DIR, 'data/hospitality/bookings/scraper')
+# prop_kwargs = {
+#     "ROOT_DIR":ROOT_DIR,   # absolute path to the wrangler dir
+#     "MODULE_DIR":MODULE_DIR,   # absolute path to the ota module
+#     "DATA_DIR":DATA_DIR, # absolute path to the scraper data dir
+# }
+prop_kwargs = {"WRITE_TO_FILE":True,
+              }
 
 #####################################################################
 
 ### inhouse libraries to initialize, extract, transform, and load
-sys.path.insert(1,MODULE_DIR)
-import propertyScrapers as ps
-sys.path.insert(1, UTILS_DIR)
-import sparkwls as spark
+sys.path.insert(1,"/home/nuwan/workspace/rezaware/")
+import rezaware as reza
+from wrangler.modules.ota.scraper import propertyScrapers as ps, scraperUtils as otasu
+from utils.modules.etl.load import sparkwls as spark
+# from utils.modules.ml.natlang import nlp
+# sys.path.insert(1,MODULE_DIR)
+# import propertyScrapers as ps
+# sys.path.insert(1, UTILS_DIR)
+# import sparkwls as spark
 ''' executing the property scraper '''
 clsScraper = ps.PropertyScraper(desc='scrape hotel prices data from OTAs', **prop_kwargs)
 clsSparkWL = spark.SparkWorkLoads(desc="airflow ETL property room prices", **prop_kwargs)
@@ -107,7 +114,7 @@ with DAG(
     description='scrape ota property web data and stage in database',
     schedule_interval=timedelta(hours=__schedule_interval__),
     #start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
-    start_date=datetime(2022, 10, 5),
+    start_date=datetime(2022, 10, 20),
     catchup=False,
     tags=['wrangler','ota','properties','scrape', 'stage'],
 ) as dag:
@@ -300,11 +307,11 @@ with DAG(
         _tmp_fname = ti.xcom_pull(key='tmp_data_file')
         logging.debug("[load] pulled tmp_fname from xcom %s", ti) 
         ''' retrieve the data into a dataframe '''
-        _get_tmp_sdf = clsSparkWL.read_csv_to_sdf(filesPath=_tmp_fname)
+        _get_tmp_sdf, traceback = clsSparkWL.read_csv_to_sdf(filesPath=_tmp_fname)
         logging.info("[load] Retrieved %d records from %s", _get_tmp_sdf.count(), _tmp_fname)
         ''' save data to table '''
         _s_tbl_name = "ota_property_prices"
-        count, saved_df = clsScraper.save_to_db(data_df=_aug_dest_df,table_name = _tbl_name)
+        count, saved_df = clsScraper.save_to_db(data_df=_aug_dest_df,table_name=_tbl_name)
         logging.info("%d records saved to %s", count, _s_tbl_name)
 
     ''' Function (TODO)

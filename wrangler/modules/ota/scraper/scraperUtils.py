@@ -6,7 +6,7 @@ __package__ = "scraper"
 # __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
 # __module_dir__ = 'modules/ota/'
 __module__ = "ota"
-__container__ = "wrangler"
+__app__ = "wrangler"
 #__data_dir__ = 'data/hospitality/bookings/scraper/'
 # __conf_fname__ = "app.cfg"
 __conf_fname__ = "app.ini"
@@ -59,7 +59,7 @@ class Utils():
         self.__name__ = __name__
         self.__package__ = __package__
         self.__module__ = __module__
-        self.__container__ = __container__
+        self.__app__ = __app__
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
@@ -104,7 +104,7 @@ class Utils():
 # #        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
 
         self.pckgDir = config.get("CWDS",self.__package__)
-        self.containerDir = config.get("CWDS",self.__container__)
+        self.appDir = config.get("CWDS",self.__app__)
         ''' get the path to the input and output data '''
         self.dataDir = config.get("CWDS","DATA")
 
@@ -112,7 +112,7 @@ class Utils():
         global logger
         logger = logs.get_logger(
             cwd=self.rezHome,
-            container=self.__container__, 
+            app=self.__app__, 
             module=self.__module__,
             package=self.__package__,
             ini_file=self.__conf_fname__)

@@ -22,7 +22,7 @@ nohup.out
 wrangler/data/ota/scraper/hospitality/bookings/rates/*
 wrangler/data/tmp/*
 wrangler/logs/*
-wrangler/data/transport/airlines/scraper/itinerary/*
+wrangler/data/ota/scraper/transport/airlines/itinerary/*
 #wrangler/modules/ota/__init__.py
 #wrangler/modules/ota/__pycache__/*
 #wrangler/notebooks/.ipynb_checkpoints/*

@@ -62,7 +62,6 @@ class App:
         data and logging. 
     '''
 
-#     app_name = "utils"   # utils, wrangler, mining, visuals
     storeMethod = None  # dir, s3bucket,
     dataStore = object
     confData = None
@@ -85,13 +84,7 @@ class App:
                 raise ValueError("Invalid app name".format(self.appName))
             self.appName = app_name
             self.module = module
-#             self.module = __module__
-#             if module:
-#                 self.module = module
             self.package = package
-#             self.package = __package__
-#             if package:
-#                 self.package = package
             self.cwd = os.path.dirname(__file__)
             self.appPath = os.path.join(self.cwd,self.appName)
 
@@ -122,7 +115,7 @@ class App:
         self.confData,self.ini_file_list = Config.set_conf_ini_conf(
             reza_cwd=self.cwd,
             container=self.appName,
-            container_path=self.appPath,
+            app_path=self.appPath,
             conf_file=self.confFile)
         return self.confData,self.ini_file_list
 
@@ -155,7 +148,7 @@ class App:
 class Config(ConfigParser):
 
     def get_config(cwd:str,
-                   container:str=None,
+                   app:str=None,
                    module:str=None,
                    package:str=None,
                    fName:str=None) -> ConfigParser:
@@ -166,19 +159,19 @@ class Config(ConfigParser):
         try:
             if not fName:
                 raise ValueError("Undefined config file name %s. Must be specified" % fName)
-#             _conf_file_path = os.path.join(container, fName)
+#             _conf_file_path = os.path.join(app, fName)
             if cwd:
                 _conf_file_path = cwd
             else:
                 raise ValueError("Undefined working directory %s. Must be specified" % cwd)
-            if container:
-                _conf_file_path = os.path.join(_conf_file_path,container)
+            if app:
+                _conf_file_path = os.path.join(_conf_file_path,app)
                 if module:
                     _conf_file_path = os.path.join(_conf_file_path, "modules",module)
                     if package:
                         _conf_file_path = os.path.join(_conf_file_path, package)
 #             _conf_file_path = os.path.join(_conf_file_path, fName)
-            ''' check if config container exists in folder path '''
+            ''' check if config app exists in folder path '''
             if not os.path.exists(_conf_file_path):
                 raise FileNotFoundError("%s No config file %s found in:"
                                         % (fName,_conf_file_path))
@@ -193,14 +186,14 @@ class Config(ConfigParser):
             return None
 
     def set_conf_ini_conf(reza_cwd,
-                          container,
-                          container_path,
+                          app,
+                          app_path,
                           conf_file) -> list:
 
         try:
             conf_data = Config.get_config(
                 cwd=reza_cwd,
-                container=container,
+                app=app,
                 fName = conf_file,
             )
 
@@ -214,11 +207,7 @@ class Config(ConfigParser):
             log_format = " ".join(["%("+str(elem)+")s" for elem in _format_elements])\
                             .strip().replace(' ',' - ')
 
-            _modules_path = os.path.join(container_path,"modules")
-#             _mod_conf = Config.get_config(
-#                 container=container,
-#                 fName = conf_file,
-#             )
+            _modules_path = os.path.join(app_path,"modules")
 
             if not "MODULES" in conf_data.sections():
                 raise ValueError("No MODULES section found in %s" % 
@@ -227,12 +216,12 @@ class Config(ConfigParser):
             _ini_conf_file_list = []
 
 #             for module in _mod_conf['MODULES']:
-#                 _sub_modules = _mod_conf['MODULES'][module].split(',')
+#                 _mod_pkgs = _mod_conf['MODULES'][module].split(',')
             for module in conf_data['MODULES']:
-                _sub_modules = conf_data['MODULES'][module].split(',')
+                _mod_pkgs = conf_data['MODULES'][module].split(',')
                 _modules_list=[]
                 _mod_path = os.path.join(_modules_path,module)
-                for pkg in _sub_modules:
+                for pkg in _mod_pkgs:
                     _pkg_path = os.path.join(_modules_path,module,pkg)
                     ''' create the __init__ file with python header '''
                     with open(os.path.join(_pkg_path,'__init__.py'),"w") as f:
@@ -248,13 +237,13 @@ class Config(ConfigParser):
                     ''' add the current package working directory path '''
                     _ini_conf.add_section("CWDS")
                     _ini_conf.set("CWDS",str("rezaware"), str(reza_cwd))
-                    _ini_conf.set("CWDS",str(container), str(container_path))
+                    _ini_conf.set("CWDS",str(app), str(app_path))
                     _ini_conf.set("CWDS",str(module), str(_mod_path))
                     _ini_conf.set("CWDS",str(pkg), str(_pkg_path))
 
                     ''' create the data paths '''
                     data_path = os.path.join(
-                        container_path,
+                        app_path,
                         "data/",
                         module,
                         pkg
@@ -267,7 +256,7 @@ class Config(ConfigParser):
                     if pkg and pkg.strip():
                         ''' create the logger parameters and file path'''
 #                         _logs_path = os.path.join(
-#                             container_path,
+#                             app_path,
 #                             log_path,
 #                             module,
 #                             pkg,
@@ -275,7 +264,7 @@ class Config(ConfigParser):
 #                         )
                         _logs_path = Logger.get_file_path(
                             cwd=reza_cwd,
-                            container=container,
+                            app=app,
                             module=module,
 #                             log_path,
 #                             module,
@@ -295,7 +284,7 @@ class Config(ConfigParser):
 
 #                         ''' create the data paths '''
 #                         data_path = os.path.join(
-#                             container_path,
+#                             app_path,
 #                             "data/",
 #                             module,
 #                             pkg
@@ -345,13 +334,13 @@ class Logger():
 #     import logging
 #     logger = logging.getLogger(__package__)
 
-    def get_file_handler(container)-> logging.FileHandler:
+    def get_file_handler(app)-> logging.FileHandler:
 
         fHandler = None
         
         return fHandler
 
-    def get_file_path(cwd:str,container:str, module:str, package:str, logFName:str):
+    def get_file_path(cwd:str,app:str, module:str, package:str, logFName:str):
 
         _log_fpath = None
         try:
@@ -361,11 +350,11 @@ class Logger():
                 _log_fpath=cwd
             else:
                 raise ValueError("Undefined CWD (current working dir)")
-            if container:
-                _log_fpath=os.path.join(_log_fpath,container,"logs/")
+            if app:
+                _log_fpath=os.path.join(_log_fpath,app,"logs/")
             else:
-                raise ValueError("Undefined container %s not in [mining, utils, visuals, wrangler]"
-                                 % container)
+                raise ValueError("Undefined app %s not in [mining, utils, visuals, wrangler]"
+                                 % app)
             if module:
 #                 _log_fpath = os.path.join(_log_fpath,"modules",module)
                 _log_fpath = os.path.join(_log_fpath,module)
@@ -387,7 +376,7 @@ class Logger():
         return _log_fpath
 
     
-    def get_logger(cwd:str,container:str, module:str, package:str, ini_file:str):
+    def get_logger(cwd:str,app:str, module:str, package:str, ini_file:str):
 
         ''' TODO logging.formatter string is hard coded until the error
             can be resolved with getting format string from app.ini'''
@@ -399,80 +388,32 @@ class Logger():
         try:
             _log_fpath = Logger.get_file_path(
                 cwd=cwd,
-                container=container,
+                app=app,
                 module=module,
                 package=package,
                 logFName=None)
 
             if not _log_fpath:
-                raise ValueError("Unrecovered LOG file for {0} container in {1}"
-                                 .format(container,cwd))
-#             if not ini_file:
-#                 ini_file = __ini_fname__
-#             if cwd:
-#                 _log_fpath=cwd
-#             else:
-#                 raise ValueError("Undefined CWD (current working dir)")
-#             if container:
-#                 _log_fpath=os.path.join(_log_fpath,container,"logs/")
-#             else:
-#                 raise ValueError("Undefined container %s not in [mining, utils, visuals, wrangler]"
-#                                  % container)
-
-#             if not container:
-#                 raise ValueError("Undefined CONTAINER parameter set using clsHandler.container")
-
-#             if not module:
-#                 raise ValueError("Undefined MODULE parameter set using clsHandler.module")
-
-#             if not package:
-#                 raise ValueError("Undefined PACKAGE parameter set using clsHandler.module")
+                raise ValueError("Unrecovered LOG file for {0} app in {1}"
+                                 .format(app,cwd))
 
             ''' assing the last not None value of the three values as logger name '''
-            _log_name = str([x for x in [container, module, package] if x !=None][-1])
+            _log_name = str([x for x in [app, module, package] if x !=None][-1])
 
-#             if container:
-#                 _log_fpath = os.path.join(_log_fpath,container)
-#                 _log_name = container 
-#             if module:
-#                 _log_fpath = os.path.join(_log_fpath,"modules",module)
-# #                     _log_name = module
-#                 if package:
-#                     _log_fpath = os.path.join(_log_fpath,package)
-#                         _log_name = package
-#             _pkg_path = os.path.join(cwd,container,"modules",module,package)
             _conf = Config.get_config(
                 cwd=cwd,
-                container=container,
+                app=app,
                 module=module,
                 package=package,
                 fName = ini_file,
             )
-#             _conf = Config.get_config(
-#                 container=os.path.dirname(__file__),
-#                 fName = ini_file,
-#             )
+
             logger = logging.getLogger(_log_name)
             logger.setLevel(_conf.get('LOGGER','LEVEL'))
             if (logger.hasHandlers()):
                 logger.handlers.clear()
-            # create file handler which logs even debug messages
-#             _log_fpath = _conf.get('LOGGER','PATH')
-#             if _conf.get('LOGGER','PATH').find(container)==0:
-#                 _log_fpath = os.path.join(cwd,container,_conf.get('LOGGER','PATH'))
-#             else:
-#                 _log_fpath = os.path.join(cwd,_conf.get('LOGGER','PATH'))
-#             if not os.path.dirname(_log_fpath):
-#                 os.makedirs(os.path.dirname(_log_fpath))
-#             if not os.path.isfile(_log_fpath) and os.path.isdir(_log_fpath):
-#                 _log_fpath = os.path.join(_log_fpath,"app.log")
-#             if not os.path.exists(_log_fpath):
-#                 with open(_log_fpath, 'w') as fp:
-#                     pass
             fh = logging.FileHandler(_log_fpath,_conf.get('LOGGER','MODE'))
             fh.setLevel(_conf.get('LOGGER','LEVEL'))
-#             _log_format = str(_conf['LOGGER']['FORMAT'])
-#             formatter = logging.Formatter(_log_format)
             formatter = logging.Formatter(_log_format)
             fh.setFormatter(formatter)
             logger.addHandler(fh)
