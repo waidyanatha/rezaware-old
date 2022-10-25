@@ -3,13 +3,11 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "airlineScrapers"
-__package__ = "AirlineScraper"
-__root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-__module_dir__ = 'modules/ota/'
-__data_dir__ = 'data/transport/airlines/scraper/'
-__conf_fname__ = 'app.cfg'
-__logs_dir__ = 'logs/module/ota/'
-__log_fname__ = 'app.log'
+__module__ = "ota"
+__package__ = "scraper"
+__app__ = "wrangler"
+__ini_fname__ = "app.ini"
+__airline_data__ = "transport/airlines/"
 __inputs_file_name__ = "ota_input_urls.json"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
@@ -23,8 +21,8 @@ try:
     import pandas as pd
     from datetime import datetime, date, timedelta
     
-    sys.path.insert(1,__module_dir__)
-    import otaUtils as otau
+#     sys.path.insert(1,__module_dir__)
+#     import otaUtils as otau
 
     print("All {0} software packages loaded successfully!".format(__package__))
 
@@ -55,40 +53,74 @@ class AirlineScraper():
         
         self.__name__ = __name__
         self.__package__ = __package__
+        self.__module__ = __module__
+        self.__app__ = __app__
+        self.__ini_fname__ = __ini_fname__
         self.__desc__ = desc
+        _s_fn_id = "__init__"
 
+        global config
+        global logger
+        global clsUtil
+#         global clsNLP
+        global clsSparkWL
+
+
+        self.cwd=os.path.dirname(__file__)
+        sys.path.insert(1,self.cwd)
+        import scraperUtils as otasu
+        clsUtil = otasu.Utils(desc='Inheriting Utilities class for airline itinerary scraping')
+
+        config = configparser.ConfigParser()
+        config.read(os.path.join(self.cwd,__ini_fname__))
+
+        self.rezHome = config.get("CWDS","REZAWARE")
+        sys.path.insert(1,self.rezHome)
+        from rezaware import Logger as logs
+        ''' innitialize the logger '''
+        logger = logs.get_logger(
+            cwd=self.rezHome,
+            app=self.__app__, 
+            module=self.__module__,
+            package=self.__package__,
+            ini_file=self.__ini_fname__)
+        ''' set a new logger section '''
+        logger.info('########################################################')
+        logger.info(self.__name__,self.__package__)
+
+        from utils.modules.etl.load import sparkwls as spark
+        clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
 #         ''' initialize util class to use common functions '''
 #         clsUtil = utils.Utils(desc='Utilities class for property data scraping')
         ''' initialize util class to use common functions '''
-        global clsUtil
-        clsUtil = otau.Utils(desc='Inheriting Utilities class for airline itinerary scraping')
+#         global clsUtil
 
-        ''' Set the wrangler root directory '''
-        self.rootDir = __root_dir__
-        if "ROOT_DIR" in kwargs.keys():
-            self.rootDir = kwargs['ROOT_DIR']
+#         ''' Set the wrangler root directory '''
+#         self.rootDir = __root_dir__
+#         if "ROOT_DIR" in kwargs.keys():
+#             self.rootDir = kwargs['ROOT_DIR']
 
-        self.moduleDir = os.path.join(self.rootDir, __module_dir__)     
-        if "MODULE_DIR" in kwargs.keys():
-            self.moduleDir=kwargs['MODULE_DIR']
-        self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
+#         self.moduleDir = os.path.join(self.rootDir, __module_dir__)     
+#         if "MODULE_DIR" in kwargs.keys():
+#             self.moduleDir=kwargs['MODULE_DIR']
+#         self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
 
-        if "CONFIG_PATH" in kwargs.keys():
-            self.confFPath=kwargs['CONFIG_PATH']
-        global config
-        config = configparser.ConfigParser()
-        config.read(self.confFPath)
+#         if "CONFIG_PATH" in kwargs.keys():
+#             self.confFPath=kwargs['CONFIG_PATH']
+#         global config
+#         config = configparser.ConfigParser()
+#         config.read(self.confFPath)
 
-        ''' get the file and path for the logger '''
-        self.logDir = os.path.join(self.rootDir,__logs_dir__)
-        self.logFPath = os.path.join(self.logDir,__log_fname__)
-        try:
-            self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
-            self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
-        except:
-            pass
-        if not os.path.exists(self.logDir):
-            os.makedirs(self.logDir)
+#         ''' get the file and path for the logger '''
+#         self.logDir = os.path.join(self.rootDir,__logs_dir__)
+#         self.logFPath = os.path.join(self.logDir,__log_fname__)
+#         try:
+#             self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
+#             self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
+#         except:
+#             pass
+#         if not os.path.exists(self.logDir):
+#             os.makedirs(self.logDir)
 #        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
                 
 #         if not os.path.exists(self.logPath):
@@ -96,23 +128,34 @@ class AirlineScraper():
 #        self.logFile = os.path.join(self.logPath,config.get('LOGGING','LOGFILE'))
 
         ''' innitialize the logger '''
-        global logger
-        logger = logging.getLogger(self.__package__)
-        logger.setLevel(logging.DEBUG)
-        if (logger.hasHandlers()):
-            logger.handlers.clear()
-        # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
-#        fh = logging.FileHandler(self.logPath, config.get('LOGGING','LOGMODE'))
-        fh.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        logger.addHandler(fh)
-        ''' set a new logger section '''
-        logger.info('########################################################')
-        logger.info(self.__package__)
-        logger.info('Module Path = %s', self.moduleDir)
+#         global logger
+#         logger = logging.getLogger(self.__package__)
+#         logger.setLevel(logging.DEBUG)
+#         if (logger.hasHandlers()):
+#             logger.handlers.clear()
+#         # create file handler which logs even debug messages
+#         fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
+# #        fh = logging.FileHandler(self.logPath, config.get('LOGGING','LOGMODE'))
+#         fh.setLevel(logging.DEBUG)
+#         formatter = logging.Formatter(
+#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#         fh.setFormatter(formatter)
+#         logger.addHandler(fh)
+        ''' Set the wrangler root directory '''
+        self.pckgDir = config.get("CWDS",self.__package__)
+        self.appDir = config.get("CWDS",self.__app__)
+        ''' get the path to the input and output data '''
+        self.dataDir = os.path.join(config.get("CWDS","DATA"),__airline_data__)
+#         ''' innitialize the logger '''
+#         logger = logs.get_logger(
+#             cwd=self.rezHome,
+#             app=self.__app__, 
+#             module=self.__module__,
+#             package=self.__package__,
+#             ini_file=self.__ini_fname__)
+#         ''' set a new logger section '''
+#         logger.info('########################################################')
+#         logger.info(self.__name__,self.__package__)
 
         ''' get the path to the input and output data '''
 #         if "DATA_DIR" in kwargs.keys():
@@ -121,27 +164,30 @@ class AirlineScraper():
 #             self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
 #         self.path = os.path.join(self.rootDir,config.get('STORES','DATA'))
 #         logger.info("Data store path: %s", self.dataDir)
-        self.dataDir = __data_dir__
-        try:
-            if "DATA_DIR" in kwargs.keys():
-                ''' first preference given to kwargs '''
-                self.dataDir = kwargs['DATA_DIR']
-                logger.info("Appending data path from kwargs %s" % self.dataDir)
-            else:
-                ''' next try the app.cfg file '''
-                self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
-                if not self.dataDir:
-                    raise ValueError("Data location not defined in %s" % self.confFPath)
-                else:
-                    logger.info("Appending data path from class default value %s" % self.dataDir)            
+#         self.dataDir = __data_dir__
+#         try:
+#             if "DATA_DIR" in kwargs.keys():
+#                 ''' first preference given to kwargs '''
+#                 self.dataDir = kwargs['DATA_DIR']
+#                 logger.info("Appending data path from kwargs %s" % self.dataDir)
+#             else:
+#                 ''' next try the app.cfg file '''
+#                 self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
+#                 if not self.dataDir:
+#                     raise ValueError("Data location not defined in %s" % self.confFPath)
+#                 else:
+#                     logger.info("Appending data path from class default value %s" % self.dataDir)            
 
-        except Exception as err:
-            logger.warning("%s %s \n", _s_fn_id,err)
-            logger.warning("Using default data path %s" % self.dataDir)
+#         except Exception as err:
+#             logger.warning("%s %s \n", _s_fn_id,err)
+#             logger.warning("Using default data path %s" % self.dataDir)
 
+#         ''' select the storate method '''
+#         self.storeMethod = config.get('STORES','METHOD')
         ''' select the storate method '''
-        self.storeMethod = config.get('STORES','METHOD')
-        ''' default: ../../data/hospitality/bookings/scraper/rates '''
+        self.storeMethod = "local"
+        
+#         ''' default: ../../data/hospitality/bookings/scraper/rates '''
 #        self.ratesStoragePath = self.path+'rates'
         self.inpParamsFile = __inputs_file_name__
         
@@ -150,8 +196,9 @@ class AirlineScraper():
             given location; typically specified in app.conf
         '''
         self.tmpDIR = None
-        if "WRITE_TO_FILE":
-            self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
+        if "WRITE_TO_FILE" in kwargs.keys():
+            self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+            logger.debug("Set tmp file storage path to %s",self.tmpDIR)
             if not os.path.exists(self.tmpDIR):
                 os.makedirs(self.tmpDIR)
 
@@ -159,9 +206,14 @@ class AirlineScraper():
         self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
         self.return_flight_offset = 1
 
+        logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
+                     %(self.__app__,
+                       self.__module__,
+                       self.__package__,
+                       self.__name__,
+                       self.__desc__))
         print("Initialing %s class for %s with instance %s" 
               % (self.__package__, self.__name__, self.__desc__))
-        print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
         print("Data path set to %s" % self.dataDir)
         return None
 
@@ -678,365 +730,146 @@ class AirlineScraper():
         return _l_saved_files
 
 
-#     ''' Function
-#             name: get_url_info
-#             parameters:
-#                 dir_path - the relative or direct path to the file with urls
-#                 file_name - the name of the file containing all the urls for scraping
-#             procedure: read the list of urls from the CSV file and compile a list
-#             return list (url_info)
+    ''' Function
+            name: assign_lx_name
+            parameters:
+                otasuRLlist - string with folder path to the csv files
+                **kwargs - contain the plance holder key value pairs
+                            columns: list
+                            start_date: datetime.date
+                            end_date: datetime.date
+            procedure: reads the all the csv files in the entire folder and
+                        appends the data for the relevant columns defined in
+                        the dictionary into a dataframe
+            return dataframe (ota_bookings_df)
 
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def load_ota_info(self, dir_path:str, file_name:str):
+            author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-10-03
+            
+    '''
 
-#         import os         # apply directory read functions
-#         import csv        # to read the csv
-#         import json       # to read the json file
+    def assign_lx_name(self, data_df,   # pandas dataframe with room price data
+                       segments_dir_name:str="segments/",   # set to default in folder
+                       **kwargs):
 
-#         url_info = []     # initialize the return parameter
-#         property_data = {}
+        import glob
+
+        _s_fn_id = "function <assign_lx_name>"
+        logger.info("Executing %s %s",self.__package__, _s_fn_id)
+
+        _lx_assign_dep_df = pd.DataFrame()
+        _lx_assign_arr_df = pd.DataFrame()
+        _segments_df = pd.DataFrame()
+
+        try:
+            ''' check if dataframe is null '''
+            if data_df.shape[0] <= 0:
+                raise ValueError("Invalid dataframe with % rows" % data_df.shape[0])
+
+            ''' set the directory path to csv files with destination ids '''
+            _segments_dir = _segments_dir = os.path.join(self.dataDir, "segments/")
+#             if dest_dir_name:
+#                 _destins_dir = os.path.join(self.dataDir, dest_dir_name)
+            ''' read all the destination files in dir '''   
+#             file_path = os.path.join(destins_dir,file_name)
+            if not os.path.isdir(_segments_dir):
+                raise ValueError("Folder %s does not exisit" %(_destins_dir))
+
+            ''' read the destination ids into the list '''
+            all_files = glob.glob(os.path.join(_segments_dir,"*.csv"))
+#             dest_df = pd.read_csv(file_path, sep=',', quotechar='"')
+            _segments_df = pd.concat(
+                (pd.read_csv(_fname,
+                             sep=',',
+                             quotechar='"')
+                 for _fname in all_files))
+            if _segments_df.shape[0] <=0:
+                raise ValueError("No destination data recovered from %s" %(file_path))
+            '''assign departure port names '''
+            _lx_assign_dep_df = data_df.merge(_segments_df,
+                                              how='left',
+                                              left_on=['depart_port_code'],
+                                              right_on=['airportCode'],
+                                              suffixes=None)
+            _lx_assign_dep_df.rename(columns={'city':"depart_port_name"},inplace=True)
+            _lx_assign_dep_df["depart_lx_type"] = "city"
+            logger.info(("Merged %d rows with departure port data"
+                         % _lx_assign_dep_df.shape[0]))
+
+            '''assign arrival port names '''
+            _lx_assign_arr_df = _lx_assign_dep_df.merge(_segments_df,
+                                                        how='left',
+                                                        left_on=['arrive_port_code'],
+                                                        right_on=['airportCode'],
+                                                        suffixes=('_x','_y'))
+            _lx_assign_arr_df.rename(columns={'city':"arrive_port_name"},inplace=True)
+            _lx_assign_arr_df["arrive_lx_type"] = "city"
+#             _lx_assign_arr_df.drop(columns=['state','airportCode'])
+            logger.info(("Merged %d rows with arrival port data"
+                         % _lx_assign_arr_df.shape[0]))
+            _lx_assign_arr_df.drop(
+                columns=['state_x','airportCode_x','state_y','airportCode_y'],
+                inplace=True)
+           
+            ''' TODO pass all the column names as **kwargs '''
+#             _lx_assign_df.drop(['state','destinationID'],axis=1,inplace=True)
+#             _lx_assign_arrive_df.rename(columns={'city':"dest_lx_name"},inplace=True)
+#             _lx_assign_arrive_df["dest_lx_type"] = "city"
+
+        except Exception as err:
+            logger.error("%s %s \n", _s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return _lx_assign_arr_df
+
+
+    ''' Function
+            name: save_to_db
+            parameters:
+                otasuRLlist - string with folder path to the csv files
+                **kwargs - contain the plance holder key value pairs
+                            columns: list
+                            start_date: datetime.date
+                            end_date: datetime.date
+            procedure: reads the all the csv files in the entire folder and
+                        appends the data for the relevant columns defined in
+                        the dictionary into a dataframe
+            return dataframe (ota_bookings_df)
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+            modified: 2022-10-03
+            
+       TODO - build the function and use it in the notebook
+    '''
+
+    def save_to_db(self, data_df, table_name:str="ota_airline_routes", **kwargs):
         
-#         _s_fn_id = "function <load_ota_info>"
-#         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+        _s_fn_id = "function <merge_similar_room_cate>"
+        logger.info("Executing %s %s",self.__package__, _s_fn_id)
 
-#         try:
+        count = 0
 
-#             ''' Get the list of urls from the CSV file '''        
-#             if dir_path:
-#                 self.path = dir_path
-#             _l_files = os.listdir(self.path)
-#             ''' if file_name is not null check if it is in the director '''
-#             if file_name and file_name in _l_files:
-#                 self.file = file_name
-#             else:
-#                 raise ValueError("Invalid file name %s in dir: %s. Does not exist!" % (file_name, self.path))
+        try:
+            if data_df.shape[0] <= 0:
+                raise ValueError("Invalid dataframe with % rows" % data_df.shape[0])
 
-#             ''' read the list of urls from the file '''
-#             with open(self.path+"/"+self.file, newline='') as f:
-#                 property_data = json.load(f)
+            if "data_source" in data_df.columns:
+                data_df.loc[data_df["data_source"].isnull(),'data_source'] = data_df.ota_name
+            if "data_owner" in data_df.columns:
+                data_df.loc[data_df["data_owner"].isnull(),'data_owner'] = data_df.ota_name
+            data_df["created_dt"] = date.today()
+            data_df["created_by"] = os.getlogin()             
+            data_df["created_proc"] = self.__package__
 
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id,err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+            ''' save dataframe with spark '''
+            count = clsSparkWL.insert_sdf_into_table(save_sdf=data_df, dbTable=table_name)
+            # print("%d rows saved to %s" % (aug_search_sdf.count(), _tmp_fname))
+            logger.info("Data %d rows loaded into %s table",count,table_name)
 
-#         return property_data
+        except Exception as err:
+            logger.error("%s %s \n", _s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
 
-#     ''' Function DEPRECTAED -- moved to otaUtils
-#             name: get_scrape_input_params
-#             parameters:
-#                 url - string comprising the url with place holders
-#                 **kwargs - contain the plance holder key value pairs
-
-#             procedure: build the url by inserting the values from the **kwargs dict
-#             return string (url)
-            
-#             author: <nuwan.waidyanatha@rezgateway.com>
-
-#             TODO - change the ota_scrape_tags_df to a list of dictionaries
-#     '''
-#     def get_scrape_input_params(self, airline_dict:dict):
-
-#         _s_fn_id = "function <get_scrape_input_params>"
-#         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
-
-#         try:
-#             ''' check for property dictionary '''
-#             if not airline_dict:
-#                 raise ValueError("Invalid dictionary")
-
-#             ''' loop through the dict to construct the scraper parameters '''
-#             ota_param_info = []
-#             _l_tag=[]
-#             for prop_detail in airline_dict:
-#                 param_dict = {}
-#                 tag_dict = {}
-#                 ''' create a dict with input params '''
-#                 param_dict['ota'] = prop_detail
-#                 for detail in airline_dict[prop_detail]:
-#                     param_dict['url'] = detail['url']
-#                     param_dict['inputs'] = detail['inputs']
-# #                    param_dict['destinations'] = detail['destinations']
-#                     ''' append the input parameters into a list'''
-#                     ota_param_info.append(param_dict)
-      
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return ota_param_info #, ota_scrape_tags_df
-
-#     ''' Function DEPRECTAED -- moved to otaUtils
-#             name: get_scrape_output_params
-#             parameters:
-#                 airline_dict - obtained from loading the property scraping parameters from the JSON
-
-#             procedure: loop through the loaded dictionary to retrieve the output variable names, tags, and values.
-#                         Then construcct and return a dataframe for all corresponding OTAs
-#             return dataframe (_scrape_tags_df)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def get_scrape_html_tags(self, airline_dict:dict):
-
-#         _scrape_tags_df = pd.DataFrame()
-
-#         _s_fn_id = "function <get_scrape_output_params>"
-#         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
-
-#         try:
-#             if not airline_dict:
-#                 raise ValueError("Invalid properties dictionary")
-
-#             ''' loop through the dict to construct html tags to retrieve the data elements '''
-#             for prop_detail in airline_dict:
-#                 for _prop_params in airline_dict[prop_detail]:
-#                     for _out_vars in _prop_params['outputs']:
-#                         _out_vars['ota'] = prop_detail
-#                         _scrape_tags_df = pd.concat([_scrape_tags_df,\
-#                                                      pd.DataFrame([_out_vars.values()], columns=_out_vars.keys())],
-#                                                    ignore_index=False)
-
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id,err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return _scrape_tags_df
-#     ''' Function  DEPRECATED -- moved to otaUtils
-#             name: insert_params_in_url
-#             parameters:
-#                 url - string comprising the url with place holders
-#                 **kwargs - contain the plance holder key value pairs
-
-#             procedure: build the url by inserting the values from the **kwargs dict
-#             return string (url)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def insert_params_in_url(self, url: str, **kwargs ):
-
-#         import re
-
-#         url_w_params = None
-
-#         _s_fn_id = "function <insert_params_in_url>"
-# #        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
-
-#         try:
-#             if not url:
-#                 raise ValueError("Invalid url string %s" % (url))
-#             url_w_params = url
-
-#             ''' match the keys in dict with the placeholder string in the url''' 
-#             for key in kwargs.keys():
-#                 _s_regex = r"{"+key+"}"
-#                 urlRegex = re.compile(_s_regex, re.IGNORECASE)
-#                 param = urlRegex.search(url_w_params)
-#                 if param:
-#                     _s_repl_val = str(kwargs[key]).replace(" ","%20")
-#                     url_w_params = re.sub(_s_regex, _s_repl_val, url_w_params)
-            
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return url_w_params
-
-#     ''' Function
-#             name: read_folder_csv_to_df
-#             parameters:
-#                 dir_path - string with folder path to the csv files
-#                 **kwargs - contain the plance holder key value pairs
-#                             columns: list
-#                             start_date: datetime.date
-#                             end_date: datetime.date
-#             procedure: give the relative root strage location to amend a data & time
-#                         specific folder for the current time
-                        
-#             return string (_s3Storageobj or localhost directory path)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def get_search_data_dir_path(self,dir_path, **kwargs):
-
-#         _SearchDataDir = None
-#         _search_dt = datetime.now()
-        
-#         _s_fn_id = "function <scrape_data_to_csv>"
-#         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
-
-#         try:
-#             ''' establish the storage block '''
-#             if dir_path:
-#                 self.ratesStoragePath = dir_path
-#             ''' add the folder if not exists '''
-#             if self.ratesStoragePath[-1] != "/":
-#                 self.ratesStoragePath +="/"
-# #            if not os.path.exists(self.ratesStoragePath):
-# #                os.makedirs(self.ratesStoragePath)
-
-#             if "searchDateTime" in kwargs.keys():
-#                 _search_dt = kwargs["searchDateTime"]
-
-#             ''' TODO - change the function to round search datetime to nearest 30 min
-#                 using _distinct_df['search_datetime']=_distinct_df['search_datetime'].dt.round('30min') '''
-#             ''' pick the year, month, day, hour, min from search date time ''' 
-#             _minute = _search_dt.minute
-#             if _minute < 30:
-#                 _minute = 0
-#             else:
-#                 _minute = 30
-
-#             ''' folder is a concaternation of date hour and minute; where minute < 30 --> 0 and 30 otherwise'''
-#             _SearchDataDir = self.ratesStoragePath+\
-#                             str(_search_dt.year)+"-"+str(_search_dt.month)+"-"+str(_search_dt.day)\
-#                             +"-"+str(_search_dt.hour)+"-"+str(_minute)+"/"     # csv file name
-
-#             ''' add the folder if not exists '''
-#             if kwargs['storageLocation'] == 'local':
-#                 if not os.path.exists(self.ratesStoragePath):
-#                     os.makedirs(self.ratesStoragePath)
-#                 if not os.path.exists(_SearchDataDir):
-#                     os.makedirs(_SearchDataDir)
-#             elif kwargs['storageLocation'] == 'AWS_S3':
-#                 print("todo")
-#             else:
-#                 raise ValueError("%s is an undefined storage location in **kwargs"
-#                                  % (kwargs['storageLocation']))
-
-#             logger.info("Extracting data into %s storage", kwargs['storageLocation'])
-#             logger.info("OTA price data storage location: %s", _SearchDataDir)
-#             logger.info("Search datetime set to: %s", str(_search_dt))
-
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return _SearchDataDir
-
-#     ''' Function DEPRECATED
-#             name: scrape_ota_to_csv
-#             parameters:
-#                 url - string comprising the url with place holders
-#                 **kwargs - contain the plance holder key value pairs
-
-#             procedure: build the url by inserting the values from the **kwargs dict
-#             return string (url)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def scrape_data_to_csv(self,url,_scrape_tags_df,file_name, path):
-
-#         from bs4 import BeautifulSoup # Import for Beautiful Soup
-#         import requests # Import for requests
-#         import lxml     # Import for lxml parser
-#         import csv
-#         from csv import writer
-
-#         _s_fn_id = "function <scrape_data_to_csv>"
-#         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
-
-#         try:
-#             if _scrape_tags_df.shape[0] <= 0:
-#                 raise ValueError("Invalid scrape tags no data scraped")
-#             if not file_name:
-#                 raise ValueError("Invalid file name no data scraped")
-#             if not path:
-#                 raise ValueError("Invalid path name no data scraped")
-
-#             ''' define generic header '''
-#             headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36'}
-#             response = requests.get(url, headers=headers)
-#             # Make it a soup
-#             soup = BeautifulSoup(response.text,"lxml")
-# #            soup = BeautifulSoup(response.text,"html.parser")
-
-#             ''' extract the list of values from content block '''
-#             _cont_block = (_scrape_tags_df.loc[_scrape_tags_df['variable']=='content_block']).head(1)
-#             _l_scrape_text = soup.select(_cont_block.tag.item())
-
-#             if len(_l_scrape_text) <= 0:
-#                 raise ValueError("no content block (area) for %s" %(_cont_block))
-
-#             ''' get the attribute list '''
-#             _l_col_names = list(_scrape_tags_df.variable)
-#             _l_col_names.remove('content_block')
-
-#             ''' init dataframe to store the scraped categorical text '''
-#             _prop_data_df = pd.DataFrame()
-
-#             ''' loop through the list to retrieve values from tags '''
-#             for row in _l_scrape_text:
-#                 _scraped_data_dict = {}
-#                 for colName in _l_col_names:
-#                     _tag = _scrape_tags_df.loc[_scrape_tags_df.variable==colName, 'tag'].item()
-#                     _code = _scrape_tags_df.loc[_scrape_tags_df.variable==colName, 'code'].item()
-
-#                     try:
-#                         _scraped_data_dict[colName] = row.find(_tag, class_ = _code).text
-
-#                     except Exception as err:
-#                         pass
-                        
-#                 if _scraped_data_dict:
-#                     _prop_data_df = pd.concat([_prop_data_df, pd.DataFrame(_scraped_data_dict, index=[0])])
-
-#         except Exception as err:
-#             logger.error("%s %s \n", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return _prop_data_df
-
-#     ''' Function - DEPRECATED moved to libOTAETL
-#             name: remove_empty_files
-#             parameters:
-#                 dir_path - string with folder path to the csv files
-#                 **kwargs - contain the plance holder key value pairs
-#                             columns: list
-#                             start_date: datetime.date
-#                             end_date: datetime.date
-#             procedure: reads the all the csv files in the entire folder and
-#                         appends the data for the relevant columns defined in
-#                         the dictionary into a dataframe
-#             return dataframe (ota_bookings_df)
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def remove_empty_files(self,path):
-
-#         _s_fn_id = "function <remove_empty_files>"
-# #        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
-
-#         _l_removed_files = []
-#         try:
-#             if not path:
-#                 path = self.path
-            
-# #            print(list(os.walk(path)))
-#             for (dirpath, folder_names, files) in os.walk(path):
-#                 for filename in files:
-#                     file_location = dirpath + '/' + filename  #file location is location is the location of the file
-#                     if os.path.isfile(file_location):
-#                         if os.path.getsize(file_location) == 0:#Checking if the file is empty or not
-#                             os.remove(file_location)  #If the file is empty then it is deleted using remove method
-#                             _l_removed_files.append(filename)
-# #                        else:
-# #                            with open(file_location, 'r') as infile, \
-# #                                open(file_location, 'w') as outfile:
-# #                                data = infile.read()
-# #                                data = data.replace("•", " ")
-# #                                outfile.write(data)
-
-
-#         except Exception as err:
-#             logger.error("%s %s", _s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return _l_removed_files
+        return count, data_df

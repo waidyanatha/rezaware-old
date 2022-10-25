@@ -69,19 +69,6 @@ class PropertyScraper():
         self.rezHome = config.get("CWDS","REZAWARE")
         sys.path.insert(1,self.rezHome)
         from rezaware import Logger as logs
-        from utils.modules.etl.load import sparkwls as spark
-        from utils.modules.ml.natlang import nlp
-
-        ''' initialize util class to use common functions '''
-        clsUtil = otasu.Utils(desc='Utilities class for property data scraping')
-        clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
-        clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
-
-        ''' Set the wrangler root directory '''
-        self.pckgDir = config.get("CWDS",self.__package__)
-        self.containerDir = config.get("CWDS",self.__app__)
-        ''' get the path to the input and output data '''
-        self.dataDir = os.path.join(config.get("CWDS","DATA"),__bookings_data__)
         ''' innitialize the logger '''
         logger = logs.get_logger(
             cwd=self.rezHome,
@@ -92,6 +79,29 @@ class PropertyScraper():
         ''' set a new logger section '''
         logger.info('########################################################')
         logger.info(self.__name__,self.__package__)
+
+        from utils.modules.etl.load import sparkwls as spark
+        from utils.modules.ml.natlang import nlp
+        ''' initialize util class to use common functions '''
+        clsUtil = otasu.Utils(desc='Utilities class for property data scraping')
+        clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
+        clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
+
+        ''' Set the wrangler root directory '''
+        self.pckgDir = config.get("CWDS",self.__package__)
+        self.appDir = config.get("CWDS",self.__app__)
+        ''' get the path to the input and output data '''
+        self.dataDir = os.path.join(config.get("CWDS","DATA"),__bookings_data__)
+#         ''' innitialize the logger '''
+#         logger = logs.get_logger(
+#             cwd=self.rezHome,
+#             app=self.__app__, 
+#             module=self.__module__,
+#             package=self.__package__,
+#             ini_file=self.__ini_fname__)
+#         ''' set a new logger section '''
+#         logger.info('########################################################')
+#         logger.info(self.__name__,self.__package__)
 
         ''' select the storate method '''
         self.storeMethod = "local"
@@ -225,7 +235,7 @@ class PropertyScraper():
             if not file_name:
                 raise ValueError("Invalid file to fetch scraper property dictionary")
             if not inp_data_dir:
-#                 inp_data_dir = os.path.join(self.containerDir,config.get('STORES','INPUTDATA'))
+#                 inp_data_dir = os.path.join(self.appDir,config.get('STORES','INPUTDATA'))
                 inp_data_dir = self.dataDir
             logger.debug("Directory path for loading input data %s" % inp_data_dir)
             

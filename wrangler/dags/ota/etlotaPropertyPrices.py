@@ -59,7 +59,7 @@ prop_kwargs = {"WRITE_TO_FILE":True,
 ### inhouse libraries to initialize, extract, transform, and load
 sys.path.insert(1,"/home/nuwan/workspace/rezaware/")
 import rezaware as reza
-from wrangler.modules.ota.scraper import propertyScrapers as ps, scraperUtils as otasu
+from wrangler.modules.ota.scraper import propertyScrapers as ps #, scraperUtils as otasu
 from utils.modules.etl.load import sparkwls as spark
 # from utils.modules.ml.natlang import nlp
 # sys.path.insert(1,MODULE_DIR)

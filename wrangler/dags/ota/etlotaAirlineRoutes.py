@@ -33,23 +33,29 @@ import traceback
 import logging
 
 ### environment variables to load inhouse libraries
-ROOT_DIR = "/home/nuwan/workspace/rezgate/wrangler/"
-MODULE_PATH = os.path.join(ROOT_DIR, 'modules/ota/')
-#UTILS_PATH = os.path.join(ROOT_DIR, 'utils/')
-UTILS_PATH = "/home/nuwan/workspace/rezgate/utils/"
-DATA_PATH = os.path.join(ROOT_DIR, 'data/transport/airlines/scraper/')
-dir_args = {
-    'ROOT_DIR':ROOT_DIR,
-    'DATA_PATH':DATA_PATH,
-}
+# ROOT_DIR = "/home/nuwan/workspace/rezgate/wrangler/"
+# MODULE_PATH = os.path.join(ROOT_DIR, 'modules/ota/')
+# #UTILS_PATH = os.path.join(ROOT_DIR, 'utils/')
+# UTILS_PATH = "/home/nuwan/workspace/rezgate/utils/"
+# DATA_PATH = os.path.join(ROOT_DIR, 'data/transport/airlines/scraper/')
+# dir_args = {
+#     'ROOT_DIR':ROOT_DIR,
+#     'DATA_PATH':DATA_PATH,
+# }
 
 ### inhouse libraries to initialize, extract, transform, and load
-sys.path.insert(1,MODULE_PATH)
-import airlineScrapers as airWS
-sys.path.insert(1, UTILS_PATH)
-import sparkwls as spark
-clsScraper = airWS.AirlineScraper(desc="kayak and momondo ota scrapes",**dir_args)
-clsSparkWL = spark.SparkWorkLoads(desc="ota prices", **dir_args)
+# sys.path.insert(1,MODULE_PATH)
+# import airlineScrapers as airWS
+# sys.path.insert(1, UTILS_PATH)
+# import sparkwls as spark
+prop_kwargs = {"WRITE_TO_FILE":True,
+              }
+sys.path.insert(1,"/home/nuwan/workspace/rezaware/")
+import rezaware as reza
+from wrangler.modules.ota.scraper import airlineScrapers as air #, scraperUtils as otasu
+from utils.modules.etl.load import sparkwls as spark
+clsScraper = air.AirlineScraper(desc="kayak and momondo ota scrapes",**prop_kwargs)
+clsSparkWL = spark.SparkWorkLoads(desc="ota prices", **prop_kwargs)
 
 ### pyspark libraries for the transform task
 from pyspark.sql.functions import substring,lit,col,trim
@@ -95,7 +101,7 @@ with DAG(
     description='scrape ota airline web data and stage in database',
     schedule_interval=timedelta(hours=2),
     #start_date=pendulum.datetime(2021, 1, 1, tz="UTC"),
-    start_date=datetime(2022, 9, 27),
+    start_date=datetime(2022, 10, 25),
     catchup=False,
     tags=['wrangler','ota','scrape','airline','stage', 'ETL'],
 ) as dag:
@@ -121,7 +127,7 @@ with DAG(
 #         airportCodefile = "airportUSACities.csv"
         filePath=os.path.join(DATA_PATH, airportCodefile)
 
-        ota_args = {
+        urls_kwargs = {
             "startDate": start_date,
             "endDate" : end_date,
 #             'airportsFile' : airportCodefile,
@@ -130,10 +136,10 @@ with DAG(
             'arriveAirportCode': ['LAS'],
         }
         _fname, _ota_url_parameterized_list  = clsScraper.build_scrape_url_info(\
-                                                        fileName=file,\
-                                                        dirPath=DATA_PATH,\
-                                                        **ota_args\
-                                                        )
+                                                file_name=file,\
+                                                dirPath=None,\
+                                                **urls_kwargs,\
+                                                )
         ''' define XCOM parameters for downstream tasks '''
         ti = kwargs['ti']
         ti.xcom_push(key='url_list_file', value=_fname)
@@ -154,7 +160,7 @@ with DAG(
 
         from datetime import datetime, timezone
 
-        dirPath=os.path.join(DATA_PATH, "itinerary/")
+#         dirPath=os.path.join(DATA_PATH, "itinerary/")
         _search_dt = datetime.now()
         ''' round the search datatime to nearest 15 min '''
         _search_dt = _search_dt + (datetime.min - _search_dt) % timedelta(minutes=15)
@@ -164,7 +170,12 @@ with DAG(
         ''' include the timezone '''
         _search_dt = (_search_dt.replace(tzinfo=timezone.utc)).isoformat()
         ''' get the storate location '''
-        _search_data_store = clsScraper.get_search_data_dir_path(dirPath, **storage_args)
+        search_kwargs = {
+        #    'SEARCH_DATETIME': _search_dt,
+            'PARENT_DIR': "itinerary/",
+            'STORAGE_METHOD': "local",   # values can be "local" or "AWS_S3"
+        }
+        _search_data_store = = clsScraper.make_storage_dir(**search_kwargs)
         ''' push the xcom key value pairs '''
         ti = kwargs['ti']
         ti.xcom_push(key='storage_location', value=_search_data_store)
@@ -223,55 +234,63 @@ with DAG(
         _saved_airline_route_fpath = ti.xcom_pull(key='storage_location')
 #        _saved_airline_route_fpath = "/home/nuwan/workspace/rezgate/wrangler/data/hospitality/bookings/scraper/rates/2022-9-14-21-0/"
         logging.info("[function extract] xcom pull folder path to storage location %s", _saved_airline_route_fpath)
-        _search_sdf = clsSparkWL.read_csv_to_sdf(filesPath=_saved_airline_route_fpath)
+        spark_kwargs = {"TO_PANDAS":True,   # change spark dataframe to pandas
+                        "IS_FOLDER":True,   # if folder then check if folder is empty
+                       }
+        _search_sdf, traceback = clsSparkWL.read_csv_to_sdf(\
+                                                            filesPath=_saved_airline_route_fpath,\
+                                                            **spark_kwargs)
 #        _search_sdf = _search_sdf.distinct()
-        logging.info("Spark loaded %d rows", _search_sdf.count())
+        logging.info("Spark loaded %d rows", _search_sdf.shape[0])
 
-        ''' reset data types to match table '''
-        _search_sdf = _search_sdf.withColumn("booking_price",col("booking_price").cast(FloatType())) \
-                                .withColumn("search_dt",col("search_dt").cast(DateType()))
+        ''' set departure and arrival port location names '''
+        _aug_port_name_sdf = clsScraper.assign_lx_name(_search_sdf)
+        logging.info("Location name augmentation completed for %d rows", _aug_port_name_sdf.count())
 #         ''' reset data types to match table '''
 #         _search_sdf = _search_sdf.withColumn("booking_price",col("booking_price").cast(FloatType())) \
 #                                 .withColumn("search_dt",col("search_dt").cast(DateType()))
-        logging.info("Data type reset and column drops complete!")
+#         ''' reset data types to match table '''
+#         _search_sdf = _search_sdf.withColumn("booking_price",col("booking_price").cast(FloatType())) \
+#                                 .withColumn("search_dt",col("search_dt").cast(DateType()))
+#         logging.info("Data type reset and column drops complete!")
         
-        ''' Get destination id dictionary '''
-        airportCodefile = "airportUSACities.csv"
-        airportsPath = os.path.join(DATA_PATH,'airports/')
-        airports_sdf = clsSparkWL.read_csv_to_sdf(filesPath=airportsPath)
-        airports_sdf = airports_sdf.withColumn("airportCode", trim(airports_sdf.airportCode))
-        logging.info("Loaded %d rows from %s to replace destination ids with names", \
-                     destinations_sdf.count(), destfilesPath)
-        _search_sdf = _search_sdf.withColumn("arrive_port_code", trim(_search_sdf.arrive_port_code)) \
-                                .withColumn("depart_port_code", trim(_search_sdf.depart_port_code))\
+#         ''' Get destination id dictionary '''
+#         airportCodefile = "airportUSACities.csv"
+#         airportsPath = os.path.join(DATA_PATH,'airports/')
+#         airports_sdf = clsSparkWL.read_csv_to_sdf(filesPath=airportsPath)
+#         airports_sdf = airports_sdf.withColumn("airportCode", trim(airports_sdf.airportCode))
+#         logging.info("Loaded %d rows from %s to replace destination ids with names", \
+#                      destinations_sdf.count(), destfilesPath)
+#         _search_sdf = _search_sdf.withColumn("arrive_port_code", trim(_search_sdf.arrive_port_code)) \
+#                                 .withColumn("depart_port_code", trim(_search_sdf.depart_port_code))\
 
-        ''' first do the departure codes and names '''
-        dep_airports_sdf = airports_sdf.selectExpr("city as depart_port_name", \
-                                                   "airportCode as depart_port_code", \
-                                                  )
+#         ''' first do the departure codes and names '''
+#         dep_airports_sdf = airports_sdf.selectExpr("city as depart_port_name", \
+#                                                    "airportCode as depart_port_code", \
+#                                                   )
 #         ''' set data types '''
 #         destinations_sdf = destinations_sdf.withColumn("destination_name",col("destination_name").cast(StringType())) \
 #                                             .withColumn("destination_id",col("destination_id").cast(StringType()))
 #         logging.info("Set data types for: destination_name, destination_id")
-        ''' Lookup & augment departure name '''
-        aug_depart_sdf = dep_airports_sdf.join(_search_sdf,"depart_port_code")
-        logging.info("Departure airport names and codes to dataframe.")
+#         ''' Lookup & augment departure name '''
+#         aug_depart_sdf = dep_airports_sdf.join(_search_sdf,"depart_port_code")
+#         logging.info("Departure airport names and codes to dataframe.")
         
-        ''' next do the same for arrival codes and names '''
-        arr_airports_sdf = airports_sdf.selectExpr("city as arrive_port_name", \
-                                                   "airportCode as arrive_port_code", \
-                                                  )
-        ''' Lookup & augment arrival name '''
-        aug_arr_sdf = arr_airports_sdf.join(aug_depart_sdf,on="arrive_port_code")
+#         ''' next do the same for arrival codes and names '''
+#         arr_airports_sdf = airports_sdf.selectExpr("city as arrive_port_name", \
+#                                                    "airportCode as arrive_port_code", \
+#                                                   )
+#         ''' Lookup & augment arrival name '''
+#         aug_arr_sdf = arr_airports_sdf.join(aug_depart_sdf,on="arrive_port_code")
 
         ''' save data to tmp file '''
-        _tmp_fname = clsSparkWL.save_sdf_to_csv(aug_depart_sdf)
+        _tmp_fname = clsSparkWL.save_sdf_to_csv(_aug_port_name_sdf)
         logging.info("Cleaned data saved to %s",_tmp_fname)
         ti.xcom_push(key='tmp_data_file', value=_tmp_fname)
         logging.info("[transform] xcom push file name to %s", ti) 
 
     ''' Function
-            name: load
+            name: load transformed data in to the rezstage database
             parameters:
                 kwargs - to use with passing values between tasks
             procedure: loads the transfromed data from the tmp file to call the function
@@ -281,12 +300,12 @@ with DAG(
             author(s): <nuwan.waidyanatha@rezgateway.com>
     '''
     def load(**kwargs):
-        
+
         ''' pull the tmp file path from xcom '''
         ti = kwargs['ti']
         _tmp_fname = ti.xcom_pull(key='tmp_data_file')
         ''' retrieve the data into a dataframe '''
-        _get_tmp_sdf = clsSparkWL.read_csv_to_sdf(filesPath=_tmp_fname)
+        _get_tmp_sdf, traceback = clsSparkWL.read_csv_to_sdf(filesPath=_tmp_fname)
         logging.info("Retrieved %d records from %s", _get_tmp_sdf.count(), _tmp_fname)
         ''' save data to table '''
         _s_tbl_name = "ota_airline_routes"
