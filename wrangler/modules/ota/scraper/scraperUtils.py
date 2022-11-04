@@ -3,15 +3,9 @@
 ''' Initialize with default environment variables '''
 __name__ = "scraperUtils"
 __package__ = "scraper"
-# __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-# __module_dir__ = 'modules/ota/'
 __module__ = "ota"
 __app__ = "wrangler"
-#__data_dir__ = 'data/hospitality/bookings/scraper/'
-# __conf_fname__ = "app.cfg"
 __conf_fname__ = "app.ini"
-# __logs_dir__ = 'logs/module/ota/'
-# __log_fname__ = 'app.log'
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -63,22 +57,6 @@ class Utils():
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
-#         ''' Set the wrangler root directory '''
-#         self.rootDir = __root_dir__
-#         if "ROOT_DIR" in kwargs.keys():
-#             self.rootDir = kwargs['ROOT_DIR']
-
-#         self.moduleDir = os.path.join(self.rootDir, __module_dir__)
-#         if "MODULE_DIR" in kwargs.keys():
-#             self.moduleDir=kwargs['MODULE_DIR']
-
-#         self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
-#         if "CONFIG_PATH" in kwargs.keys():
-#             self.confFPath=kwargs['CONFIG_PATH']
-#         global config
-#         config = configparser.ConfigParser()
-#         config.read(self.confFPath)
-
         self.cwd=os.path.dirname(__file__)
         global config
         config = configparser.ConfigParser()
@@ -87,21 +65,6 @@ class Utils():
         self.rezHome = config.get("CWDS","REZAWARE")
         sys.path.insert(1,self.rezHome)
         from rezaware import Logger as logs
-
-#         global clsRezLog
-#         clsRezLog = logs.Logger()
-
-#         ''' get the file and path for the logger '''
-#         self.logDir = os.path.join(self.rootDir,__logs_dir__)
-#         self.logFPath = os.path.join(self.logDir,__log_fname__)
-#         try:
-#             self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
-#             self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
-#         except:
-#             pass
-#         if not os.path.exists(self.logDir):
-#             os.makedirs(self.logDir)
-# #        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
 
         self.pckgDir = config.get("CWDS",self.__package__)
         self.appDir = config.get("CWDS",self.__app__)
@@ -117,19 +80,6 @@ class Utils():
             package=self.__package__,
             ini_file=self.__conf_fname__)
 
-#         global logger
-#         logger = logging.getLogger(__package__)
-#         logger.setLevel(logging.DEBUG)
-#         if (logger.hasHandlers()):
-#             logger.handlers.clear()
-#         # create file handler which logs even debug messages
-#         fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
-# #        fh = logging.FileHandler(self.logDir, config.get('LOGGING','LOGMODE'))
-#         fh.setLevel(logging.DEBUG)
-#         formatter = logging.Formatter(
-#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-#         fh.setFormatter(formatter)
-#         logger.addHandler(fh)
         ''' set a new logger section '''
         logger.info('########################################################')
         logger.info(self.__name__)
@@ -153,7 +103,6 @@ class Utils():
 
         print("Initialing %s class for %s with instance %s" 
               % (self.__package__, self.__name__, self.__desc__))
-#         print("Logging %s info, warnings, and error to %s" % (self.__package__, self.logFPath))
         return None
 
     ''' Function
@@ -346,13 +295,6 @@ class Utils():
             if 'SCRAPE_TIME_GAP' in kwargs.keys():
                 _search_time_gap = kwargs['SCRAPE_TIME_GAP']
             _parent_dir_path = os.path.join(data_store_path, parent_dir_name)
-                
-#             ''' establish the storage block '''
-#             if dirPath:
-#                 self.ratesStoragePath = dirPath
-#             ''' add the folder if not exists '''
-#             if self.ratesStoragePath[-1] != "/":
-#                 self.ratesStoragePath +="/"
 
             if "SEARCH_DATETIME" in kwargs.keys():
                 _search_dt = kwargs["SEARCH_DATETIME"]
@@ -360,19 +302,8 @@ class Utils():
                 _search_dt = datetime.now()
             _search_dt = _search_dt + (datetime.min - _search_dt) % timedelta(minutes=_search_time_gap)
 
-            ''' TODO - change the function to round search datetime to nearest 30 min
-                using _distinct_df['search_datetime']=_distinct_df['search_datetime'].dt.round('30min') '''
-            ''' pick the year, month, day, hour, min from search date time ''' 
-#             _minute = _search_dt.minute
-#             if _minute < 30:
-#                 _minute = 0
-#             else:
-#                 _minute = 30
-
-            ''' folder is a concaternation of date hour and minute; where minute < 30 --> 0 and 30 otherwise'''
-#             _SearchDataDir = self.ratesStoragePath+\
-#                             str(_search_dt.year)+"-"+str(_search_dt.month)+"-"+str(_search_dt.day)\
-#                             +"-"+str(_search_dt.hour)+"-"+str(_minute)+"/"     # csv file name
+            ''' folder is a concaternation of date hour and minute;
+                where minute < 30 --> 0 and 30 otherwise'''
             _dt_dir_name = str(_search_dt.year)+"-"+str(_search_dt.month)+"-"+str(_search_dt.day)\
                             +"-"+str(_search_dt.hour)+"-"+str(_search_dt.minute)+"/"     # csv file name
             _search_data_save_dir = os.path.join(_parent_dir_path, _dt_dir_name)
@@ -516,24 +447,17 @@ class Utils():
                         ".csv"
                 _fname=_fname.replace(" ",".")
 
-#                print("Processsing ota=%s location=%s for checkin=%s and page=%s" 
-#                      % (ota_dict['ota'],ota_dict['location'],str(ota_dict['checkin']),str(ota_dict['page_offset'])))
                 ''' TODO add search_datetime'''
                 if ota_dict['ota'] == 'booking.com':
-                    saveTo = self._scrape_bookings_to_csv(ota_dict['url'],      # constructed url with parameters
-                                                          ota_dict['checkin'],  # booking intended checkin date
-                                                          searchDT,   # date & time scraping was executed
-                                                          ota_dict['destination_id'],  # destingation id to lookup the name
-                                                          _fname,       # csv file name to store in
-                                                          dirPath     # folder name to save the files
-                                                         )
+                    saveTo = self._scrape_bookings_to_csv(
+                        ota_dict['url'],      # constructed url with parameters
+                        ota_dict['checkin'],  # booking intended checkin date
+                        searchDT,   # date & time scraping was executed
+                        ota_dict['destination_id'],  # destingation id to lookup the name
+                        _fname,     # csv file name to store in
+                        dirPath     # folder name to save the files
+                    )
                     _l_saved_files.append(saveTo)
-#                    print("Data saved to %s" % saveTo)
-#                else:
-#                    print("Define a scraper function for %s, no data saved" % ota_dict['ota'])
-#    _scraped_data_df = clsScraper.scrape_data_to_csv(ota_dict['url'],_ota_tags_df,_fname, _s3object)
-#    _scraped_data_df = clsScraper._scrape_data_to_csv(ota_dict['url'],_fname, _s3object)
-#            print("Scraping and data save to csv complete!")
 
         except Exception as err:
             logger.error("%s %s \n", _s_fn_id, err)
@@ -570,10 +494,10 @@ class Utils():
 
             for (dirpath, folder_names, files) in os.walk(path):
                 for filename in files:
-                    file_location = dirpath + '/' + filename  #file location is location is the location of the file
+                    file_location = dirpath + '/' + filename  #location of the file
                     if os.path.isfile(file_location):
-                        if os.path.getsize(file_location) == 0:#Checking if the file is empty or not
-                            os.remove(file_location)  #If the file is empty then it is deleted using remove method
+                        if os.path.getsize(file_location) == 0: # Checking if the file is empty or not
+                            os.remove(file_location)            # remove empty files
                             _l_removed_files.append(filename)
 
 

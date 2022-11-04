@@ -65,7 +65,6 @@ class AirlineScraper():
 #         global clsNLP
         global clsSparkWL
 
-
         self.cwd=os.path.dirname(__file__)
         sys.path.insert(1,self.cwd)
         import scraperUtils as otasu
@@ -90,105 +89,16 @@ class AirlineScraper():
 
         from utils.modules.etl.load import sparkwls as spark
         clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
-#         ''' initialize util class to use common functions '''
-#         clsUtil = utils.Utils(desc='Utilities class for property data scraping')
-        ''' initialize util class to use common functions '''
-#         global clsUtil
 
-#         ''' Set the wrangler root directory '''
-#         self.rootDir = __root_dir__
-#         if "ROOT_DIR" in kwargs.keys():
-#             self.rootDir = kwargs['ROOT_DIR']
-
-#         self.moduleDir = os.path.join(self.rootDir, __module_dir__)     
-#         if "MODULE_DIR" in kwargs.keys():
-#             self.moduleDir=kwargs['MODULE_DIR']
-#         self.confFPath = os.path.join(self.moduleDir, __conf_fname__)
-
-#         if "CONFIG_PATH" in kwargs.keys():
-#             self.confFPath=kwargs['CONFIG_PATH']
-#         global config
-#         config = configparser.ConfigParser()
-#         config.read(self.confFPath)
-
-#         ''' get the file and path for the logger '''
-#         self.logDir = os.path.join(self.rootDir,__logs_dir__)
-#         self.logFPath = os.path.join(self.logDir,__log_fname__)
-#         try:
-#             self.logDir = os.path.join(self.rootDir,config.get('LOGGING','LOGPATH'))
-#             self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
-#         except:
-#             pass
-#         if not os.path.exists(self.logDir):
-#             os.makedirs(self.logDir)
-#        self.logFPath = os.path.join(self.logDir,config.get('LOGGING','LOGFILE'))
-                
-#         if not os.path.exists(self.logPath):
-#             os.makedirs(self.logPath)
-#        self.logFile = os.path.join(self.logPath,config.get('LOGGING','LOGFILE'))
-
-        ''' innitialize the logger '''
-#         global logger
-#         logger = logging.getLogger(self.__package__)
-#         logger.setLevel(logging.DEBUG)
-#         if (logger.hasHandlers()):
-#             logger.handlers.clear()
-#         # create file handler which logs even debug messages
-#         fh = logging.FileHandler(self.logFPath, config.get('LOGGING','LOGMODE'))
-# #        fh = logging.FileHandler(self.logPath, config.get('LOGGING','LOGMODE'))
-#         fh.setLevel(logging.DEBUG)
-#         formatter = logging.Formatter(
-#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-#         fh.setFormatter(formatter)
-#         logger.addHandler(fh)
         ''' Set the wrangler root directory '''
         self.pckgDir = config.get("CWDS",self.__package__)
         self.appDir = config.get("CWDS",self.__app__)
         ''' get the path to the input and output data '''
         self.dataDir = os.path.join(config.get("CWDS","DATA"),__airline_data__)
-#         ''' innitialize the logger '''
-#         logger = logs.get_logger(
-#             cwd=self.rezHome,
-#             app=self.__app__, 
-#             module=self.__module__,
-#             package=self.__package__,
-#             ini_file=self.__ini_fname__)
-#         ''' set a new logger section '''
-#         logger.info('########################################################')
-#         logger.info(self.__name__,self.__package__)
-
         ''' get the path to the input and output data '''
-#         if "DATA_DIR" in kwargs.keys():
-#             self.dataDir = kwargs["DATA_DIR"]
-#         else:
-#             self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
-#         self.path = os.path.join(self.rootDir,config.get('STORES','DATA'))
-#         logger.info("Data store path: %s", self.dataDir)
-#         self.dataDir = __data_dir__
-#         try:
-#             if "DATA_DIR" in kwargs.keys():
-#                 ''' first preference given to kwargs '''
-#                 self.dataDir = kwargs['DATA_DIR']
-#                 logger.info("Appending data path from kwargs %s" % self.dataDir)
-#             else:
-#                 ''' next try the app.cfg file '''
-#                 self.dataDir = os.path.join(self.rootDir,config.get('STORES','DATA'))
-#                 if not self.dataDir:
-#                     raise ValueError("Data location not defined in %s" % self.confFPath)
-#                 else:
-#                     logger.info("Appending data path from class default value %s" % self.dataDir)            
-
-#         except Exception as err:
-#             logger.warning("%s %s \n", _s_fn_id,err)
-#             logger.warning("Using default data path %s" % self.dataDir)
-
-#         ''' select the storate method '''
-#         self.storeMethod = config.get('STORES','METHOD')
         ''' select the storate method '''
         self.storeMethod = "local"
         
-#         ''' default: ../../data/hospitality/bookings/scraper/rates '''
-#        self.ratesStoragePath = self.path+'rates'
         self.inpParamsFile = __inputs_file_name__
         
         ''' set the tmp dir to store large data to share with other functions

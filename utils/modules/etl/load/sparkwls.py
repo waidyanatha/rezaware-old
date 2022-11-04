@@ -16,6 +16,7 @@ try:
     import findspark
     findspark.init()
     from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
+    from pyspark import SparkContext, SparkConf
     import pandas as pd
     import configparser    
     import logging
@@ -84,40 +85,6 @@ class SparkWorkLoads():
         appConf = configparser.ConfigParser()
         appConf.read(os.path.join(self.appDir, self.__conf_fname__))
         
-#         ''' Set the wrangler root directory '''
-#         self.rootDir = __root_dir__
-#         if "ROOT_DIR" in kwargs.keys():
-#             self.rootDir = kwargs['ROOT_DIR']
-#         if self.rootDir[-1] != "/":
-#             self.rootDir +="/"
-#         ''' Set the utils root directory '''
-#         self.utilsDir = __utils_dir__
-#         if "UTILS_DIR" in kwargs.keys():
-#             self.utilsDir = kwargs['UTILS_DIR']
-#         ''' load the utils config env vars '''
-#         self.appConfigPath = os.path.join(self.rootDir, __conf_fname__)
-#         confApp.read(self.appConfigPath)
-#         self.utilsDir = os.path.join(self.rootDir, __utils_dir__)
-#         self.utilConfFPath = os.path.join(self.utilsDir, __conf_fname__)
-#         confUtil.read(self.utilConfFPath)
-
-#         ''' get the file and path for the logger '''
-#         self.logDir = os.path.join(self.utilsDir,confUtil.get('LOGGING','LOGPATH'))
-#         if not os.path.exists(self.logDir):
-#             os.makedirs(self.logDir)
-#         self.logFPath = os.path.join(self.logDir,confUtil.get('LOGGING','LOGFILE'))
-#         ''' innitialize the logger '''
-#         logger = logging.getLogger(__package__)
-#         logger.setLevel(logging.DEBUG)
-#         if (logger.hasHandlers()):
-#             logger.handlers.clear()
-#         # create file handler which logs even debug messages
-#         fh = logging.FileHandler(self.logFPath, confUtil.get('LOGGING','LOGMODE'))
-#         fh.setLevel(logging.DEBUG)
-#         formatter = logging.Formatter(
-#             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-#         fh.setFormatter(formatter)
-#         logger.addHandler(fh)
         ''' innitialize the logger '''
         logger = logs.get_logger(
             cwd=self.rezHome,
@@ -127,12 +94,11 @@ class SparkWorkLoads():
             ini_file=self.__ini_fname__)
         ''' set a new logger section '''
         logger.info('########################################################')
-        logger.info(self.__name__,self.__package__)
+        logger.info("%s %s",self.__name__,self.__package__)
         
         ''' get tmp storage location '''
         self.tmpDIR = None
         if "WRITE_TO_FILE" in kwargs.keys():
-#             self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
             if not os.path.exists(self.tmpDIR):
                 os.makedirs(self.tmpDIR)
@@ -245,12 +211,42 @@ class SparkWorkLoads():
             self.spark_jar = appConf.get('SPARK','SPARKJARDIR')
             logger.info("Defining Spark Jar dir: %s" % (self.spark_jar))
 
-            ''' the Spark session should be instantiated as follows '''
+#             ''' the Spark session should be instantiated as follows '''
+#             if not "DATA_STORE" in kwargs.keys():
+#                 kwargs['DATA_STORE']="LOCAL"
+#             if kwargs['DATA_STORE']=="AWS-S3":
+#                 print("setting up spark session for AWS S3")
+#                 os.environ['PYSPARK_SUBMIT_ARGS'] = '-- packages com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.3 pyspark-shell'
+
+#                 conf = SparkConf().set('spark.executor.extraJavaOptions', \
+#                                        '-Dcom.amazonaws.services.s3.enableV4=true')\
+#                                 .set('spark.driver.extraJavaOptions', \
+#                                      '-Dcom.amazonaws.services.s3.enableV4=true')\
+#                                 .setAppName(self.__app__)\
+#                                 .setMaster('local[*]')
+
+#                 sc=SparkContext(conf=conf)
+#                 print(sc)
+#                 sc.setSystemProperty('com.amazonaws.services.s3.enableV4', 'true')
+
+#                 hadoopConf = sc._jsc.hadoopConfiguration()
+#                 hadoopConf.set('fs.s3a.access.key', pkgConf.get('AWSAUTH','ACCESSKEY'))
+#                 hadoopConf.set('fs.s3a.secret.key', pkgConf.get('AWSAUTH','SECURITYKEY'))
+#                 hadoopConf.set('fs.s3a.endpoint', pkgConf.get('AWSAUTH','REGION'))
+#                 hadoopConf.set('fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
+
+#                 self.spark_session=SparkSession(sc)
+                
+#             elif kwargs['DATA_STORE']=="LOCAL":
+#                 print("setting up spark session for local files")
             self.spark_session = SparkSession \
-                    .builder \
-                    .appName("rezaware wrangler") \
-                    .config("spark.jars", self.spark_jar) \
-            .getOrCreate()
+                                .builder \
+                                .appName(self.__app__) \
+                                .config("spark.jars", self.spark_jar) \
+                                .getOrCreate()
+#             else:
+#                 raise ValueError("Invalid DATA_STORE value defined to set the spark session")
+
             logger.info("Starting a Spark Session: %s" % (self.spark_session))
 
             ''' build the url for db connection '''
@@ -273,33 +269,6 @@ class SparkWorkLoads():
 
         return None
 
-#     ''' Function
-#             name: get_spark_session
-#             parameters:
-#                     @name (str)
-#                     @enrich (dict)
-#             procedure:
-
-#             return DataFrame
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def DEPRECATED_get_spark_session(self, **kwargs):
-
-#         try:
-#             ''' the Spark session should be instantiated as follows '''
-#             self.spark_session = SparkSession \
-#                                     .builder \
-#                                     .appName("rezaware wrangler") \
-#                                     .config("spark.jars", self.spark_jar) \
-#                                     .getOrCreate()
-
-#         except Exception as err:
-#             _s_fn_id = "Class <SparkWorkLoads> Function <get_spark_session>"
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
-
-#         return self.spark_session
 
     ''' Function
             name: get_data_from_table
@@ -334,6 +303,11 @@ class SparkWorkLoads():
                     driver=self.db_driver).load()
             logger.debug("loaded %d rows into pyspark dataframe" % load_sdf.count())
 
+            ''' drop duplicates '''
+            if "DROP_DUPLICATES" in kwargs.keys() and kwargs['DROP_DUPLICATES']:
+                load_sdf = load_sdf.distinct()
+
+            ''' convert to pandas dataframe '''
             if 'TO_PANDAS' in kwargs.keys() and kwargs['TO_PANDAS']:
                 load_sdf = load_sdf.toPandas()
                 logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
@@ -441,6 +415,10 @@ class SparkWorkLoads():
                 if not (len(filelist) > 0):
                     raise ValueError("No data files found in director: %s" % (filesPath))
 
+            ''' set inferschema '''
+            _csv_inferSchema = True
+            if "INFERSCHEMA" in kwargs.keys():
+                _csv_inferSchema = kwargs['INFERSCHEMA']
             ''' extract data from **kwargs if exists '''
             if 'schema' in kwargs.keys():
                 _sdf_cols = kwargs['schema']
@@ -451,7 +429,7 @@ class SparkWorkLoads():
 
             _csv_to_sdf = self.spark_session.read.options( \
                                                           header='True', \
-                                                          inferSchema='True', \
+                                                          inferSchema=_csv_inferSchema, \
                                                           delimiter=',') \
                                             .csv(filesPath)
 
@@ -520,4 +498,97 @@ class SparkWorkLoads():
             print(traceback.format_exc())
 
         return _csv_file_path
-          
+
+#     ''' Function
+#             name: read_s3obj_to_sdf
+#             parameters:
+#                 bucketName (str) - s3 bucket name
+#                 objPath (str) - s3 key that points to the objecy
+#             procedure: 
+#             return DataFrame
+
+#             author: <nuwan.waidyanatha@rezgateway.com>
+
+#     '''
+#     def read_s3csv_to_sdf(self,bucketName:str,keyFPath: str, **kwargs):
+
+#         import boto3
+        
+#         _csv_to_sdf = self.spark_session.sparkContext.emptyRDD()     # initialize the return var
+# #         _tmp_df = self.spark_session.sparkContext.emptyRDD()
+#         _start_dt = None
+#         _end_dt = None
+#         _sdf_cols = []
+#         _l_cols = []
+#         _traceback = None
+        
+#         _s_fn_id = "function <read_s3csv_to_sdf>"
+#         logger.info("Executing %s in %s",_s_fn_id, __name__)
+
+#         try:
+
+#             if not 'AWSAUTH' in pkgConf.sections():
+#                 raise ValueError('Unable to find AWSAUTH keys and values to continue')
+            
+#             AWS_ACCESS_KEY_ID = pkgConf.get('AWSAUTH','ACCESSKEY')
+#             AWS_SECRET_ACCESS_KEY = pkgConf.get('AWSAUTH','SECURITYKEY')
+#             AWS_REGION_NAME = pkgConf.get('AWSAUTH','REGION')
+
+#             s3 = boto3.resource(
+#                 's3',
+#                 aws_access_key_id=AWS_ACCESS_KEY_ID,
+#                 aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+#                 region_name=AWS_REGION_NAME,
+#             )
+# #             response = s3.get_object(Bucket=bucketName, Key=str(key))
+# #             print(self.spark_session.__dict__)
+# #             self.spark_session.sparkContext.hadoopConfiguration.set("fs.s3a.access.key", AWS_ACCESS_KEY_ID)
+# #             self.spark_session.sparkContext\
+# #                     .hadoopConfiguration.set("fs.s3a.secret.key", AWS_SECRET_ACCESS_KEY)
+# #             self.spark_session.sparkContext\
+# #                   .hadoopConfiguration.set("fs.s3a.endpoint", "s3.amazonaws.com")
+
+# #             os.environ['PYSPARK_SUBMIT_ARGS'] = '-- packages com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.3 pyspark-shell'
+            
+# #             conf = SparkConf().set('spark.executor.extraJavaOptions', \
+# #                                    '-Dcom.amazonaws.services.s3.enableV4=true')\
+# #                             .set('spark.driver.extraJavaOptions', \
+# #                                  '-Dcom.amazonaws.services.s3.enableV4=true')\
+# #                             .setAppName('pyspark_aws')\
+# #                             .setMaster('local[*]')
+            
+# #             sc=SparkContext(conf=conf)
+# # #             sc=self.spark_session.sparkContext(conf=conf)
+# #             sc.setSystemProperty('com.amazonaws.services.s3.enableV4', 'true')
+            
+# #             hadoopConf = sc._jsc.hadoopConfiguration()
+# #             hadoopConf.set('fs.s3a.access.key', AWS_ACCESS_KEY_ID)
+# #             hadoopConf.set('fs.s3a.secret.key', AWS_SECRET_ACCESS_KEY)
+# #             hadoopConf.set('fs.s3a.endpoint', AWS_REGION_NAME)
+# #             hadoopConf.set('fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
+            
+# #             spark=SparkSession(sc)
+
+# #             Bucket=bucketName,
+# #             Key=keyFPath
+
+# #             s3 = boto3.resource('s3')
+#             bucket = s3.Bucket(str(bucketName))
+#             obj = bucket.objects.filter(Prefix=str(keyFPath))
+# #             response = s3.get_object(Bucket=bucketName, Key=str(keyFPath))
+# #             _s3_obj = "s3a://"+bucketName+"/"+objPath
+# #             _csv_to_sdf=spark.read.csv(
+# #             _csv_to_sdf=self.spark_session.read.csv(
+#             _csv=self.spark_session.read.csv(
+#                 obj,
+# #                 _s3_obj,
+#                 header=True,
+#                 inferSchema=True)
+# #             _csv_to_sdf = self.spark_session.read.csv(_s3_obj)
+
+#         except Exception as err:
+#             logger.error("%s %s \n",_s_fn_id, err)
+#             print("[Error]"+_s_fn_id, err)
+#             print(traceback.format_exc())
+
+#         return _csv_to_sdf

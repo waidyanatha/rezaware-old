@@ -114,9 +114,24 @@ class App:
         self.appPath = os.path.join(self.cwd,self.appName)
         self.confData,self.ini_file_list = Config.set_conf_ini_conf(
             reza_cwd=self.cwd,
-            container=self.appName,
+            app_name=self.appName,
             app_path=self.appPath,
             conf_file=self.confFile)
+        ''' remove AWS credentials from cfg '''
+        aws_dict = {'AWSAUTH' : [{'awsaccesskey' : "",
+                                  'awssecuritykey' : "",
+                                  'awsregion' : "",
+                                  'awsiampolicy' : "",
+                                  'awsiamuser' : ""
+                                 }]
+                   }
+
+        conf_fpath = Config.set_cfg_file_data(
+            reza_cwd=self.cwd,
+            app_name=self.appName,
+            conf_file=self.confFile,
+            cfg_dict = aws_dict)
+            
         return self.confData,self.ini_file_list
 
     def get_package_logger(self):
@@ -144,6 +159,18 @@ class App:
 
     pass
 
+
+'''
+    *** CLASS CONFIG ***
+
+    Initializes a ConfigParser object for any of the rezaware apps, modules, and packages.
+    Makes use of the app.cfg files to generate package-wise app.ini files. Use the config
+    object for reading and writing app.ini and app.cfg data.
+
+    Contributor(s):
+        * nuwan.waidyanatha@rezgateway.com
+
+'''
 
 class Config(ConfigParser):
 
@@ -186,14 +213,17 @@ class Config(ConfigParser):
             return None
 
     def set_conf_ini_conf(reza_cwd,
-                          app,
+                          app_name,
                           app_path,
                           conf_file) -> list:
+
+        _config_list=[]
+        _ini_conf_file_list = []
 
         try:
             conf_data = Config.get_config(
                 cwd=reza_cwd,
-                app=app,
+                app=app_name,
                 fName = conf_file,
             )
 
@@ -207,16 +237,20 @@ class Config(ConfigParser):
             log_format = " ".join(["%("+str(elem)+")s" for elem in _format_elements])\
                             .strip().replace(' ',' - ')
 
+            ''' get AWS security credentials '''
+            if 'AWSAUTH' in conf_data.sections():
+                _aws_acc_key = conf_data['AWSAUTH']['awsaccesskey']
+                _aws_sec_key = conf_data['AWSAUTH']['awssecuritykey']
+                _aws_region = conf_data['AWSAUTH']['awsregion']
+                _aws_iam_pol = conf_data['AWSAUTH']['awsiampolicy']
+                _aws_iam_usr = conf_data['AWSAUTH']['awsiamuser']
+
             _modules_path = os.path.join(app_path,"modules")
 
             if not "MODULES" in conf_data.sections():
                 raise ValueError("No MODULES section found in %s" % 
                                  os.path.join(conf_data))
-            _config_list=[]
-            _ini_conf_file_list = []
 
-#             for module in _mod_conf['MODULES']:
-#                 _mod_pkgs = _mod_conf['MODULES'][module].split(',')
             for module in conf_data['MODULES']:
                 _mod_pkgs = conf_data['MODULES'][module].split(',')
                 _modules_list=[]
@@ -237,7 +271,7 @@ class Config(ConfigParser):
                     ''' add the current package working directory path '''
                     _ini_conf.add_section("CWDS")
                     _ini_conf.set("CWDS",str("rezaware"), str(reza_cwd))
-                    _ini_conf.set("CWDS",str(app), str(app_path))
+                    _ini_conf.set("CWDS",str(app_name), str(app_path))
                     _ini_conf.set("CWDS",str(module), str(_mod_path))
                     _ini_conf.set("CWDS",str(pkg), str(_pkg_path))
 
@@ -249,25 +283,15 @@ class Config(ConfigParser):
                         pkg
                     )
                     data = {'dataPath':data_path}
-#                     _ini_conf.add_section("DATA")
                     _ini_conf.set("CWDS","DATA", str(data_path))
                     ''' construct package configuration data '''
                     _pkg_list=[]
                     if pkg and pkg.strip():
                         ''' create the logger parameters and file path'''
-#                         _logs_path = os.path.join(
-#                             app_path,
-#                             log_path,
-#                             module,
-#                             pkg,
-#                             log_file_name,
-#                         )
                         _logs_path = Logger.get_file_path(
                             cwd=reza_cwd,
-                            app=app,
+                            app=app_name,
                             module=module,
-#                             log_path,
-#                             module,
                             package=pkg,
                             logFName=None,
                         )
@@ -282,16 +306,13 @@ class Config(ConfigParser):
                         _ini_conf.set("LOGGER",'MODE',str(log_mode))
                         _ini_conf.set("LOGGER",'FORMAT',str(log_format))
 
-#                         ''' create the data paths '''
-#                         data_path = os.path.join(
-#                             app_path,
-#                             "data/",
-#                             module,
-#                             pkg
-#                         )
-#                         data = {'dataPath':data_path}
-#                         _ini_conf.add_section("DATA")
-#                         _ini_conf.set("DATA","PATH", str(data_path))
+                        ''' add AWS auth credentials '''
+                        _ini_conf.add_section("AWSAUTH")
+                        _ini_conf.set("AWSAUTH","ACCESSKEY", str(_aws_acc_key))
+                        _ini_conf.set("AWSAUTH",'SECURITYKEY',str(_aws_sec_key))
+                        _ini_conf.set("AWSAUTH",'REGION',str(_aws_region))
+                        _ini_conf.set("AWSAUTH",'IAMUSR',str(_aws_iam_usr))
+                        _ini_conf.set("AWSAUTH",'IAMPOLICY',str(_aws_iam_pol))
 
                         file_list = []
                         _ini_conf.add_section("MODULES")
@@ -328,7 +349,61 @@ class Config(ConfigParser):
 
         return _config_list, [*set(_ini_conf_file_list)]
 
+    ''' Function
+            name: set_cfg_file_data
+            parameters:
+                reza_cwd (str) - rezaware directory path
+                app_name (str) - mining, utils, visuals, or wrangler
+                conf_file (str)- generally app.cfg
+                cfg_dict (dict)- dictionary with secotor specific key value pairs
+            procedure: 
+            return None
             
+            author: <nuwan.waidyanatha@rezgateway.com>
+
+    '''
+    def set_cfg_file_data(
+        reza_cwd,
+        app_name,
+        conf_file,
+        cfg_dict) -> str:
+
+        _new_conf_file = None
+
+        try:
+            conf_data = Config.get_config(
+                cwd=reza_cwd,
+                app=app_name,
+                fName = conf_file,
+            )
+
+            for _sector in cfg_dict:
+                for _key_val_pair in cfg_dict[_sector]:
+                    for _key, _val in _key_val_pair.items():
+                        conf_data.set(_sector,_key,_val)
+
+#             cfgfile = open(file_path,'w')
+            with open(os.path.join(reza_cwd,app_name,conf_file), 'w') as configfile:
+                conf_data.write(configfile)
+
+        except Exception as e:
+            print("Error set_conf_ini_conf {0} with error:\n{1}".format(__package__,e))
+            print(traceback.format_exc())
+
+        return _new_conf_file
+
+    
+
+'''
+    *** CLASS LOGGER ***
+
+    Initializes a logger object for any of the rezaware apps, modules, and packages.
+
+    Contributor(s):
+        * nuwan.waidyanatha@rezgateway.com
+
+'''
+
 class Logger():
     
 #     import logging
