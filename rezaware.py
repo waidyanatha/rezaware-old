@@ -112,27 +112,27 @@ class App:
     def make_ini_files(self) -> str:
 #         self.get_ini_data()
         self.appPath = os.path.join(self.cwd,self.appName)
-        self.confData,self.ini_file_list = Config.set_conf_ini_conf(
+        self.ini_file_list = Config.set_conf_ini_conf(
             reza_cwd=self.cwd,
             app_name=self.appName,
             app_path=self.appPath,
             conf_file=self.confFile)
-        ''' remove AWS credentials from cfg '''
-        aws_dict = {'AWSAUTH' : [{'awsaccesskey' : "",
-                                  'awssecuritykey' : "",
-                                  'awsregion' : "",
-                                  'awsiampolicy' : "",
-                                  'awsiamuser' : ""
-                                 }]
-                   }
+#         ''' remove AWS credentials from cfg '''
+#         aws_dict = {'AWSAUTH' : [{'awsaccesskey' : "",
+#                                   'awssecuritykey' : "",
+#                                   'awsregion' : "",
+#                                   'awsiampolicy' : "",
+#                                   'awsiamuser' : ""
+#                                  }]
+#                    }
 
-        conf_fpath = Config.set_cfg_file_data(
-            reza_cwd=self.cwd,
-            app_name=self.appName,
-            conf_file=self.confFile,
-            cfg_dict = aws_dict)
+#         conf_fpath = Config.set_cfg_file_data(
+#             reza_cwd=self.cwd,
+#             app_name=self.appName,
+#             conf_file=self.confFile,
+#             cfg_dict = aws_dict)
             
-        return self.confData,self.ini_file_list
+        return self.ini_file_list
 
     def get_package_logger(self):
         return Logger.get_logger(self.cwd,
@@ -227,6 +227,7 @@ class Config(ConfigParser):
                 fName = conf_file,
             )
 
+            ''' TODO change to a function that returns a dataframe() '''
             if not "LOGGER" in conf_data.sections():
                 raise ValueError("No LOGGER section found in config")
             log_file_name = conf_data['LOGGER']['FILE']
@@ -237,13 +238,13 @@ class Config(ConfigParser):
             log_format = " ".join(["%("+str(elem)+")s" for elem in _format_elements])\
                             .strip().replace(' ',' - ')
 
-            ''' get AWS security credentials '''
-            if 'AWSAUTH' in conf_data.sections():
-                _aws_acc_key = conf_data['AWSAUTH']['awsaccesskey']
-                _aws_sec_key = conf_data['AWSAUTH']['awssecuritykey']
-                _aws_region = conf_data['AWSAUTH']['awsregion']
-                _aws_iam_pol = conf_data['AWSAUTH']['awsiampolicy']
-                _aws_iam_usr = conf_data['AWSAUTH']['awsiamuser']
+#             ''' get AWS security credentials '''
+#             if 'AWSAUTH' in conf_data.sections():
+#                 _aws_acc_key = conf_data['AWSAUTH']['awsaccesskey']
+#                 _aws_sec_key = conf_data['AWSAUTH']['awssecuritykey']
+#                 _aws_region = conf_data['AWSAUTH']['awsregion']
+#                 _aws_iam_pol = conf_data['AWSAUTH']['awsiampolicy']
+#                 _aws_iam_usr = conf_data['AWSAUTH']['awsiamuser']
 
             _modules_path = os.path.join(app_path,"modules")
 
@@ -252,9 +253,14 @@ class Config(ConfigParser):
                                  os.path.join(conf_data))
 
             for module in conf_data['MODULES']:
-                _mod_pkgs = conf_data['MODULES'][module].split(',')
-                _modules_list=[]
                 _mod_path = os.path.join(_modules_path,module)
+                _mod_pkgs = conf_data['MODULES'][module].split(',')
+#                 _mod_pkgs=next(os.walk(_mod_path))[1]
+#                 _mod_pkgs=[x for x in _mod_pkgs if not x.startswith('.')]
+#                 print(_mod_pkgs)
+
+#                 _modules_list=[]
+                _pkg_list=[]
                 for pkg in _mod_pkgs:
                     _pkg_path = os.path.join(_modules_path,module,pkg)
                     ''' create the __init__ file with python header '''
@@ -285,36 +291,37 @@ class Config(ConfigParser):
                     data = {'dataPath':data_path}
                     _ini_conf.set("CWDS","DATA", str(data_path))
                     ''' construct package configuration data '''
-                    _pkg_list=[]
+
+#                     _pkg_list=[]
                     if pkg and pkg.strip():
-                        ''' create the logger parameters and file path'''
-                        _logs_path = Logger.get_file_path(
-                            cwd=reza_cwd,
-                            app=app_name,
-                            module=module,
-                            package=pkg,
-                            logFName=None,
-                        )
-                        log = {'Path':_logs_path,
-                               'Level':log_level,
-                               'Mode':log_mode,
-                               'Format':log_format,
-                              }
-                        _ini_conf.add_section("LOGGER")
-                        _ini_conf.set("LOGGER","PATH", str(_logs_path))
-                        _ini_conf.set("LOGGER",'LEVEL',str(log_level))
-                        _ini_conf.set("LOGGER",'MODE',str(log_mode))
-                        _ini_conf.set("LOGGER",'FORMAT',str(log_format))
+#                         ''' create the logger parameters and file path'''
+#                         _logs_path = Logger.get_file_path(
+#                             cwd=reza_cwd,
+#                             app=app_name,
+#                             module=module,
+#                             package=pkg,
+#                             logFName=None,
+#                         )
+#                         log = {'Path':_logs_path,
+#                                'Level':log_level,
+#                                'Mode':log_mode,
+#                                'Format':log_format,
+#                               }
+#                         _ini_conf.add_section("LOGGER")
+#                         _ini_conf.set("LOGGER","PATH", str(_logs_path))
+#                         _ini_conf.set("LOGGER",'LEVEL',str(log_level))
+#                         _ini_conf.set("LOGGER",'MODE',str(log_mode))
+#                         _ini_conf.set("LOGGER",'FORMAT',str(log_format))
 
-                        ''' add AWS auth credentials '''
-                        _ini_conf.add_section("AWSAUTH")
-                        _ini_conf.set("AWSAUTH","ACCESSKEY", str(_aws_acc_key))
-                        _ini_conf.set("AWSAUTH",'SECURITYKEY',str(_aws_sec_key))
-                        _ini_conf.set("AWSAUTH",'REGION',str(_aws_region))
-                        _ini_conf.set("AWSAUTH",'IAMUSR',str(_aws_iam_usr))
-                        _ini_conf.set("AWSAUTH",'IAMPOLICY',str(_aws_iam_pol))
+#                         ''' add AWS auth credentials '''
+#                         _ini_conf.add_section("AWSAUTH")
+#                         _ini_conf.set("AWSAUTH","ACCESSKEY", str(_aws_acc_key))
+#                         _ini_conf.set("AWSAUTH",'SECURITYKEY',str(_aws_sec_key))
+#                         _ini_conf.set("AWSAUTH",'REGION',str(_aws_region))
+#                         _ini_conf.set("AWSAUTH",'IAMUSR',str(_aws_iam_usr))
+#                         _ini_conf.set("AWSAUTH",'IAMPOLICY',str(_aws_iam_pol))
 
-                        file_list = []
+                        file_list = []   # temp stores the app.ini file list
                         _ini_conf.add_section("MODULES")
                         for root, dirs, files in os.walk(
                             os.path.join(_modules_path,module,pkg)):
@@ -326,28 +333,50 @@ class Config(ConfigParser):
                                     file_list.append(
                                         os.path.splitext(file)[0])
                                     _s_pkg_list += os.path.splitext(file)[0]+" "
-                            if _s_pkg_list and _s_pkg_list.strip():
-                                _s_pkg_list = "["+_s_pkg_list.strip().replace(" ",",")+"]"
+                            if _s_pkg_list != "" and _s_pkg_list.strip():
+#                                 _s_pkg_list = "["+_s_pkg_list.strip().replace(" ",",")+"]"
+                                _pkg_list = "["+_s_pkg_list.strip().replace(" ",",")+"]"
 #                                 _ini_conf.set("SUBMODULE","PACKAGES",str(_s_pkg_list))
                                 _ini_conf.set("MODULES",str(module),str(_s_pkg_list))
-                        _pkg_list.append(
-                            {"data":data,
-                             "logs":log,
-                             "packages":file_list,
-                            })
+#                         _pkg_list.append(
+#                             {"data":data,
+#                              "logs":log,
+#                              "packages":file_list,
+#                             })
+
+                        ''' create the logger parameters and file path'''
+                        _logs_path = Logger.get_file_path(
+                            cwd=reza_cwd,
+                            app=app_name,
+                            module=module,
+                            package=pkg,
+                            logFName=None,
+                        )
+#                         log = {'Path':_logs_path,
+#                                'Level':log_level,
+#                                'Mode':log_mode,
+#                                'Format':log_format,
+#                               }
+                        _ini_conf.add_section("LOGGER")
+                        _ini_conf.set("LOGGER","PATH", str(_logs_path))
+                        _ini_conf.set("LOGGER",'LEVEL',str(log_level))
+                        _ini_conf.set("LOGGER",'MODE',str(log_mode))
+                        _ini_conf.set("LOGGER",'FORMAT',str(log_format))
+
+                    ''' write ini data to file '''
                     if len(_pkg_list) > 0:
-                        _modules_list.append({pkg:_pkg_list})
+#                         _modules_list.append({pkg:_pkg_list})
                         _ini_conf.write(_ini_conf_file)
                         _ini_conf_file_list.append(str(ini_file_path))
                         _ini_conf_file.close()
 
-                _config_list.append({module:_modules_list})
+#                 _config_list.append({module:_modules_list})
 
         except Exception as e:
             print("Error set_conf_ini_conf {0} with error:\n{1}".format(__package__,e))
             print(traceback.format_exc())
 
-        return _config_list, [*set(_ini_conf_file_list)]
+        return [*set(_ini_conf_file_list)]
 
     ''' Function
             name: set_cfg_file_data

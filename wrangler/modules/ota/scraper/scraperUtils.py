@@ -115,17 +115,17 @@ class Utils():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def load_ota_list(self, file_path:str, **kwargs):
+    def load_ota_list(self, file_path:str, **kwargs) -> dict:
 
         import os         # apply directory read functions
         import csv        # to read the csv
         import json       # to read the json file
 
-        property_data = {}
-        
         _s_fn_id = "function <load_ota_list>"
         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
+        _ota_dict = {}
+        
         try:
 
             ''' Get the list of urls from the CSV file '''        
@@ -134,14 +134,14 @@ class Utils():
 
             ''' read the list of urls from the file '''
             with open(file_path, newline='') as f:
-                property_data = json.load(f)
+                _ota_dict = json.load(f)
 
         except Exception as err:
             logger.error("%s %s \n", _s_fn_id,err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
-        return property_data
+        return _ota_dict
 
     ''' Function
             name: get_scrape_input_params

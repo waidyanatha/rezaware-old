@@ -15,6 +15,7 @@ try:
     import sys
     import boto3
     import pandas as pd
+    import json
     import configparser    
     import logging
     import traceback
@@ -107,6 +108,18 @@ class FileWorkLoads():
 
         return None
 
+
+    ''' Function - @property mode and @mode.setter
+
+            parameters:
+                mode - local-fs sets to read and write on your local machine file system
+                       aws-s3-bucket sets to read and write with an AWS S3 bucket 
+            procedure: checks if it is a valid value and sets the mode
+            return (str) self._mode
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+            
+    '''
     @property
     def mode(self) -> str:
         
@@ -130,6 +143,17 @@ class FileWorkLoads():
         return self._mode
 
 
+    ''' Function - @property data_root and @data_root.setter
+
+            parameters:
+                data_root - local file system root directory or (e.g. wrangler/data/ota/scraper)
+                            S3 bucket name (e.g. rezaware-wrangler-source-code)
+            procedure: Check it the directory exists and then set the data_root property
+            return (str) self._data_root
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+            
+    '''
     @property
     def data_root(self) -> str:
         
@@ -146,9 +170,6 @@ class FileWorkLoads():
                 s3_resource = boto3.resource('s3')
                 s3_bucket = s3_resource.Bucket(name=data_root)
                 count = len([obj for obj in s3_bucket.objects.all()])
-#                 for obj in s3_bucket.objects.all():
-#                     print(f'-- {obj.key}')
-#                 if not _bucket in s3_resource.buckets.all():
                 if count <=0:
                     raise ValueError("Invalid S3 Bucket = %s.\nAccessible Buckets are %s"
                                      % (str(_bucket.name),
@@ -172,82 +193,109 @@ class FileWorkLoads():
         return self._data_root
 
 
-    ''' Function - extract data from aws s3 bucket into a dataframe
+    ''' Function - read content from a folder
 
-            name: s3bucket_to_sdf
             parameters:
-                    filesPath (str)
-                    @enrich (dict)
-            procedure: 
-            return DataFrame
+                key - key in the s3 bucket
+            procedure: Check if the key exists and then read the content
+            return (boto3.object.content) key_cont
 
             author: <nuwan.waidyanatha@rezgateway.com>
             
     '''
-    def s3bucket_to_sdf(self,
-                   s3_bucket_name,
-                   s3_obj_path,
-                   **kwargs):
-        pass
+    def read_from_awss3_key(self,key_name:str, file_name:str=None, file_types:list=[]):
 
+        _s_fn_id = "read_from_s3_obj"
+        try:
+            s3_resource = boto3.resource('s3')
+            s3_bucket = s3_resource.Bucket(name=self.data_root)
+            key_cont="read_from_awss3_obj"
 
-    ''' Function - 
-            name: pdf_to_csv
-            procedure: 
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
 
-            return DataFrame
+        return key_cont
 
-    '''
-    def extract_data(self,
-                     source_path,  # folder path to retriev files
-                     source_type,  # read data as CSV, XML, JSON, or SQL
-                     dest_path,    # folder path to store files
-                     dest_type,    # save data as CSV, XML, JSON, or SQL
-                     **kwargs,     # e.g. hold database connection information
-                    ):
-        pass
+    def read_from_local_folder(self,folder_path:str, file_name:str=None, file_types:list=[]):
 
-    ''' Function - 
-            name: pdf_to_csv
-            procedure: 
+        _s_fn_id = "read_from_local_folder"
 
-            return DataFrame
+        try:
+            folder_content="read_from_local_folder"
 
-    '''
-    def pdf_to_df(self,
-                  in_pdf_fname,
-                  **kwargs):
-        pass
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
 
-    ''' Function - 
-            name: xml_to_csv
-            procedure: 
+        return folder_content
+    
+    def read_files_into_sdf(self,folder_path:str, file_name:str=None, file_types:list=[]):
 
-            return DataFrame
+        _s_fn_id = "read_folder_into_sdf"
 
-    '''
-    def xml_to_csv(self,
-                   in_xml_fname,
-                   out_csv_fname,
-                   **kwargs):
-        pass
+        try:
+            if self.mode == "aws-s3-bucket":
+                ''' read content from s3 bucket '''
+                logger.debug("Reading files from %s",self.mode)
+                return self.read_from_awss3_key(folder_path, file_name, file_types)
+            elif self.mode == "local-fs":
+                ''' read content from local file system '''
+                logger.debug("Reading files from %s",self.mode)
+                return self.read_from_local_folder(folder_path, file_name, file_types)
+            else:
+                raise ValueError("Invalid data_mode. Set to one of the following %s"
+                                 % str(self._modes_list))
 
-    ''' Function
-            name: csv_to_sql
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+            return None
+
+    ''' Function - read_file_into_json
+
             parameters:
-                csv_df - dataframe containing the data to import into sql
-                sql_scritp - script to use with importing the data into the tables
-                kwargs - (i) database connection parameters
-                         (ii) force replace table rows
+                folder_path - madandatory to give the relative path w.r.t. data_root
+                file_name - is mandatory and must be a json
+            procedure: Check it the directory exists and then set the data_root property
+            return (str) self._data_root
 
-            return error_log, stats_dict (dict) - with the database data ingestion
-                            and error log with failed rows
-
-            author: nuwan.waidyanatha@rezgateway.com
+            author: <nuwan.waidyanatha@rezgateway.com>
+            
     '''
-    @staticmethod
-    def csv_to_sql(self,
-                     csv_df,   # dataframe with the data
-                     **kwargs,   # other parameters to consider
-                    ):
-        return None
+    def read_json_into_dict(self,folder_path:str, file_name:str, file_types:list=[]) -> dict:
+
+        _s_fn_id = "read_files_into_json"
+        json_content = {}
+
+        try:
+
+            if self.mode == "aws-s3-bucket":
+                ''' read content from s3 bucket '''
+                logger.debug("Reading files from %s",self.mode)
+                s3_resource = boto3.resource('s3')
+                s3_bucket = s3_resource.Bucket(name=self.data_root)
+                content_object = s3_resource.Object(
+                    self.data_root,   # bucket
+                    str(os.path.join(folder_path,file_name)))   # key
+                file_content = content_object.get()['Body'].read().decode('utf-8')
+                json_content = json.loads(file_content)
+#                 return self.read_from_awss3_key(folder_path,file_name, file_types)
+
+            elif self.mode == "local-fs":
+                ''' read content from local file system '''
+                logger.debug("Reading files from %s",self.mode)
+#                 return self.read_from_local_folder(folder_path, file_name, file_types)
+            else:
+                raise ValueError("Invalid data_mode. Set to one of the following %s"
+                                 % str(self._modes_list))
+
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+  
+        return json_content

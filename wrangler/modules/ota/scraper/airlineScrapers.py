@@ -677,7 +677,7 @@ class AirlineScraper():
                 raise ValueError("Invalid dataframe with % rows" % data_df.shape[0])
 
             ''' set the directory path to csv files with destination ids '''
-            _segments_dir = _segments_dir = os.path.join(self.dataDir, "segments/")
+            _segments_dir = os.path.join(self.dataDir, "segments/")
 #             if dest_dir_name:
 #                 _destins_dir = os.path.join(self.dataDir, dest_dir_name)
             ''' read all the destination files in dir '''   
