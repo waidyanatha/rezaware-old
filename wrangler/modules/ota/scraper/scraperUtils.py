@@ -57,22 +57,36 @@ class Utils():
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
-        self.cwd=os.path.dirname(__file__)
         global config
+        global logger
+        global dataio
+
+        self.cwd=os.path.dirname(__file__)
         config = configparser.ConfigParser()
         config.read(os.path.join(self.cwd,__conf_fname__))
 
         self.rezHome = config.get("CWDS","REZAWARE")
         sys.path.insert(1,self.rezHome)
         from rezaware import Logger as logs
-
+        
+        ''' import dataio utils to read and write data '''
+        from utils.modules.etl.load import filesRW as rw
+        clsRW = rw.FileWorkLoads(desc=self.__desc__)
+        clsRW.storeMode = config.get("DATASTORE","MODE")
+        clsRW.storeRoot = config.get("DATASTORE","ROOT")
+        self.storePath = os.path.join(
+            self.__app__,
+            "data/",
+            self.__module__,
+            self.__package__,
+        )
+        
         self.pckgDir = config.get("CWDS",self.__package__)
         self.appDir = config.get("CWDS",self.__app__)
-        ''' get the path to the input and output data '''
+        ''' DEPRECATED: get the path to the input and output data '''
         self.dataDir = config.get("CWDS","DATA")
 
         ''' innitialize the logger '''
-        global logger
         logger = logs.get_logger(
             cwd=self.rezHome,
             app=self.__app__, 
@@ -92,7 +106,8 @@ class Utils():
         self.tmpDIR = None
         if "WRITE_TO_FILE":
 #             self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
-            self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+#             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+            self.tmpDIR = os.path.join(self.storePath,"tmp/")
             if not os.path.exists(self.tmpDIR):
                 os.makedirs(self.tmpDIR)
 

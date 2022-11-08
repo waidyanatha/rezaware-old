@@ -68,6 +68,27 @@ class PropertyScraper():
 
         self.rezHome = config.get("CWDS","REZAWARE")
         sys.path.insert(1,self.rezHome)
+        
+        ''' import dataio utils to read and write data '''
+        from utils.modules.etl.load import filesRW as rw
+        clsRW = rw.FileWorkLoads(desc=self.__desc__)
+        clsRW.storeMode = config.get("DATASTORE","MODE")
+        clsRW.storeRoot = config.get("DATASTORE","ROOT")
+        self.storePath = os.path.join(
+            self.__app__,
+            "data/",
+            self.__module__,
+            self.__package__,
+        )
+                
+        ''' set package specific path to the input and output data '''
+#         self.dataDir = os.path.join(config.get("CWDS","DATA"),__bookings_data__)
+        self.dataDir = os.path.join(self.storePath,__bookings_data__)
+
+        ''' Set the wrangler root directory '''
+        self.pckgDir = config.get("CWDS",self.__package__)
+        self.appDir = config.get("CWDS",self.__app__)
+
         from rezaware import Logger as logs
         ''' innitialize the logger '''
         logger = logs.get_logger(
@@ -87,11 +108,6 @@ class PropertyScraper():
         clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
         clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
 
-        ''' Set the wrangler root directory '''
-        self.pckgDir = config.get("CWDS",self.__package__)
-        self.appDir = config.get("CWDS",self.__app__)
-        ''' get the path to the input and output data '''
-        self.dataDir = os.path.join(config.get("CWDS","DATA"),__bookings_data__)
 #         ''' innitialize the logger '''
 #         logger = logs.get_logger(
 #             cwd=self.rezHome,
@@ -135,9 +151,9 @@ class PropertyScraper():
                        self.__package__,
                        self.__name__,
                        self.__desc__))
-        print("Initialing %s class for %s with instance %s" 
-              % (self.__package__, self.__name__, self.__desc__))
-        print("Data path set to %s" % self.dataDir)
+#         print("Initialing %s class for %s with instance %s" 
+#               % (self.__package__, self.__name__, self.__desc__))
+# #         print("Data path set to %s" % self.dataDir)
         return None
 
 
@@ -176,8 +192,6 @@ class PropertyScraper():
             ''' see if the file exists '''
             if not destins_dir:
                 destins_dir = self.dataDir
-#             if inp_data_dir[-1] != "/":
-#                 inp_data_dir +="/"
             file_path = os.path.join(destins_dir,file_name)
             if not os.path.exists(file_path):
                 raise ValueError("File %s does not exisit in folder %s" %(file_name,destins_dir))
@@ -187,8 +201,6 @@ class PropertyScraper():
             if dest_df.shape[0] <=0:
                 raise ValueError("No destination data recovered from %s" %(file_path))
 
-#             if not col_name:
-#                 col_name = "destinationID"
             _l_dests = list(dest_df[col_name])
 
 
@@ -235,7 +247,6 @@ class PropertyScraper():
             if not file_name:
                 raise ValueError("Invalid file to fetch scraper property dictionary")
             if not inp_data_dir:
-#                 inp_data_dir = os.path.join(self.appDir,config.get('STORES','INPUTDATA'))
                 inp_data_dir = self.dataDir
             logger.debug("Directory path for loading input data %s" % inp_data_dir)
             
@@ -776,7 +787,6 @@ class PropertyScraper():
 #             if dest_dir_name:
 #                 _destins_dir = os.path.join(self.dataDir, dest_dir_name)
             ''' read all the destination files in dir '''   
-#             file_path = os.path.join(destins_dir,file_name)
             if not os.path.exists(_destins_dir):
                 raise ValueError("Folder %s does not exisit" %(_destins_dir))
 

@@ -7,9 +7,9 @@ The README file is intended for Rezgateway affiilates working on rezAWARE projec
 ## Introduction
 
 The rezAWARE tools and processes will support an organization to mature from descriptive to cognitive analytics. For such data being the key ingrediant, the rezAWARE core components offer:
+1. _Mining_ - Arificial Intelligence (AI) and Machine Learning (ML) analytical methods
 1. _Utils_ - set of common utility packages that can be used with any of the below apps
 1. _Wrangler_ - for processing data extract, transform, and load automated pipelines
-1. _Mining_ - Arificial Intelligence (AI) and Machine Learning (ML) analytical methods
 1. _Visuals_ - interactive dashboards with visual analytics for Business Intelligence (BI)
 
 ## Getting Started
