@@ -18,14 +18,6 @@ try:
     import pandas as pd
     from datetime import datetime, date, timedelta
 
-
-#     ''' Initialize with default environment variables '''
-#     __name__ = "otaUtils"
-#     __package__ = "Utils"
-#     __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler"
-#     __module_path__ = os.path.join(__root_dir__, 'modules/ota/')
-#     __config_path__ = os.path.join(__module_path__, 'app.cfg')
-
     print("All {0} in {1} software packages loaded successfully!"\
           .format(__package__,__module__))
 

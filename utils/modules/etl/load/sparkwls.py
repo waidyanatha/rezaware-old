@@ -182,7 +182,7 @@ class SparkWorkLoads():
             ''' set the database password '''
             if "dbPswd" in kwargs.keys():
                 self.db_pswd = kwargs['DBPSWD']
-            elif appConf.get('DATABASE','DBPORT'):
+            elif appConf.get('DATABASE','DBPSWD'):
                 self.db_pswd = appConf.get('DATABASE','DBPSWD')
             else:
                 raise ConnectionError("Undefined database password. Set the db_pswd in app.cfg")

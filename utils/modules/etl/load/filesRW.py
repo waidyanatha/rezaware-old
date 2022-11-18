@@ -23,7 +23,7 @@ try:
     import numpy as np
     import json
     import csv
-    import fsspec
+#     import fsspec
     import functools
 
     print("All %s-module %s-packages in function-%s imported successfully!"
@@ -91,10 +91,10 @@ class FileWorkLoads():
             'JSON',  # Javascript object notation
             'TXT',   # text file
         ]
-        self._actionList = [
-            'READ',   # read data from file
-            'WRITE',  # write data to file
-        ]
+#         self._actionList = [
+#             'READ',   # read data from file
+#             'WRITE',  # write data to file
+#         ]
         _s_fn_id = "__init__"
 
         ''' initiate to load app.cfg data '''
