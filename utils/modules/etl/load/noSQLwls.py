@@ -13,12 +13,12 @@ __conf_fname__ = "app.cfg"
 try:
     import os
     import sys
+    import functools
     import configparser    
     import logging
     import traceback
     from pymongo import MongoClient
     import pandas as pd
-    import functools
     from bson.objectid import ObjectId 
 
     print("All %s-module %s-packages in function-%s imported successfully!"
@@ -536,8 +536,6 @@ class NoSQLWorkLoads():
             
     '''
     def converter(func):
-
-#         from itertools import dropwhile
 
         @functools.wraps(func)
         def wrapper_converter(self,

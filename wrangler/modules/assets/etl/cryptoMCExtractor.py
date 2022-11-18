@@ -15,6 +15,7 @@ try:
     import sys
     import logging
     import traceback
+    import functools
     import configparser
     ''' function specific python packages '''
     import pandas as pd
@@ -56,6 +57,7 @@ class CryptoMarkets():
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
         
+        self._data = None
         self._connection = None
         self._prices = None
 
@@ -147,6 +149,36 @@ class CryptoMarkets():
 
 
     ''' Function
+            name: data @property and @setter functions
+            parameters:
+
+            procedure: 
+            return self._data
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self,data=None):
+
+        __s_fn_id__ = "function <@data.setter>"
+
+        try:
+            if data is None:
+                raise AttributeError("Invalid input parameter")
+            self._data = data
+
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return self._data
+
+    ''' Function
             name: update_crypto_metadata
             parameters:
 
@@ -205,87 +237,141 @@ class CryptoMarkets():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def get_daily_mc_data(self,data_owner:str=''):
+    def mcextract(func):
+
+        @functools.wraps(func)
+        def marketcap_extractor(self,data_owner:str):
+
+            __s_fn_id__ = "function wrapper <marketcap_extractor>"
+
+            __mc_destin_db_name__ = "tip-marketcap"
+            __mc_destin_db_coll__ = ''
+            __uids__ = ['extract.source.name', # coingeko or coinmarketcap
+                        'extract.source.id',   # source provided identifier
+                        'asset.symbol',   # crypto symbol
+                        'asset.name']     # crypto name
+
+            try:
+                logger.info("Begin processing %s data for writing to %s",
+                            data_owner,__mc_destin_db_name__)
+                _results = func(self,data_owner)
+
+                _mc_dict_list = []
+                _mc_coll_name = '.'.join([data_owner,str(date.today())])
+
+                if data_owner == 'coinmarketcap':
+                    _extract_dt = _results['status']['timestamp']
+                    for _data in _results['data']:
+                        _mc_dict_list.append(
+                            {
+                                "extract.source.id":_data['id'],
+                                "extract.source.name":data_owner,
+                                "extract.datetime":_extract_dt,
+                                "asset.name":_data['name'],
+                                "asset.symbol":_data['symbol'],
+                                "asset.supply":int(_data['circulating_supply']),
+                                "asset.price":float(_data['quote']['USD']['price']),
+                                "marketcap.value":float(_data['quote']['USD']['market_cap']),
+                                "marketcap.rank":int(_data['cmc_rank']),
+                                "marketcap.updated":_data['quote']['USD']['last_updated'],
+                            }
+                        )
+                elif data_owner == 'coingeko':
+                    for _data in _results:
+                        _mc_dict_list.append(
+                            {
+                                "extract.source.id":_data['id'],
+                                "extract.source.name":data_owner,
+                                "extract.datetime":_data['last_updated'],
+                                "asset.name":_data['name'],
+                                "asset.symbol":_data['symbol'],
+                                "asset.supply":int(_data['circulating_supply']),
+                                "asset.price":float(_data['current_price']),
+                                "marketcap.value":float(_data['market_cap']),
+                                "marketcap.rank":int(_data['market_cap_rank']),
+                                "marketcap.updated":_data['last_updated'],
+                            }
+                        )
+                else:
+                    raise AttributeError("Unrecognized data owner %s" % data_owner)
+
+                logger.info("Appended %d market-cap dicts",len(_mc_dict_list))
+                logger.info("Ready to write %d documents to %s",
+                            len(_mc_dict_list),__mc_destin_db_name__)
+                clsNoSQL.connect={'DBAUTHSOURCE':__mc_destin_db_name__}
+
+                if not __mc_destin_db_name__ in clsNoSQL.connect.list_database_names():
+                    raise RuntimeError("%s does not exist",_mc_destin_db_name)
+
+                self._data = clsNoSQL.write_documents(
+                    db_name=__mc_destin_db_name__,
+                    db_coll=_mc_coll_name,
+                    data=_mc_dict_list,
+                    uuid_list=__uids__)
+
+                logger.info("Finished writing %s market-cap documents to %s",
+                            data_owner,clsNoSQL.dbType)
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                print("[Error]"+__s_fn_id__, err)
+                print(traceback.format_exc())
+
+            return self._data
+
+        return marketcap_extractor
+
+    @mcextract
+    def get_daily_mc_data(self,data_owner:str):
         
+        print(data_owner)
         __s_fn_id__ = "function <get_daily_mc_data>"
         __as_type__ = "list"
-        __price_source_db_name__ = "tip"
-        __price_source_db_coll__ = 'datasource.catalog'
+        __asset_meta_db_name__ = "tip"
         __asset_meta_db_coll__ = 'datasource.catalog'
-        __price_destin_db_name__ = "tip-marketcap"
-        __price_destin_db_coll__ = ''
-        __price_coll_prefix__ = ''
-        __uids__ = ['id','symbol','name']
         _data_source_list = []
         _collection = None
 
         try:
-            clsNoSQL.connect={'DBAUTHSOURCE':'tip-marketcap'}
-#             clsNoSQL.dbName = __price_destin_db_name__
-            if not __price_destin_db_name__ in clsNoSQL.connect.list_database_names():
-                print("%s does not exist" % __price_destin_db_name__)
-
+            logger.info("Preparing to retrieve %s source metadata from %s database %s collection",
+                       data_owner,__asset_meta_db_name__,__asset_meta_db_coll__)
             clsNoSQL.connect={'DBAUTHSOURCE':'tip'}
-            if data_owner is None or data_owner=='':
-                ''' get marketcap from all sources '''
-                _find = {'category':{"$regex":'marketcap'}}
-            else:
-                _find = {'category':{"$regex":'marketcap'},'owner':{"$regex" : data_owner}}
-
+            _find = {'category':{"$regex":'marketcap'},'owner':{"$regex" : data_owner}}
             _data_source_list = clsNoSQL.read_documents(
                 as_type = __as_type__,
-                db_name = __price_source_db_name__,
+                db_name = __asset_meta_db_name__,
                 db_coll = __asset_meta_db_coll__, 
                 doc_find = _find
             )
+            logger.debug("Received %d %s metadata",
+                       len(_data_source_list),__asset_meta_db_coll__)
+
             for _source in _data_source_list:
-                _price_coll = '.'.join([_source['owner'],str(date.today())])
                 _s_api = _source['api']['url']
-                print(_price_coll, _s_api)
-                _data = []
-#                 headers=_source['api']['headers']
                 headers = {k: v for k, v in _source['api']['headers'].items() if v}
                 session = Session()
                 session.headers.update(headers)
-#                 parameters = {
-#                     'localization':'false',
-#                 }
                 parameters = {k: v for k, v in _source['api']['parameters'].items() if v}
-#                 response = session.get(_s_api, params=parameters)
                 
-                try:
-                    response = session.get(_s_api, params=parameters)
-#                     print(response.status_code)
-                    if response.status_code != 200:
-                        raise RuntimeError("Exit with %s" % (response.text))
+#                 try:
+                response = session.get(_s_api, params=parameters)
+                if response.status_code != 200:
+                    raise RuntimeError("Exit with %s" % (response.text))
 
-                    ''' data found, write to collection '''
-                    _data = json.loads(response.text)
-                    json_object = json.dumps(_data, indent=4)
-                    with open('test.json','w') as f:
-                        f.write(json_object)
-#                     break
-#                     clsNoSQL.connect={'DBAUTHSOURCE':__price_destin_db_name__}
-#                     _collection = clsNoSQL.write_documents(
-#                         db_name=__price_destin_db_name__,
-#                         db_coll=_price_coll,
-#                         data=_data,
-#                         uuid_list=__uids__)
+                ''' data found, write to collection '''
+                self._data = json.loads(response.text)
+                logger.info("Retrieved %d market-cap data with api:%s",
+                           len(self._data),_s_api)
 
-                except Exception as err:
-#                     print("No data for %s and date: " % (coin_id, str(date)))
-                    print("[Error] ", err)
-                    print(traceback.format_exc())
-                    pass
-
-
+#                 except Exception as err:
+# #                     print("[Error] ",__s_fn_id__,err)
+#                     logger.error("%s %s",__s_fn_id__,err)
+#                     print(traceback.format_exc())
+#                     pass
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
-        return _collection
-
-      
-    
+        return self._data
