@@ -38,7 +38,6 @@ from wrangler.modules.assets.etl import cryptoMCExtractor as crypto
 from utils.modules.etl.load import noSQLwls as nosql
 clsMC = crypto.CryptoMarkets(
     desc='get crypto macket capitalization data', **prop_kwargs)
-# clsNoSQL = nosql.NoSQLWorkLoads(desc="get crypto macket capitalization data")
 
 __data_source__ = 'coinmarketcap'
 
@@ -93,20 +92,45 @@ with DAG(
     dag.doc_md = __doc__
 
     ''' Function
-            name: parameterize_urls
+            name: extract
             parameters:
                 kwargs - to use with passing values between tasks
-            procedure: sets the start & end date and scrape criteria paramenters
-                        to execute the function for generating the list of URLs
-            xcom: url_list_file (string) with tmp storage of list of URLs
+            procedure: requests market cap data and stores in mongodb collection
+            xcom: collection name (str) pushed
 
             author(s): <nuwan.waidyanatha@rezgateway.com>
     '''
     def extract(**kwargs):
 
 #         _source = __data_source__
-        _data = clsMC.get_daily_mc_data(data_owner=__data_source__)
+        _data, _coll_name = clsMC.get_daily_mc_data(data_owner=__data_source__)
+        ti = kwargs['ti']
+        ti.xcom_push(key='collection', value=_coll_name)
         logging.info("[function extract] read and write % data to MongoDB", __data_source__)
+
+    ''' Function
+            name: store
+            parameters:
+                kwargs - to use with passing values between tasks
+            procedure: read marketcap data from DB collection and 
+                        archive in google cloud store
+            xcom: collection name (str) pulled
+
+            author(s): <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def store(**kwargs):
+
+        _db_name = "tip-marketcap"
+        ti = kwargs['ti']
+        _coll_name=ti.xcom_pull(key='collection')
+        _fname = str(date.today())+".json"
+
+        archived_data = clsMC.cold_store_daily_mc(
+            from_db_name=_db_name,
+            from_db_coll=_coll_name,
+            to_file_name=_fname,
+            to_folder_path=__data_source__,
+        )
 
     ''' task to execute the parameterize_urls function '''
     read_n_write_task = PythonOperator(
@@ -121,6 +145,19 @@ with DAG(
     """
     )
 
+    ''' task to execute the parameterize_urls function '''
+    cloud_store_task = PythonOperator(
+        task_id='cold_store_'+__data_source__+'_data',
+        python_callable=store,
+    )
+    cloud_store_task.doc_md = dedent(
+        """\
+    #### Cold store marketcap data
+    
+    Archive the extracted market-cap data in MongoDB in Google Cloud Storage. 
+    """
+    )
+
 
     ''' get url and storage location to pass as inputs to the ETL '''
-    read_n_write_task
+    read_n_write_task >> cloud_store_task

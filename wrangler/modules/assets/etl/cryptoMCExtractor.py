@@ -317,14 +317,13 @@ class CryptoMarkets():
                 print("[Error]"+__s_fn_id__, err)
                 print(traceback.format_exc())
 
-            return self._data
+            return self._data, _mc_coll_name
 
         return marketcap_extractor
 
     @mcextract
     def get_daily_mc_data(self,data_owner:str):
         
-        print(data_owner)
         __s_fn_id__ = "function <get_daily_mc_data>"
         __as_type__ = "list"
         __asset_meta_db_name__ = "tip"
@@ -375,3 +374,59 @@ class CryptoMarkets():
             print(traceback.format_exc())
 
         return self._data
+
+    ''' Function
+            name: update_crypto_metadata
+            parameters:
+
+            procedure: Initialize the class
+            return None
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def cold_store_daily_mc(
+        self,
+        from_db_name:str,
+        from_db_coll:str,
+        to_file_name:str,
+        to_folder_path:str,
+        **kwargs,   #
+    ):
+
+        import json
+        from bson.json_util import dumps
+
+        __s_fn_id__ = 'Function <save_data_file>'
+
+        __as_type__ = "list"
+        _data_source_list = []
+        _collection = None
+
+        try:
+
+            clsRW.storeMode = "google-storage"
+            if "STOREMODE" in kwargs.keys():
+                clsRW.storeMode = kwargs["STOREMODE"]
+
+            clsRW.storeRoot = "tip-daily-marketcap"   #"rezaware-wrangler-source-code"
+            if "STOREROOT" in kwargs.keys():
+                clsRW.storeRoot= kwargs["STOREROOT"]
+
+            clsNoSQL.connect = {'DBAUTHSOURCE':from_db_name}
+            _data = clsNoSQL.read_documents(
+                as_type='DICT',
+                db_name = from_db_name,
+                db_coll=from_db_coll,
+                doc_find={}
+            )
+            _json_data = json.loads(dumps(_data))
+
+            write_data=clsRW.export_data(to_file_name,to_folder_path,_json_data)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return write_data
+

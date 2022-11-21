@@ -16,15 +16,16 @@ try:
     import configparser    
     import logging
     import traceback
+    import functools
 #     import s3fs
-    import boto3
+    import boto3   # handling AWS S3 
     from botocore.errorfactory import ClientError   # required to check if key exists
+    from google.cloud import storage   # handles GCS reads and writes
     import pandas as pd
     import numpy as np
     import json
     import csv
 #     import fsspec
-    import functools
 
     print("All %s-module %s-packages in function-%s imported successfully!"
           % (__module__,__package__,__name__))
@@ -71,7 +72,8 @@ class FileWorkLoads():
         self._storeMode = None
         self._storeModeList = [
             'local-fs',     # local hard drive on personal computer
-            'aws-s3-bucket' # cloud amazon AWS S3 Bucket storage
+            'aws-s3-bucket', # cloud amazon AWS S3 Bucket storage
+            'google-storage',   # google cloud storage buckets
         ]
         self._storeRoot = None   # holds the data root path or bucket name
         self._contObj = None
@@ -153,12 +155,13 @@ class FileWorkLoads():
     @property
     def storeMode(self) -> str:
 
+        __s_fn_id__= "function <@property.storeMode>"
         try:
             if not self._storeMode.lower() in self._storeModeList:
                 raise ValueError("Parameter storeMode is not and must be set")
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
@@ -171,6 +174,10 @@ class FileWorkLoads():
         try:
             if not store_mode.lower() in self._storeModeList:
                 raise ValueError("Invalid mode = %s. Must be in %s" % (store_mode,self._storeModeList))
+
+            if store_mode == 'google-storage':
+                os.environ["GCLOUD_PROJECT"] = appConf.get("GOOGLE","PROJECTID")
+
 
             self._storeMode = store_mode.lower()
 
@@ -210,6 +217,8 @@ class FileWorkLoads():
                 s3_resource = boto3.resource('s3')
                 s3_bucket = s3_resource.Bucket(name=store_root)
                 count = len([obj for obj in s3_bucket.objects.all()])
+                logger.debug("%s bucket with %d objects exists",
+                             self.storeMode,count)
                 if count <=0:
                     raise ValueError("Invalid S3 Bucket = %s.\nAccessible Buckets are %s"
                                      % (str(_bucket.name),
@@ -217,8 +226,18 @@ class FileWorkLoads():
 
             elif self.storeMode == "local-fs":
                 ''' check if folder path exists '''
+                logger.debug("%s %s",_s_fn_id,self.storeMode)
                 if not os.path.exists(store_root):
                     raise ValueError("Invalid local folder path = %s does not exists." % (store_root))
+
+            elif self.storeMode == "google-storage":
+                ''' check if bucket exists '''
+                logger.debug("%s %s",_s_fn_id,self.storeMode)
+#                 client = storage.Client(project= 'glass-watch-369111')
+                client = storage.Client()
+                if not client.bucket(store_root).exists():
+                    raise ValueError("Invalid GCS bucket %s, does not exist." % (store_root))
+
             else:
                 raise ValueError("Invalid mode = %s. First set mode to one of the %s values" 
                                  % (self.storeMode, str(self._storeModeList)))
@@ -260,9 +279,7 @@ class FileWorkLoads():
         _fType = None   # or - file type from store dict
 
         try:
-#             if not ("action" in storeMeta.keys()) \
-#                 or (storeMeta['action'].upper() not in self._actionList):
-#                 raise ValueError("Missing action. Specify %s" % str(self._actionList))
+
             if not "filePath" in storeMeta.keys():
                 raise ValueError("Missing filePath to folder. Specify relative path")
             _fPath = storeMeta['filePath']
@@ -453,6 +470,20 @@ class FileWorkLoads():
                 else:
                     raise ValueError("something was wrong")
 
+            elif self.storeMode == 'google-storage':
+                ''' read content from google cloud storage '''
+                if file_name:
+                    file_path = str(os.path.join(folder_path,file_name))
+                    print(file_path)
+                    client = storage.Client()
+                    bucket = client.bucket(self.storeRoot)
+                    blob = bucket.blob(file_path)
+#                     blob.upload_from_filename(_tmp_file_path)
+                    with blob.open("r") as f:
+                        file_content = f.read()
+                elif file_type:
+                    ''' multiple files of same file type '''
+                    file_path = str(os.path.join(folder_path))
             else:
                 raise typeError("Invalid storage mode %s" % self.storeMode)
 
@@ -534,7 +565,10 @@ class FileWorkLoads():
             elif isinstance(self.storeData,list):
                 ''' List to txt, csv, json files '''
                 if _file_type == 'txt':
-                    print(_file_type)
+                    print("TBD",_file_type)
+                elif _file_type == 'json':
+                    with open(_tmp_file_path, "w") as f:
+                        json.dump(self.storeData, f)
                 elif _file_type == 'csv':
                     print(_file_type)
                 else:
@@ -552,7 +586,7 @@ class FileWorkLoads():
             elif isinstance(self.storeData,pd.DataFrame):
                 ''' Pandas DataFrame to txt, csv, json files '''
                 if file_name.rsplit('.',1)[1] == "csv":
-                    self.storeData.to_csv(_tmp_file_path)
+                    self.storeData.to_csv(_tmp_file_path,index=False)
                 elif file_name.rsplit('.',1)[1] == "json":
                     self.storeData.to_json(_tmp_file_path)
                 else:
@@ -569,16 +603,28 @@ class FileWorkLoads():
             ''' transfer the tmp file to storage '''
             with open(_tmp_file_path,'r') as outfile:
                 object_data = outfile.read()
+
                 if self.storeMode == 'aws-s3-bucket':
                     ''' write file to AWS S3 Bucket '''
                     s3 = boto3.client('s3')
                     s3.put_object(Body=object_data, 
                                   Bucket=self.storeRoot,
                                   Key=_file_path)
+
                 elif self.storeMode == 'local-fs':
                     ''' write file to Local File System '''
                     with open(_file_path,'w') as savefile:
                         savefile.write(object_data)
+
+                elif self.storeMode == 'google-storage':
+                    ''' write file to google-cloud-storage '''
+                    client = storage.Client()
+                    bucket = client.bucket(self.storeRoot)
+                    blob = bucket.blob(_file_path)
+#                     blob.upload_from_filename(_tmp_file_path)
+                    with blob.open("w") as f:
+                        f.write(object_data)
+
                 else:
                     raise RuntimeError("Something went wrong writing %s file to %s"
                                        % (_tmp_file_path,self.storeMode))
@@ -607,25 +653,6 @@ class FileWorkLoads():
 
         try:
             logger.debug("Writing file to %s",self.storeMode)
-            
-#             _file_type = file_name.rsplit('.',1)[1]
-            
-#             if isinstance(self.storeData,str):
-#                 _data_type = "STR"
-#             elif isinstance(self.storeData,dict):
-#                 _data_type = "DICT"
-#             elif isinstance(self.storeData,list):
-#                 _data_type = "LIST"
-#             elif isinstance(self.storeData,np.ndarray):
-#                 _data_type = "ARRAY"
-#             elif isinstance(self.storeData,pd.DataFrame):
-#                 _data_type = "PANDAS"
-#             elif isinstance(self.storeData,spark.DataFrame):
-#                 _data_type = "ARRAY"
-#             else:
-#                 raise TypeError("Unrecognized data type %s must be either of\n%s"
-#                                 % (type(self.storeData),str(self._asTypeList)))
-#             _data_type = type(self.storeData)
 
             if self.storeMode == 'aws-s3-bucket':
                 ''' check if s3 bucket key not exists, then create '''
@@ -662,6 +689,10 @@ class FileWorkLoads():
                                      folder_path,self.storeRoot)
                 ''' give absolute path to write '''
                 _file_path = str(os.path.join(self.storeRoot,folder_path,file_name))
+
+            elif self.storeMode == 'google-storage':
+                ''' check if google bucket key not exists, then create '''
+                _file_path = str(os.path.join(folder_path,file_name))
 
             else:
                 raise typeError("Invalid storage mode %s" % self.storeMode)

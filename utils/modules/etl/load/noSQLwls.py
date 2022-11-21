@@ -560,7 +560,8 @@ class NoSQLWorkLoads():
 
             return self._documents
 
-        return wrapper_converter    
+        return wrapper_converter
+
     @converter
     def read_documents(self, as_type, db_name, db_coll, doc_find):
 
