@@ -1,0 +1,68 @@
+## MongoDB shell scripts for creating databases, users, and collections ###
+##
+## ----- OTA -----
+## Online Travel Agencies
+##
+## 1) CREATE DATABASE
+##
+use admin;
+use ota-scraper;
+##
+## 2) CREATE USER AND ROLES
+##
+db.createUser(
+  {
+    user: "rezaware",
+    pwd: "rezaware",
+    roles: [ { role: "readWrite", db: "ota-scraper" } ]
+  }
+)
+
+## check user was created
+db.getUsers()
+
+## 3) CREATE COLLECTION 
+
+db["property.api"].insertOne(
+    {
+        "data.source" : "booking.com",
+        "api.url" : "https://www.booking.com/searchresults.en-gb.html?ss=Las+Vegas&label=gen173nr-1DCAEoggI46AdIM1gEaIUBiAEBmAEJuAEXyAEM2AED6AEBiAIBqAIDuAK_g7aYBsACAdICJDFiNWFiNzM3LTQ0YmItNDIzOC04NDM0LWRjMDFlNmZhYTUwM9gCBOACAQ&sid=36e124997ccdbec4823b6c98d5931c2e&aid=304142&lang=en-gb&sb=1&src_elem=sb&src=searchresults&dest_id={destinID}&dest_type=city&checkin={checkIn}&checkout={checkOut}&group_adults=1&no_rooms=1&group_children=0&selected_currency=USD&offset={page}",
+        "api.parameter.inputs" : ["page","checkIn","checkOut","destinID"],
+        "api.parameter.locations" : "cityCodesBookingCom.csv",
+        "response.content_block.tag" : "div", 
+        "response.content_block.code" : ".d20f4628d0",
+        "response.property_name.tag" : "span",
+        "response.property_name.code" : "fcab3ed991 a23c043802",
+        "response.room_type.tag" : "span",
+        "response.room_type.code" : "df597226dd",
+        "response.room_rate.tag" : "div",
+        "response.room_rate.code" : "fcab3ed991 bd73d13072",
+        "response.review_score.tag" : "div",
+        "response.review_score.code" : "b5cd09854e d10a6220b4",
+        "response.location.tag" : "div",
+        "response.location.code" : "a1fbd102d9",
+        "response.Other.tag" : "div",
+        "response.Other.code" : "d22a7c133b"    
+    }
+)
+
+## 4) CREATE CITY CODES
+
+db["cityCodes.BookingCom"].insertMany(
+    [
+        {destinID : "20079110",city : "Las Vegas",state : "Nevada"},
+        {destinID : "20088325",city : "New York City",state : "New York"},
+        {destinID : "20061717",city : "Massachusetts",state : "Boston"},
+        {destinID : "20023488",city : "Orlando",state : "Florida"},
+        {destinID : "20021296",city : "Washington",state : "DC"},
+        {destinID : "20030916",city : "Honolulu",state : "Hawaii"},
+        {destinID : "20050264",city : "New Orleans",state : "Louisiana"},
+        {destinID : "20033173",city : "Chicago",state : "Illinois"},
+        {destinID : "20135442",city : "Alexandria",state : "Virginia"},
+        {destinID : "20131185",city : "San Antonio",state : "Texas"},
+        {destinID : "20090971",city : "Asheville",state : "North Carolina"},
+        {destinID : "20023181",city : "Miami",state : "Florida",},
+        {destinID : "20014181",city : "Los Angeles",state : "California"},
+        {destinID : "20015732",city : "San Francisco",state : "California"}
+    ]
+)

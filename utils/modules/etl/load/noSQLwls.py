@@ -380,6 +380,11 @@ class NoSQLWorkLoads():
     @connect.setter
     def connect(self,connect_properties:dict={}):
 
+        _db_host_ip=None
+        _db_user=None
+        _db_pswd=None
+        _db_auth=None
+        _db_mech=None
         _s_fn_id = "function @connect.setter"
 
         try:
@@ -389,9 +394,9 @@ class NoSQLWorkLoads():
                                 % (_s_fn_id,self.__conf_fname__))
             ''' check and set DBHOSTIP from args or app config '''
             if "DBHOSTIP" in connect_properties.keys():
-                    __db_host_ip__ = connect_properties['DBHOSTIP']
+                    _db_host_ip = connect_properties['DBHOSTIP']
             elif appConf.get('NOSQLDB','DBHOSTIP'):
-                    __db_host_ip__ = appConf.get('NOSQLDB','DBHOSTIP')
+                    _db_host_ip = appConf.get('NOSQLDB','DBHOSTIP')
             else:
                 raise ValueError("Undefined DBHOSTIP in function args and app config file. aborting")
 
@@ -405,44 +410,44 @@ class NoSQLWorkLoads():
 
             ''' check and set DBUSER from args or app config '''
             if "DBUSER" in connect_properties.keys():
-                    __db_user__ = connect_properties['DBUSER']
+                    _db_user = connect_properties['DBUSER']
             elif appConf.get('NOSQLDB','DBUSER'):
-                    __db_user__ = appConf.get('NOSQLDB','DBUSER')
+                    _db_user = appConf.get('NOSQLDB','DBUSER')
             else:
                 raise ValueError("Undefined DBUSER in function args and app config file. aborting")
 
             ''' check and set DBPSWD from args or app config '''
             if "DBPSWD" in connect_properties.keys():
-                    __db_pswd__ = connect_properties['DBPSWD']
+                    _db_pswd = connect_properties['DBPSWD']
             elif appConf.get('NOSQLDB','DBPSWD'):
-                    __db_pswd__ = appConf.get('NOSQLDB','DBPSWD')
+                    _db_pswd = appConf.get('NOSQLDB','DBPSWD')
             else:
                 raise ValueError("Undefined DBPSWD in function args and app config file. aborting")
 
             ''' check and set DBAUTHSOURCE from args or app config '''
             if "DBAUTHSOURCE" in connect_properties.keys():
-                    __db_auth__ = connect_properties['DBAUTHSOURCE']
+                    _db_auth = connect_properties['DBAUTHSOURCE']
             elif appConf.get('NOSQLDB','DBAUTHSOURCE'):
-                    __db_auth__ = appConf.get('NOSQLDB','DBAUTHSOURCE')
+                    _db_auth = appConf.get('NOSQLDB','DBAUTHSOURCE')
             else:
                 raise ValueError("Undefined DBAUTHSOURCE in function args and app config file. aborting")
 
             ''' check and set DBAUTHMECHANISM from args or app config '''
             if "DBAUTHMECHANISM" in connect_properties.keys():
-                    __db_mech__ = connect_properties['DBAUTHMECHANISM']
+                    _db_mech = connect_properties['DBAUTHMECHANISM']
             elif appConf.get('NOSQLDB','DBAUTHMECHANISM'):
-                    __db_mech__ = appConf.get('NOSQLDB','DBAUTHMECHANISM')
+                    _db_mech = appConf.get('NOSQLDB','DBAUTHMECHANISM')
             else:
                 raise ValueError("Undefined DBAUTHMECHANISM in function args and app config file. aborting")
 
             ''' initialize noSQLdbconnect '''
             if self.dbType.lower() == 'mongodb':
                 self._connect = MongoClient(
-                    __db_host_ip__,
-                    username=__db_user__,
-                    password=__db_pswd__,
-                    authSource=__db_auth__,
-                    authMechanism=__db_mech__
+                    _db_host_ip,
+                    username=_db_user,
+                    password=_db_pswd,
+                    authSource=_db_auth,
+                    authMechanism=_db_mech
                 )
                 logger.debug(self._connect)
             elif self.dbType.lower() == 'firebase':

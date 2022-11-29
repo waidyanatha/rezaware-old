@@ -1,0 +1,37 @@
+## MongoDB shell scripts for creating databases, users, and collections ##
+##
+## ----- ASSETS -----
+##
+## 1) create database
+##
+
+use admin;
+use tip-data-sources;
+
+##
+## 2) create a user and grant read/write roles
+##
+
+db.createUser(
+  {
+    user: "farmraider",
+    pwd: "spirittribe",
+    roles: [ { role: "readWrite", db: "tip-data-sources" } ]
+  }
+)
+##
+use admin;
+use tip-marketcap;
+
+##
+## 2) create a user and grant read/write roles
+##
+
+db.createUser(
+  {
+    user: "farmraider",
+    pwd: "spirittribe",
+    roles: [ { role: "readWrite", db: "tip-marketcap" } ]
+  }
+)
+##

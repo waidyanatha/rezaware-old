@@ -129,11 +129,9 @@ class CryptoMarkets():
             '''
             self.tmpDIR = None
             if "WRITE_TO_FILE":
-    #             self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
-    #             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
                 self.tmpDIR = os.path.join(self.storePath,"tmp/")
-                if not os.path.exists(self.tmpDIR):
-                    os.makedirs(self.tmpDIR)
+#                 if not os.path.exists(self.tmpDIR):
+#                     os.makedirs(self.tmpDIR)
 
             self.scrape_start_date = date.today()
             self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
@@ -186,13 +184,16 @@ class CryptoMarkets():
             return None
 
             author: <nuwan.waidyanatha@rezgateway.com>
+            
+            TBD - no real need yet
     '''
 
     def update_crypto_metadata(self,url:str=None):
         
-        _s_fn_id = "function <import_asset_metadata>"
-        __db_name__ = "tip"
-        __db_coll_name__ = "crypto.metadata"
+        _s_fn_id = "function <update_crypto_metadata>"
+        __as_type__ = "list"
+        __asset_meta_db_name__ = "tip-data-sources"
+        __asset_meta_db_coll__ = 'crypto.marketcap'
         __uids__ = ['symbol','name']
         _collection = None
 
@@ -322,12 +323,14 @@ class CryptoMarkets():
         return marketcap_extractor
 
     @mcextract
-    def get_daily_mc_data(self,data_owner:str):
+    def get_daily_mc_data(self,data_owner:str, **kwargs):
         
+        ''' TODO : use **kwargs to get DB connection parameters '''
+
         __s_fn_id__ = "function <get_daily_mc_data>"
         __as_type__ = "list"
-        __asset_meta_db_name__ = "tip"
-        __asset_meta_db_coll__ = 'datasource.catalog'
+        __asset_meta_db_name__ = "tip-data-sources"
+        __asset_meta_db_coll__ = 'crypto.marketcap'
         _data_source_list = []
         _collection = None
 
@@ -352,7 +355,6 @@ class CryptoMarkets():
                 session.headers.update(headers)
                 parameters = {k: v for k, v in _source['api']['parameters'].items() if v}
                 
-#                 try:
                 response = session.get(_s_api, params=parameters)
                 if response.status_code != 200:
                     raise RuntimeError("Exit with %s" % (response.text))
@@ -362,11 +364,6 @@ class CryptoMarkets():
                 logger.info("Retrieved %d market-cap data with api:%s",
                            len(self._data),_s_api)
 
-#                 except Exception as err:
-# #                     print("[Error] ",__s_fn_id__,err)
-#                     logger.error("%s %s",__s_fn_id__,err)
-#                     print(traceback.format_exc())
-#                     pass
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -396,7 +393,7 @@ class CryptoMarkets():
         import json
         from bson.json_util import dumps
 
-        __s_fn_id__ = 'Function <save_data_file>'
+        __s_fn_id__ = 'Function <cold_store_daily_mc>'
 
         __as_type__ = "list"
         _data_source_list = []
