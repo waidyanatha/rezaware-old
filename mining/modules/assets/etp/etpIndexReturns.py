@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 ''' Initialize with default environment variables '''
-__name__ = "CryptoMarket"
-__package__ = "etl"
+__name__ = "RatioOfReturns"
+__package__ = "etp"
 __module__ = "assets"
-__app__ = "wrangler"
+__app__ = "mining"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -32,7 +32,7 @@ except Exception as e:
     CLASS spefic to providing reusable functions for scraping ota data
 '''
 
-class CryptoMarkets():
+class RatioOfReturns():
 
     ''' Function
             name: __init__

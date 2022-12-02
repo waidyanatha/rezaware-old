@@ -588,6 +588,7 @@ class NoSQLWorkLoads():
                     doc_dict = db[db_coll].find(doc_find)
                 else:
                     doc_dict = db[db_coll].find({})
+                    print(doc_dict)
 #                 for doc in doc_dict:
 #                     print(doc)
                     

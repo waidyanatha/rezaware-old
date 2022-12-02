@@ -1,6 +1,6 @@
 ## MongoDB shell scripts for creating databases, users, and collections ##
 ##
-## ----- ASSETS -----
+## ----- ASSET API CATALOG -----
 ##
 ## 1) create database
 ##
@@ -18,8 +18,41 @@ db.createUser(
     pwd: "spirittribe",
     roles: [ { role: "readWrite", db: "tip-data-sources" } ]
   }
-)
+);
+
+# 3) create about db collection
+db.about.insertOne({"name":"tip-data-sources","desc":"stores source-wise api url, header, and parameters"})
+
+## ----- ASSET METADATA -----
 ##
+##
+## 1) create database
+##
+
+use admin;
+use tip-asset-metadata;
+
+##
+## 2) create a user and grant read/write roles
+##
+
+db.createUser(
+  {
+    user: "farmraider",
+    pwd: "spirittribe",
+    roles: [ { role: "readWrite", db: "tip-asset-metadata" } ]
+  }
+);
+
+# 3) create about db collection
+db.about.insertOne({"name":"tip-asset-metadata","desc":"stores source-wise retrieved coin metadata"})
+
+## ----- ASSET LATEST MARKETCAP -----
+##
+##
+## 1) create database
+##
+
 use admin;
 use tip-marketcap;
 
@@ -33,5 +66,32 @@ db.createUser(
     pwd: "spirittribe",
     roles: [ { role: "readWrite", db: "tip-marketcap" } ]
   }
-)
+);
+
+# 3) create about db collection
+db.about.db.insertOne({"name":"marketcap","desc":"marketcap"})
+
+## ----- ASSET HISTORIC MARKETCAP -----
 ##
+##
+##
+## 1) create database
+##
+
+use admin;
+use tip-historic-marketcap;
+
+##
+## 2) create a user and grant read/write roles
+##
+
+db.createUser(
+  {
+    user: "farmraider",
+    pwd: "spirittribe",
+    roles: [ { role: "readWrite", db: "tip-historic-marketcap" } ]
+  }
+);
+
+# 3) create about db collection
+db.about.insertOne({"name":"tip-historic-marketcap","desc":"stores source-wise historic marketcap data"})
