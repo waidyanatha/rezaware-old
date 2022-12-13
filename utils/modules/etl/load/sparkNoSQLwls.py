@@ -77,6 +77,7 @@ class NoSQLWorkLoads():
         self._dbType = None
         self._dbTypesList = ['mongodb','firebase']
         self._dbName = None
+        self._collections = None
         self._connect = None
         self._documents = None
 
@@ -395,9 +396,9 @@ class NoSQLWorkLoads():
                                 % (_s_fn_id,self.__conf_fname__))
             ''' check and set DBHOSTIP from args or app config '''
             if "DBHOSTIP" in connect_properties.keys():
-                    _db_host_ip = connect_properties['DBHOSTIP']
+                _db_host_ip = connect_properties['DBHOSTIP']
             elif appConf.get('NOSQLDB','DBHOSTIP'):
-                    _db_host_ip = appConf.get('NOSQLDB','DBHOSTIP')
+                _db_host_ip = appConf.get('NOSQLDB','DBHOSTIP')
             else:
                 raise ValueError("Undefined DBHOSTIP in function args and app config file. aborting")
 
@@ -411,33 +412,35 @@ class NoSQLWorkLoads():
 
             ''' check and set DBUSER from args or app config '''
             if "DBUSER" in connect_properties.keys():
-                    _db_user = connect_properties['DBUSER']
+                _db_user = connect_properties['DBUSER']
             elif appConf.get('NOSQLDB','DBUSER'):
-                    _db_user = appConf.get('NOSQLDB','DBUSER')
+                _db_user = appConf.get('NOSQLDB','DBUSER')
             else:
                 raise ValueError("Undefined DBUSER in function args and app config file. aborting")
 
             ''' check and set DBPSWD from args or app config '''
             if "DBPSWD" in connect_properties.keys():
-                    _db_pswd = connect_properties['DBPSWD']
+                _db_pswd = connect_properties['DBPSWD']
             elif appConf.get('NOSQLDB','DBPSWD'):
-                    _db_pswd = appConf.get('NOSQLDB','DBPSWD')
+                _db_pswd = appConf.get('NOSQLDB','DBPSWD')
             else:
                 raise ValueError("Undefined DBPSWD in function args and app config file. aborting")
 
             ''' check and set DBAUTHSOURCE from args or app config '''
             if "DBAUTHSOURCE" in connect_properties.keys():
-                    _db_auth = connect_properties['DBAUTHSOURCE']
+                _db_auth = connect_properties['DBAUTHSOURCE']
             elif appConf.get('NOSQLDB','DBAUTHSOURCE'):
-                    _db_auth = appConf.get('NOSQLDB','DBAUTHSOURCE')
+                _db_auth = appConf.get('NOSQLDB','DBAUTHSOURCE')
+            elif not self.dbName is None:
+                _db_auth = self.dbName
             else:
                 raise ValueError("Undefined DBAUTHSOURCE in function args and app config file. aborting")
 
             ''' check and set DBAUTHMECHANISM from args or app config '''
             if "DBAUTHMECHANISM" in connect_properties.keys():
-                    _db_mech = connect_properties['DBAUTHMECHANISM']
+                _db_mech = connect_properties['DBAUTHMECHANISM']
             elif appConf.get('NOSQLDB','DBAUTHMECHANISM'):
-                    _db_mech = appConf.get('NOSQLDB','DBAUTHMECHANISM')
+                _db_mech = appConf.get('NOSQLDB','DBAUTHMECHANISM')
             else:
                 raise ValueError("Undefined DBAUTHMECHANISM in function args and app config file. aborting")
 
@@ -462,6 +465,55 @@ class NoSQLWorkLoads():
             print(traceback.format_exc())
 
         return self._connect
+
+    ''' Function - collection
+
+            parameters:
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+            
+    '''
+    @property
+    def collections(self) -> list:
+        return self._collections
+
+    @collections.setter
+    def collections(self, collection_properties:dict={}) -> list:
+        
+        __s_fn_id__ = "function <collections.setter>"
+        _coll_list=[]
+
+        try:
+            ''' set the dbName if specified '''
+            if "DBNAME" in collection_properties.keys():
+                self.dbName = collection_properties['DBNAME']
+            if self.dbName is None:
+                raise AttributeError("Database name must be specified")
+            ''' set the dbType if specified '''
+            if "DBTYPE" in collection_properties.keys():
+                self.dbType = collection_properties['DBTYPE'].lower()
+            if "DBAUTHSOURCE" in collection_properties.keys():
+                self.connect = {'DBAUTHSOURCE':collection_properties['DBAUTHSOURCE']}
+            else:
+                self.connect = {'DBAUTHSOURCE':self.dbName}
+            
+            if self.dbType.lower() == 'mongodb':
+                db = self.connect[self.dbName]
+                _coll_list = db.list_collection_names()
+            ''' select collections with specified regex '''
+            if "HASINNAME" in collection_properties.keys() and len(_coll_list)>0:
+                r = re.compile(f".*{collection_properties['HASINNAME']}*")
+                self._collections = list(filter(r.match, _coll_list))
+            else:
+                self._collections = _coll_list
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._collections
+
 
     ''' Function - data
 
@@ -768,34 +820,34 @@ class NoSQLWorkLoads():
 
         return db[db_coll]
 
-    ''' Function - write collection
+#     ''' Function - write collection
 
-            parameters:
+#             parameters:
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+#             author: <nuwan.waidyanatha@rezgateway.com>
             
-    '''
-    def get_db_collections(self,db_name:str, has_in_name):
+#     '''
+#     def get_db_collections(self,db_name:str, has_in_name):
 
         
-        _s_fn_id = "function <get_db_collections>"
-        _collections = None, 
-        try:
-            if self.dbType.lower() == 'mongodb':
-                db = self.connect[db_name]
-                _coll_list = db.list_collection_names()
-                if has_in_name:
-                    r = re.compile(f".*{has_in_name}*")
-                    _collections = list(filter(r.match, _coll_list))
-                else:
-                    _collections = _coll_list
+#         _s_fn_id = "function <get_db_collections>"
+#         _collections = None, 
+#         try:
+#             if self.dbType.lower() == 'mongodb':
+#                 db = self.connect[db_name]
+#                 _coll_list = db.list_collection_names()
+#                 if has_in_name:
+#                     r = re.compile(f".*{has_in_name}*")
+#                     _collections = list(filter(r.match, _coll_list))
+#                 else:
+#                     _collections = _coll_list
 
-        except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+#         except Exception as err:
+#             logger.error("%s %s \n",_s_fn_id, err)
+#             print("[Error]"+_s_fn_id, err)
+#             print(traceback.format_exc())
 
-        return _collections
+#         return _collections
 
     ''' convert to dict '''
     def convert_2_dict_mongodb(obj):

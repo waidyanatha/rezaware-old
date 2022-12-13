@@ -107,12 +107,15 @@ class CryptoMarkets():
             clsRW.storeRoot = pkgConf.get("DATASTORE","ROOT")
             logger.info("Files RW mode %s with root %s set",clsRW.storeMode,clsRW.storeRoot)
             ''' set the package specific storage path '''
-            self.storePath = os.path.join(
-                self.__app__,
-                "data/",
-                self.__module__,
-                self.__package__,
-            )
+            ''' TODO change to use the utils/FileRW package '''
+            self.storePath = pkgConf.get("CWDS","DATA")
+#             self.storePath = os.path.join(
+#                 self.__app__,
+#                 "data/",
+#                 self.__module__,
+#                 self.__package__,
+#             )
+    
             logger.info("%s package files stored in %s",self.__package__,self.storePath)
 
             ''' import mongo work load utils to read and write data '''
@@ -131,10 +134,10 @@ class CryptoMarkets():
                 given location; typically specified in app.conf
             '''
             self.tmpDIR = None
-            if "WRITE_TO_FILE":
+            if "WRITE_TO_TMP":
                 self.tmpDIR = os.path.join(self.storePath,"tmp/")
-#                 if not os.path.exists(self.tmpDIR):
-#                     os.makedirs(self.tmpDIR)
+                if not os.path.exists(self.tmpDIR):
+                    os.makedirs(self.tmpDIR)
 
             self.scrape_start_date = date.today()
             self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
@@ -215,8 +218,8 @@ class CryptoMarkets():
                 else:
                     _destin_coll = '.'.join([data_owner,"asset","list"])
 
-                logger.info("Begin processing %s data for writing to %s",
-                            data_owner,_destin_db)
+                logger.info("%s Begin processing %s data for writing to %s",
+                            __s_fn_id__,data_owner,_destin_db)
 
                 _asset_dict_list = []
 #                 _mc_coll_name = '.'.join([data_owner,"asset","list"])
@@ -231,7 +234,7 @@ class CryptoMarkets():
                                 "symbol":_data['symbol'],
                                 "lastupdated":_extract_dt,
                                 "asset.id":_data['id'],
-                                "asset.isactive":_data['is_active'],
+                                "asset.isactive":_data.get('is_active',1.0),
                                 "asset.tokenaddress":_data.get('token_address',None),
                                 "asset.platforms":_data.get('platform',None),
                             }
@@ -246,7 +249,7 @@ class CryptoMarkets():
                                 "symbol":_data['symbol'],
                                 "lastupdated":datetime.now(),
                                 "asset.id":_data['id'],
-                                "asset.isactive":_data.get('is_active',None),
+                                "asset.isactive":_data.get('is_active',1.0),
                                 "asset.tokenaddress":_data.get('token_address',None),
                                 "asset.platforms":_data.get('platform',None),
                             }
@@ -362,10 +365,13 @@ class CryptoMarkets():
         @functools.wraps(func)
         def extractor(self,data_owner,from_date,to_date,**kwargs):
 
+            from random import randint
+            import random
+            import string
+
             __s_fn_id__ = "function wrapper <historic_extractor>"
 
             __destin_db_name__ = "tip-historic-marketcap"
-            __destin_collection__ = ''
             __uids__ = ['source',   # coingeko or coinmarketcap
                         'symbol',   # source provided identifier
                         'date']     # crypto name
@@ -382,74 +388,132 @@ class CryptoMarkets():
                 else:
                     _destin_db_auth = __destin_db_name__
                 if "DESTINDBCOLL" in kwargs.keys():
-                    _api_collect = kwargs["DESTINDBCOLL"]
+                    _destin_coll_prefix = kwargs["DESTINDBCOLL"]
                 else:
-                    _destin_coll = ".".join([data_owner,str(from_date),str(to_date)])
+#                     _destin_coll = ".".join([data_owner,str(from_date),str(to_date)])
+                    _destin_coll_prefix = ".".join([data_owner,str(from_date)])
 
                 logger.info("Begin processing %s data for writing to %s",
                             data_owner,_destin_db)
 
                 _hmc_dict_list = []
+                _failed_assets = []
 
                 clsNoSQL.connect={'DBAUTHSOURCE':_destin_db_auth}
                 if not _destin_db in clsNoSQL.connect.list_database_names():
-                    raise RuntimeError("%s does not exist",_destin_db)
+                    raise DatabaseError("%s does not exist",_destin_db)
     
-                if data_owner == 'coinmarketcap':
-                    print("%s historic data is not free. API to be done")
+#                 if data_owner == 'coinmarketcap':
+#                     print("%s historic data is not free. API to be done")
 
-                elif data_owner == 'coingecko':
-                    for _api in _proc_api_list:
-                        session = Session()
-                        session.headers.update(_api['headers'])
-                        try:
-                            response = session.get(_api['url'], params=_api['parameters'])
-                            if response.status_code != 200:
-                                raise ValueError("%s" % (response.text))
+#                 elif data_owner == 'coingecko':
+                for _api in _proc_api_list:
+                    time.sleep(randint(5,10))
+                    session = Session()
+                    session.headers.update(_api['headers'])
+                    try:
+                        response = session.get(_api['url'], params=_api['parameters'])
+                        if response.status_code != 200:
+                            _failed_assets.append(_api['symbol'])
+                            raise ValueError("%s failed %s" % (_api['id'], response.text))
 
-                            ''' data found, write to collection '''
-                            _hmc_data = json.loads(response.text)
-                            for _mc_price in _hmc_data['prices']:
-                                _hmc_dict_list.append(
-                                    {
-                                        "source":data_owner,
-                                        "symbol":_api['symbol'],
-                                        "date":datetime.fromtimestamp(_mc_price[0]/1000),
-                                        "marketcap":float(_mc_price[1]),
-                                    }
-                                )
+                        ''' data found, write to collection '''
+                        _hmc_data = json.loads(response.text)
+                        _coin_hmc_data = []
+                        for _mc_price in _hmc_data['market_caps']:
+#                             _hmc_dict_list.append(
+#                             try:
+                            if float(_mc_price[1]) <= 0:
+                                raise ValueError("%s marketcap = %0.2f"
+                                                 %(_api['id'],_mc_price[1]))
+                            _coin_hmc_data.append(
+                                {
+                                    "source":data_owner,
+                                    "id":_api['id'],
+                                    "symbol":_api['symbol'],
+                                    "date":datetime.fromtimestamp(_mc_price[0]/1000),
+                                    "marketcap":float(_mc_price[1]),
+                                }
+                            )
+#                             except Exception as err:
+#                                 logger.warning("%s",err)
+#                                 pass
+                            
+#                         _coin_hmc_data = []
+#                         _coin_hmc_data.append(
+#                             {
+#                                 "source":data_owner,
+#                                 "id":_hmc_data['id'],
+#                                 "name":_hmc_data['name'],
+#                                 "symbol":_hmc_data['symbol'],
+#                                 "date":datetime.strftime(from_date,'%Y-%m-%d'),
+#                                 "price":_hmc_data['market_data']['current_price']['usd'],
+#                                 "marketcap":_hmc_data['market_data']['market_cap']['usd'],
+#                                 "totalvolume":_hmc_data['market_data']['total_volume']['usd'],
+#                                 "unit":"USD",
+#                             }
+#                         )
+                        if len(_coin_hmc_data)>0:
+                            if _api['symbol'] == '' or not _api['symbol']:
+                                # printing lowercase
+                                letters = string.ascii_lowercase
+                                _api['symbol']=''.join(random.choice(letters) for i in range(3))
 
-                        except Exception as err:
-                            logger.warning("%s", err)
-                            print("[WARNING]", err)
-                            pass
+                            _destin_coll = ".".join([_destin_coll_prefix,_api['symbol']])
+                            _destin_coll = _destin_coll.replace("$","_")\
+                                                .replace("%","_")\
+                                                .replace("..",".")\
+                                                .replace("#","_")
 
-                else:
-                    raise AttributeError("Unrecognized data owner %s" % data_owner)
+#                             if _destin_coll == '' or not _destin_coll:
+#                                 # printing lowercase
+#                                 letters = string.ascii_lowercase
+#                                 _destin_coll=''.join(random.choice(letters) for i in range(3))
+#                            print(_destin_coll)
+                            _data = clsNoSQL.write_documents(
+                                db_name=_destin_db,
+                                db_coll=_destin_coll,
+                                data=_coin_hmc_data,
+                                uuid_list=__uids__)
+                            _hmc_dict_list.append(_data)
+                            _comp_fname = "proc_coins_"+_destin_coll_prefix+".txt"
+                            _comp_fpath = os.path.join(self.tmpDIR,_comp_fname)
+                            with open(_comp_fpath, "a") as compfile:
+                                compfile.write(_api['id']+"\n")
 
-                if len(_hmc_dict_list) > 0:
-                    _data = clsNoSQL.write_documents(
-                        db_name=_destin_db,
-                        db_coll=_destin_coll,
-                        data=_hmc_dict_list,
-                        uuid_list=__uids__)
-                    logger.info("Appended %d historic marketcap prices to %s collection",
-                                len(_hmc_dict_list),_destin_coll)
-                    
-                logger.info("Ready to write %d documents to %s",
-                            len(_hmc_dict_list),_destin_db)
 
-                logger.info("Finished writing %s market-cap documents to %s",
-                            data_owner,clsNoSQL.dbType)
+                    except Exception as err:
+                        logger.warning("%s",err)
+#                         print("[WARNING]", err)
+                        pass
+
+#                 else:
+#                     raise AttributeError("Unrecognized data owner %s" % data_owner)
+
+#                 if len(_hmc_dict_list) > 0:
+#                     _data = clsNoSQL.write_documents(
+#                         db_name=_destin_db,
+#                         db_coll=_destin_coll,
+#                         data=_hmc_dict_list,
+#                         uuid_list=__uids__)
+                logger.info("Appended %d historic marketcap prices to %s collection in %s",
+                            len(_hmc_dict_list),_destin_coll,clsNoSQL.dbType)
+#                 else:
+#                     logger.info("No data retrieved for %s with %d api list",
+#                                 data_owner,(_proc_api_list))
+
+#                 logger.info("Finished writing %s market-cap documents to %s",
+#                             data_owner,clsNoSQL.dbType)
 
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
                 print("[Error]"+__s_fn_id__, err)
                 print(traceback.format_exc())
 
-            return _hmc_dict_list
+            return _hmc_dict_list, _failed_assets
 
         return extractor
+
 
     def api_builder(func):
 
@@ -469,8 +533,8 @@ class CryptoMarkets():
                     ''' for each coin get the historic data '''
                     unix_from_date = time.mktime(from_date.timetuple())
                     unix_to_date = time.mktime(to_date.timetuple())
-                    print("Now processing %s from %d to %d"
-                          % (data_owner.upper(),unix_from_date,unix_to_date))
+                    print("Now processing %s from %s to %s"
+                          % (data_owner.upper(),str(from_date),str(to_date)))
                     for _asset in _asset_list:
                         _asset_id = _asset['asset']['id']
 
@@ -484,18 +548,20 @@ class CryptoMarkets():
                             if param:
                                 _s_api = re.sub(_s_regex, _asset_id, _s_api)
                                 _built_api_dict['symbol']=_asset['symbol']
+                                _built_api_dict['id']=_asset['asset']['id']
                                 _built_api_dict['url']=_s_api
                             headers = {k: v for k, v in _api_doc['api']['headers'].items() if v}
                             headers['User-Agent']='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36'
                             _built_api_dict['headers']=headers
                             parameters = {k: v for k, v in _api_doc['api']['parameters'].items() if v}
+#                             parameters['date']=datetime.strftime(from_date,"%d-%m-%Y")
                             parameters['from']=unix_from_date
                             parameters['to']=unix_to_date
                             _built_api_dict['parameters']=parameters
                             _built_api_list.append(_built_api_dict)
 
                 elif data_owner.upper() == "COINMARKETCAP":
-                    raise RuntimeError("Void process, hostoric marketcap data is not free "+ \
+                    raise ValueError("Void process, hostoric marketcap data is not free "+ \
                                        "and must have a subscription => standard")
                 else:
                     raise RuntimeError("Something was wrong")
@@ -516,7 +582,7 @@ class CryptoMarkets():
 
     @historic_extractor
     @api_builder
-    def get_historic_marketcap(
+    def extract_historic_mcap(
         self,
         data_owner:str,   # data loading source name coingecko or cmc
         from_date:date,   # start date to extract prices
@@ -526,7 +592,7 @@ class CryptoMarkets():
         import time   # to convert datetime to unix timestamp int
         import re
 
-        __s_fn_id__ = "function <get_historic_mc>"
+        __s_fn_id__ = "function <extract_historic_mcap>"
         __as_type__ = "list"
         __api_db_name__ = "tip-data-sources"
         __api_collect__ = 'marketcap.api'
@@ -575,7 +641,10 @@ class CryptoMarkets():
             ''' get the list of active assets '''
             if len(_asset_list) == 0:
                 clsNoSQL.connect={'DBAUTHSOURCE':_asset_db_auth}
-                _find = {'source':{"$regex" : data_owner}}#, 'asset.isactive':{"$gt":0}}
+                _find = {'source':{"$regex" : data_owner},
+                         'asset.isactive':{"$gte":1.0},
+                         'asset.type':{"$in":['altcoin','bitcoin']}
+                        }
                 _asset_list = clsNoSQL.read_documents(
                     as_type = __as_type__,
                     db_name = _asset_db_name,
@@ -586,8 +655,8 @@ class CryptoMarkets():
             if not len(_asset_list) > 0:
                 raise ValueError("No data found %s in %s db and %s collection for %s"
                                  % (str(_find),_asset_db_name,_asset_collect,data_owner))
-            logger.debug("Received %d assets in %s for %s",
-                       len(_asset_list),_asset_collect,str(_find))
+            logger.debug("Received %d assets in %s",
+                       len(_asset_list),_asset_collect)
 
             ''' get the list of APIs '''
             clsNoSQL.connect={'DBAUTHSOURCE':_api_db_auth}
@@ -605,43 +674,6 @@ class CryptoMarkets():
             logger.debug("Received %d for %s historic data",
                        len(_api_list),_api_collect)
 
-#             try:
-#                 if data_owner.upper() == "COINGECKO":
-#                     ''' for each coin get the historic data '''
-#                     unix_from_date = time.mktime(from_date.timetuple())
-#                     unix_to_date = time.mktime(to_date.timetuple())
-#                     print("Now processing %s from %d to %d" 
-#                           % (data_owner.upper(),unix_from_date,unix_to_date))
-#                     for _asset in _asset_list:
-#                         _asset_id = _asset['asset']['id'].items()
-
-#                         for _source in _api_list:
-#                             _s_api = _source['api']['url']
-#                             headers = {k: v for k, v in _source['api']['headers'].items() if v}
-#                             session = Session()
-#                             session.headers.update(headers)
-#                             parameters = {k: v for k, v in _source['api']['parameters'].items() if v}
-
-# #                         response = session.get(_s_api, params=parameters)
-# #                         if response.status_code != 200:
-# #                             raise RuntimeError("Bad response %s" % (response.text))
-
-# #                         ''' data found, write to collection '''
-# #                         self._data = json.loads(response.text)
-
-#                 elif data_owner.upper() == "COINMARKETCAP":
-#                     raise RuntimeError("Void process, hostoric marketcap data is not free "+ \
-#                                        "and must have a subscription => standard")
-#                 else:
-#                     raise RuntimeError("Something was wrong")
-
-#                     logger.info("Retrieved %d market-cap data with api:%s",
-#                                len(self._data),_s_api)
-
-#             except Exception as err:
-#                 logger.warning("%s",err)
-#                 print("[WARNING]", err)
-#                 pass
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -745,12 +777,12 @@ class CryptoMarkets():
         return extractor
 
     @latest_extractor
-    def get_latest_marketcap(self,data_owner:str, **kwargs):
+    def extract_latest_mcap(self,data_owner:str, **kwargs):
 #     def get_daily_mc_data(self,data_owner:str, **kwargs):
         
         ''' TODO : use **kwargs to get DB connection parameters '''
 
-        __s_fn_id__ = "function <get_daily_mc_data>"
+        __s_fn_id__ = "function <extract_latest_mcap>"
         __as_type__ = "list"
         __asset_meta_db_name__ = "tip-data-sources"
         __asset_meta_db_coll__ = 'marketcap.api'
@@ -822,6 +854,7 @@ class CryptoMarkets():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
+    
     def cold_store_daily_mc(
         self,
         from_db_name:str,
@@ -867,4 +900,100 @@ class CryptoMarkets():
             print(traceback.format_exc())
 
         return write_data
+
+    ''' Function
+            name: trasnform_mcap
+            parameters:
+
+            procedure: read all the historic data mongodb colelctions
+                       for a given data_owner. 
+            return None
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+
+    '''
+
+    def trasnform_mcap(
+        self,
+        data_owner:str,
+        from_date,
+        to_date,
+        **kwargs
+    ):
+
+        __s_fn_id__ = "function <trasnform_mcap>"
+
+        __source_db_name__ = "tip-historic-marketcap"
+#         __uids__ = ['source',   # coingeko or coinmarketcap
+#                     'symbol',   # source provided identifier
+#                     'date']     # crypto name
+        __as_type__ = "pandas"
+        _hist_mcap_coll_list = []
+        _hist_mcap_df = pd.DataFrame()
+
+        try:
+
+            if "SOURCEDBNAME" in kwargs.keys():
+                _source_db = kwargs["SOURCEDBNAME"]
+            else:
+                _source_db = __source_db_name__
+            if "SOURCEDBAUTH" in kwargs.keys():
+                _source_db_auth = kwargs["SOURCEDBAUTH"]
+            else:
+                _source_db_auth = __source_db_name__
+            if "SOURCEDBCOLL" in kwargs.keys():
+                _source_coll_prefix = kwargs["SOURCEDBCOLL"]
+            else:
+#                     _destin_coll = ".".join([data_owner,str(from_date),str(to_date)])
+                _source_coll_prefix = ".".join([data_owner,str(from_date)])
+
+            clsNoSQL.connect={'DBAUTHSOURCE':_source_db}
+            _hist_mcap_coll_list = clsNoSQL.get_db_collections(
+                    db_name=_source_db,
+                    has_in_name=data_owner,
+            )
+            if len(_hist_mcap_coll_list)<=0:
+                raise ValueError("Unable to locate any collection in %sDB for %s"
+                                %(_source_db,data_owner))        
+            logger.info("Found %d collection in %s DB for %s",
+                        len(_hist_mcap_coll_list),_source_db,data_owner)
+
+            for _coll_name in _hist_mcap_coll_list:
+                tmp_df = pd.DataFrame()
+                tmp_df = clsNoSQL.read_documents(
+                    as_type = __as_type__,
+                    db_name = _source_db,
+                    db_coll = _coll_name, 
+                    doc_find = {}
+                )
+                _hist_mcap_df = pd.concat([_hist_mcap_df,tmp_df])
+            self._data = _hist_mcap_df.drop_duplicates()
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._data
+
+
+    ''' Function
+            name: trasnform_historic_mcap
+            parameters:
+
+            procedure: read all the historic data mongodb colelctions
+                       for a given data_owner. 
+            return None
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+
+    '''
+
+#     def load_mcap_to_sqldb(
+#         self,
+#         data_owner:str,
+#         from_date,
+#         to_date,
+#         **kwargs
+#     ):
 
