@@ -75,7 +75,13 @@ class NoSQLWorkLoads():
 #         self._dbtlsCAFile = None
         
         self._dbType = None
-        self._dbTypesList = ['mongodb','firebase']
+        self._dbTypesList = [
+            'mongodb',   # working and tested with community edition v4.4
+            'cassandra', # TBD
+            'hbase',   # TBD
+            'neo4j',   # TBD
+            'couchdb', # TBD
+        ]
         self._dbName = None
         self._collections = None
         self._connect = None
@@ -454,8 +460,8 @@ class NoSQLWorkLoads():
                     authMechanism=_db_mech
                 )
                 logger.debug(self._connect)
-            elif self.dbType.lower() == 'firebase':
-                raise RuntimError("Firebase is to be included in a future release")
+            elif self.dbType.lower() == 'cassandra':
+                raise RuntimError("cassandra is to be included in a future release")
             else:
                 raise ValueError("Undefined dbType. It must be one of %s" % self._dbTypeList)
 
@@ -475,6 +481,7 @@ class NoSQLWorkLoads():
     '''
     @property
     def collections(self) -> list:
+
         return self._collections
 
     @collections.setter
@@ -601,63 +608,78 @@ class NoSQLWorkLoads():
                  db_name:str,
                  db_coll:str,      # mandatory - relative path, w.r.t. self.storeRoot
                  doc_find:dict={},   # optional - name of the file to read
-#                  doc_type:str=None    # optional - read all the files of same type 
+#                  doc_type:str=None    # optional - read all the files of same type
+                  **kwargs,
                 ):
 
-            doc_dict = func(self,as_type,db_name,db_coll,doc_find)
+            doc_list = func(self,as_type,db_name,db_coll,doc_find, **kwargs)
 
             if as_type.upper() == 'DICT':
-                self._documents = list(doc_dict)
+                self._documents = list(doc_list)
             elif as_type.upper() == 'STR':
-                self._documents=' '.join(list(doc_dict))
+                self._documents=' '.join(list(doc_list))
             elif as_type.upper() == 'PANDAS':
-                self._documents=pd.DataFrame(list(doc_dict))
+                self._documents=pd.DataFrame(list(doc_list))
 #                 print("pandas",type(self._documents))
             else:
                 ''' dtype unspecified return as dictionary '''
-                self._documents=list(doc_dict)
+                self._documents=list(doc_list)
 
             return self._documents
 
         return wrapper_converter
 
     @converter
-    def read_documents(self, as_type, db_name, db_coll, doc_find):
+    def read_documents(self, as_type, db_name, db_coll, doc_find, **kwargs):
 
         _s_fn_id = "function <read_documents>"
-        doc_dict=None
+        doc_list=[]
+        doc_dics = None
 
         try:
             logger.debug("Reading files from %s",db_coll)
             
+            if doc_find is None:
+                doc_find = {}
+            
             if self.dbType.lower() == 'mongodb':
                 ''' get data from MongoDB collection '''
                 db = self.connect[db_name]
-                if db_coll is None:
-                    ''' get data from all the collections '''
+                _coll_list = db.list_collection_names()
+                if db_coll:
+#                     self._collections = [x for x in filter(db_coll, _coll_list)]
+                    self._collections = list(filter(lambda _coll: _coll == db_coll, _coll_list))
                 else:
-                    ''' only from specified collection '''
-                    _collection = db[db_coll]
-                if doc_find:
-                    doc_dict = db[db_coll].find(doc_find)
-                else:
-                    doc_dict = db[db_coll].find({})
-#                     print(doc_dict)
-#                 for doc in doc_dict:
-#                     print(doc)
+                    self._collections = _coll_list
+
+                for _coll in self.collections:
+                    try:
+                        _coll_cur = db[_coll].find(doc_find)
+                        if len(list(_coll_cur.clone())) <=0:
+                            raise ValueError("No data")
+                        doc_list.extend(list(_coll_cur.clone()))
+
+                        
+                    except Exception as err:
+                        logger.warning("collection: %s in database: %s had errors: %s \n",
+                                       _coll, db_name, err)
+                        pass
                     
-            elif self.dbType.lower() == 'firebase':
-                ''' get data from FireBase collection '''
-                raise RuntimeError("FireBase read is tbd")
+            elif self.dbType.lower() == 'cassandra':
+                ''' get data from Cassandra collection '''
+                raise RuntimeError("cassandra read is tbd")
             else:
                 raise ValueError("Something was wrong")
+
+            logger.info("Loaded %d documents from %d collections",
+                        len(doc_list),len(self.collections))
 
         except Exception as err:
             logger.error("%s %s \n",_s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
             print(traceback.format_exc())
 
-        return doc_dict
+        return doc_list
 
     ''' Function - write collection
 
@@ -699,15 +721,15 @@ class NoSQLWorkLoads():
 #             if self.dbType.lower == 'mongodb':
 #                 _insert_ids = _collection.insert_many(self.documents)
                 
-#             elif self.dbType.lower() == 'firebase':
-#                 ''' get data from FireBase collection '''
-#                 raise RuntimeError("FireBase write is tbd")
+#             elif self.dbType.lower() == 'cassandra':
+#                 ''' get data from cassandra collection '''
+#                 raise RuntimeError("cassandra write is tbd")
 #             else:
 #                 raise ValueError("Something was wrong")
 
             return self._documents 
         return create_documents
-    
+
     @createDocs
     def write_documents(
         self,
@@ -805,9 +827,9 @@ class NoSQLWorkLoads():
                     logger.info("Total %d documents, successful insert count = %d & modify count = %d",
                                 len(self.documents),_insert_count, _modify_count)
 
-            elif self.dbType.lower() == 'firebase':
-                ''' get data from FireBase collection '''
-                raise RuntimeError("FireBase write is tbd")
+            elif self.dbType.lower() == 'cassandra':
+                ''' get data from cassandra collection '''
+                raise RuntimeError("cassandra write is tbd")
             else:
                 raise ValueError("Something was wrong")
             
