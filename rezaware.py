@@ -244,9 +244,10 @@ class Config(ConfigParser):
 
             _modules_path = os.path.join(app_path,"modules")
 
-            if not "MODULES" in conf_data.sections():
-                raise ValueError("No MODULES section found in %s" % 
-                                 os.path.join(conf_data))
+            if not ("MODULES" in conf_data.sections() and \
+                    conf_data.options('MODULES')):
+                raise ValueError("No MODULES options or section found in %s config file %s"
+                                 % (app_name.upper(), __conf_file__.upper()))
 
             for module in conf_data['MODULES']:
                 _mod_path = os.path.join(_modules_path,module)
