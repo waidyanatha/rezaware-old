@@ -19,6 +19,8 @@ try:
     import traceback
     import re
     from pymongo import MongoClient
+    from pyspark.sql import SparkSession, DataFrame
+    from pyspark.sql.types import *
     import pandas as pd
     from bson.objectid import ObjectId
 
@@ -64,12 +66,13 @@ class NoSQLWorkLoads():
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
-#         ''' --- database properties --- '''
-#         self._hostIP = None
-#         self._dbUser = None
-#         self._dbPswd = None
-#         self._dbAuthSource = None
-#         self._dbAuthMechanism = None
+        ''' --- NoSQL DB properties --- '''
+        self._dbHostIP = None
+        self._dbPort = None
+        self._dbUser = None
+        self._dbPswd = None
+        self._dbAuthSource = None
+        self._dbAuthMechanism = None
 #         self._dbtls = None
 #         self._dbtlsKeyFile = None
 #         self._dbtlsCAFile = None
@@ -83,6 +86,7 @@ class NoSQLWorkLoads():
             'couchdb', # TBD
         ]
         self._dbName = None
+        self._dbFormat = None
         self._collections = None
         self._connect = None
         self._documents = None
@@ -101,6 +105,10 @@ class NoSQLWorkLoads():
 #             'JSON',  # Javascript object notation
 #             'TXT',   # text file
 #         ]
+
+        ''' --- SPARK properties --- '''
+        self._sparkMaster =  None
+
         ''' initiate to load app.cfg data '''
         global logger
         global pkgConf
@@ -143,57 +151,87 @@ class NoSQLWorkLoads():
             print("%s Class initialization complete" % self.__name__)
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return None
 
-#     ''' Functions - list of fget and fset @property and @*.setter functions
-#             hostIP, dbType, dbPort, dbDriver, dbName, 
-#             dbUser, dbPswd, dbAuthSource, dbAuthMechanism
+    ''' Functions - list of fget and fset @property and @*.setter functions
+            dbHostIP, dbType, dbPort, dbDriver, dbName, 
+            dbUser, dbPswd, dbAuthSource, dbAuthMechanism
 
-#             parameters:
-#                 store_mode - local-fs sets to read and write on your local machine file system
-#                            aws-s3-bucket sets to read and write with an AWS S3 bucket 
-#             procedure: checks if it is a valid value and sets the mode
-#             return (str) self._documents
+            parameters:
+                store_mode - local-fs sets to read and write on your local machine file system
+                           aws-s3-bucket sets to read and write with an AWS S3 bucket 
+            procedure: checks if it is a valid value and sets the mode
+            return (str) self._documents
 
-#             author: <nuwan.waidyanatha@rezgateway.com>
+            author: <nuwan.waidyanatha@rezgateway.com>
             
-#     '''
-#     @property
-#     def hostIP(self) -> str:
-#         return self._hostIP
+    '''
+    @property
+    def dbHostIP(self) -> str:
 
-#     @hostIP.setter
-#     def hostIP(self,host_ip:str = "127.0.0.1"):
+        __s_fn_id__ = "function @dbHostIP.property"
 
-#         _s_fn_id = "function @hostIP.setter"
-#         try:
-#             if not (host_ip is None and host_ip==""):
-#                 self._hostIP = host_ip
-                
-#             elif appConf.get('HOSTS','HOSTIP'):
-#                 self._hostIP = appConf.get('HOSTS','HOSTIP')
+        try:
+            if self._dbHostIP is None and appConf.get('NOSQLDB','DBHOSTIP'):
+                self._dbHostIP = appConf.get('NOSQLDB','DBHOSTIP')
 #             else:
 #                 raise ConnectionError("Undefined hostip; set in app.cfg or as class property")
 
-#         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
 
-#         return self._hostIP
+        return self._dbHostIP
 
+    @dbHostIP.setter
+    def dbHostIP(self,db_host_ip:str = "127.0.0.1"):
+
+        __s_fn_id__ = "function @dbHostIP.setter"
+
+        try:
+            if not (db_host_ip is None and db_host_ip==""):
+                self._dbHostIP = db_host_ip
+
+#             elif appConf.get('HOSTS','HOSTIP'):
+#                 self._dbHostIP = appConf.get('HOSTS','HOSTIP')
+            else:
+                raise ConnectionError("Undefined hostip; set in app.cfg or as class property")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._dbHostIP
+
+    ''' DB TYPE '''
     @property
     def dbType(self) -> str:
+        
+        __s_fn_id__ = "function @dbType.property"
+
+        try:
+            if self._dbType is None and appConf.get('NOSQLDB','DBTYPE'):
+                self._dbType = appConf.get('NOSQLDB','DBTYPE')
+#             else:
+#                 raise ConnectionError("Cannot use %s dbType",self._dbType)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
         return self._dbType
 
     @dbType.setter
     def dbType(self,db_type:str):
 
-        _s_fn_id = "function @dbType.setter"
+        __s_fn_id__ = "function @dbType.setter"
         try:
             if db_type in self._dbTypesList:
                 self._dbType = db_type
@@ -203,173 +241,319 @@ class NoSQLWorkLoads():
                 raise ConnectionError("Undefined dbType; set in app.cfg or as class property")
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return self._dbType
 
-#     @property
-#     def dbPort(self) -> str:
-#         return self._dbPort
+    ''' DB PORT '''
+    @property
+    def dbPort(self) -> int:
+        
+        ___s_fn_id____ = "function @dbPort.property"
 
-#     @dbPort.setter
-#     def dbPort(self,db_port:str='27017') -> str:
-
-#         _s_fn_id = "function @dbPort.setter"
-#         try:
-#             if not (db_port is None and db_port==""):
-#                 self._dbPort = db_port
-#             elif appConf.get('NOSQLDB','DBPORT'):
-#                 self._dbPort = appConf.get('NOSQLDB','DBPORT')
+        try:
+            if self._dbPort is None and appConf.get('NOSQLDB','DBPORT'):
+                self._dbPort = appConf.get('NOSQLDB','DBPORT')
 #             else:
 #                 raise ConnectionError("Undefined dbPort; set in app.cfg or as class property")
 
-#         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n",___s_fn_id____, err)
+            print("[Error]"+___s_fn_id____, err)
+            print(traceback.format_exc())
 
-#         return self._dbPort
+        return self._dbPort
 
-#     @property
-#     def dbDriver(self) -> str:
-#         return self._dbDriver
+    @dbPort.setter
+    def dbPort(self,db_port=27017) -> int:
 
-#     @dbDriver.setter
-#     def dbDriver(self,db_driver:str) -> str:
+        ___s_fn_id____ = "function @dbPort.setter"
 
-#         _s_fn_id = "function @dbDriver.setter"
-#         try:
-#             if not (db_driver is None and db_driver==""):
-#                 self._dbDriver = db_driver
-#             elif appConf.get('NOSQLDB','DBDRIVER'):
-#                 self._dbDriver = appConf.get('NOSQLDB','DBDRIVER')
+        try:
+            if isinstance(db_port,int):
+                self._dbPort = db_port
+#             elif appConf.get('NOSQLDB','DBPORT'):
+#                 self._dbPort = appConf.get('NOSQLDB','DBPORT')
+            else:
+                raise ConnectionError("dbPort must be a valid integer")
+
+        except Exception as err:
+            logger.error("%s %s \n",___s_fn_id____, err)
+            print("[Error]"+___s_fn_id____, err)
+            print(traceback.format_exc())
+
+        return self._dbPort
+
+    ''' DB FORMAT '''
+    @property
+    def dbFormat(self) -> str:
+
+        __s_fn_id__ = "function @dbFormat.property"
+
+        try:
+            if self._dbFormat is None and appConf.get('NOSQLDB','DBFORMAT'):
+                self._dbFormat = appConf.get('NOSQLDB','DBFORMAT')
 #             else:
-#                 raise ConnectionError("Undefined dbDriver; set in app.cfg or as class property")
+#                 raise ConnectionError("Undefined dbFormat; set in app.cfg or as class property")
 
-#         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
 
-#         return self._dbDriver
 
+        return self._dbFormat
+
+    @dbFormat.setter
+    def dbFormat(self,db_format:str) -> str:
+
+        __s_fn_id__ = "function @dbFormat.setter"
+
+        try:
+            if not (db_driver is None and db_format==""):
+                self._dbFormat = db_format
+#             elif appConf.get('NOSQLDB','DBFORMAT'):
+#                 self._dbFormat = appConf.get('NOSQLDB','DBFORMAT')
+            else:
+                raise ConnectionError("Undefined dbFormat; set in app.cfg or as class property")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._dbFormat
+
+    ''' DB NAME '''
     @property
     def dbName(self) -> str:
+
+        __s_fn_id__ = "function @dbName.property"
+
+        try:
+            if self._dbName is None and appConf.get('NOSQLDB','DBNAME'):
+                self._dbName = appConf.get('NOSQLDB','DBNAME')
+#             else:
+#                 raise ConnectionError("Undefined dbName; set in app.cfg or as class property")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
         return self._dbName
 
     @dbName.setter
     def dbName(self,db_name:str) -> str:
 
-        _s_fn_id = "function @dbName.setter"
+        __s_fn_id__ = "function @dbName.setter"
+
         try:
             if not (db_name is None and db_name==""):
                 self._dbName = db_name
-            elif appConf.get('NOSQLDB','DBNAME'):
-                self._dbName = appConf.get('NOSQLDB','DBNAME')
+#             elif appConf.get('NOSQLDB','DBNAME'):
+#                 self._dbName = appConf.get('NOSQLDB','DBNAME')
             else:
                 raise ConnectionError("Undefined dbName; set in app.cfg or as class property")
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return self._dbName
 
-#     @property
-#     def dbUser(self) -> str:
-#         return self._dbUser
+    ''' DB USER '''
+    @property
+    def dbUser(self) -> str:
 
-#     @dbUser.setter
-#     def dbUser(self,db_user:str) -> str:
+        __s_fn_id__ = "function @dbUser.setter"
 
-#         _s_fn_id = "function @dbUser.setter"
-#         try:
-#             if not (db_user is None and db_user==""):
-#                 self._dbUser = db_user
-#             elif appConf.get('NOSQLDB','DBUSER'):
-#                 self._dbUser = appConf.get('NOSQLDB','DBUSER')
+        try:
+            if self._dbUser is None and appConf.get('NOSQLDB','DBUSER'):
+                self._dbUser = appConf.get('NOSQLDB','DBUSER')
 #             else:
 #                 raise ConnectionError("Undefined dbUser; set in app.cfg or as class property")
 
-#         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
 
-#         return self._dbUser
+        return self._dbUser
 
-#     @property
-#     def dbPswd(self) -> str:
-#         return self._dbPswd
+    @dbUser.setter
+    def dbUser(self,db_user:str) -> str:
 
-#     @dbPswd.setter
-#     def dbPswd(self,db_pswd:str) -> str:
+        __s_fn_id__ = "function @dbUser.setter"
+        try:
+            if not (db_user is None and db_user==""):
+                self._dbUser = db_user
+#             elif appConf.get('NOSQLDB','DBUSER'):
+#                 self._dbUser = appConf.get('NOSQLDB','DBUSER')
+            else:
+                raise ConnectionError("Undefined dbUser; set in app.cfg or as class property")
 
-#         _s_fn_id = "function @dbPswd.setter"
-#         try:
-#             if not (db_pswd is None and db_pswd==""):
-#                 self._dbPswd = db_pswd
-#             elif appConf.get('NOSQLDB','DBPSWD'):
-#                 self._dbPswd = appConf.get('NOSQLDB','DBPSWD')
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._dbUser
+
+    ''' DB PASSWORD '''
+    @property
+    def dbPswd(self) -> str:
+
+        __s_fn_id__ = "function @dbPswd.setter"
+
+        try:
+            if self._dbPswd is None and appConf.get('NOSQLDB','DBPSWD'):
+                self._dbPswd = appConf.get('NOSQLDB','DBPSWD')
 #             else:
 #                 raise ConnectionError("Undefined dbPswd; set in app.cfg or as class property")
 
-#         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
 
-#         return self._dbPswd
+        return self._dbPswd
 
-#     @property
-#     def dbAuthSource(self) -> str:
-#         return self._dbAuthSource
+    @dbPswd.setter
+    def dbPswd(self,db_pswd:str) -> str:
 
-#     @dbAuthSource.setter
-#     def dbAuthSource(self,db_auth_source:str) -> str:
+        __s_fn_id__ = "function @dbPswd.setter"
+        try:
+            if not (db_pswd is None and db_pswd==""):
+                self._dbPswd = db_pswd
+#             elif appConf.get('NOSQLDB','DBPSWD'):
+#                 self._dbPswd = appConf.get('NOSQLDB','DBPSWD')
+            else:
+                raise ConnectionError("Undefined dbPswd; set in app.cfg or as class property")
 
-#         _s_fn_id = "function @dbAuthSource.setter"
-#         try:
-#             if not (db_auth_source is None and db_auth_source==""):
-#                 self._dbAuthSource = db_auth_source
-#             elif appConf.get('NOSQLDB','DBAUTHSOURCE'):
-#                 self._dbAuthSource = appConf.get('NOSQLDB','DBAUTHSOURCE')
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._dbPswd
+
+    ''' DB AUTHSOURCE '''
+    @property
+    def dbAuthSource(self) -> str:
+
+        __s_fn_id__ = "function @dbAuthSource.setter"
+
+        try:
+            if self._dbAuthSource is None and appConf.get('NOSQLDB','DBAUTHSOURCE'):
+                self._dbAuthSource = appConf.get('NOSQLDB','DBAUTHSOURCE')
 #             else:
 #                 raise ConnectionError("Undefined dbAuthSource; set in app.cfg or as class property")
 
-#         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
 
-#         return self._dbAuthSource
+        return self._dbAuthSource
 
-#     @property
-#     def dbAuthMechanism(self) -> str:
-#         return self._dbAuthMechanism
+    @dbAuthSource.setter
+    def dbAuthSource(self,db_auth_source:str) -> str:
 
-#     @dbAuthMechanism.setter
-#     def dbAuthMechanism(self,db_auth_mechanism:str) -> str:
-
-#         _s_fn_id = "function @dbAuthMechanism.setter"
-#         try:
-#             if not (db_auth_mechanism is None and db_auth_mechanism==""):
-#                 self._dbAuthMechanism = db_auth_mechanism
+        __s_fn_id__ = "function @dbAuthSource.setter"
+        try:
+            if not (db_auth_source is None and db_auth_source==""):
+                self._dbAuthSource = db_auth_source
 #             elif appConf.get('NOSQLDB','DBAUTHSOURCE'):
-#                 self._dbAuthMechanism = appConf.get('NOSQLDB','DBAUTHMECHANISM')
+#                 self._dbAuthSource = appConf.get('NOSQLDB','DBAUTHSOURCE')
+            else:
+                raise ConnectionError("Undefined dbAuthSource; set in app.cfg or as class property")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._dbAuthSource
+
+    ''' DB MECHANISM '''
+    @property
+    def dbAuthMechanism(self) -> str:
+
+        __s_fn_id__ = "function @dbAuthMechanism.setter"
+
+        try:
+            if self._dbAuthMechanism is None and appConf.get('NOSQLDB','DBAUTHMECHANISM'):
+                self._dbAuthMechanism = appConf.get('NOSQLDB','DBAUTHMECHANISM')
 #             else:
 #                 raise ConnectionError("Undefined dbAuthMechanism; set in app.cfg or as class property")
 
-#         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
-#             print(traceback.format_exc())
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
 
-#         return self._dbAuthMechanism
+        return self._dbAuthMechanism
 
+    @dbAuthMechanism.setter
+    def dbAuthMechanism(self,db_auth_mechanism:str) -> str:
+
+        __s_fn_id__ = "function @dbAuthMechanism.setter"
+        try:
+            if not (db_auth_mechanism is None and db_auth_mechanism==""):
+                self._dbAuthMechanism = db_auth_mechanism
+#             elif appConf.get('NOSQLDB','DBAUTHMECHANISM'):
+#                 self._dbAuthMechanism = appConf.get('NOSQLDB','DBAUTHMECHANISM')
+            else:
+                raise ConnectionError("Undefined dbAuthMechanism; set in app.cfg or as class property")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._dbAuthMechanism
+
+    ''' SPARK MASTER '''
+    @property
+    def sparkMaster(self) -> str:
+
+        __s_fn_id__ = "function @sparkMaster.setter"
+
+        try:
+            if self._sparkMaster is None and appConf.get('SPARK','MASTER'):
+                self._sparkMaster = appConf.get('SPARK','MASTER')
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._sparkMaster
+
+    @sparkMaster.setter
+    def sparkMaster(self,spark_master:str) -> str:
+
+        __s_fn_id__ = "function @sparkMaster.setter"
+        try:
+            if not (spark_master is None and spark_master==""):
+                self._sparkMaster = spark_master
+#             elif appConf.get('NOSQLDB','DBAUTHMECHANISM'):
+#                 self._dbAuthMechanism = appConf.get('NOSQLDB','DBAUTHMECHANISM')
+            else:
+                raise ConnectionError("Undefined sparkMaster; set in app.cfg or as class property")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._sparkMaster
+
+    
     ''' Function - connect
 
             parameters:
@@ -383,6 +567,32 @@ class NoSQLWorkLoads():
     '''
     @property
     def connect(self):
+
+        try:
+            if self.dbHostIP and \
+                self.dbAuthSource and \
+                self.dbUser and \
+                self.dbPswd and \
+                self._dbAuthMechanism:
+                if self.dbType.lower() == 'mongodb':
+                    self._connect = MongoClient(
+                        _db_host_ip,
+                        username=_db_user,
+                        password=_db_pswd,
+                        authSource=_db_auth,
+                        authMechanism=_db_mech
+                    )
+                    logger.debug(self._connect)
+                elif self.dbType.lower() == 'cassandra':
+                    raise RuntimError("cassandra is to be included in a future release")
+                else:
+                    raise ValueError("Undefined dbType. It must be one of %s" % self._dbTypeList)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
         return self._connect
 
     @connect.setter
@@ -393,13 +603,13 @@ class NoSQLWorkLoads():
         _db_pswd=None
         _db_auth=None
         _db_mech=None
-        _s_fn_id = "function @connect.setter"
+        __s_fn_id__ = "function @connect.setter"
 
         try:
             ''' check if properties in args or config file are defined '''
             if not (len(connect_properties) > 0 or "NOSQLDB" in appConf.sections()):
                 raise TypeError("Input args in %s and NOSQLDB section in %s undefined"
-                                % (_s_fn_id,self.__conf_fname__))
+                                % (__s_fn_id__,self.__conf_fname__))
             ''' check and set DBHOSTIP from args or app config '''
             if "DBHOSTIP" in connect_properties.keys():
                 _db_host_ip = connect_properties['DBHOSTIP']
@@ -466,8 +676,8 @@ class NoSQLWorkLoads():
                 raise ValueError("Undefined dbType. It must be one of %s" % self._dbTypeList)
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return self._connect
@@ -482,41 +692,65 @@ class NoSQLWorkLoads():
     @property
     def collections(self) -> list:
 
+        ___s_fn_id____ = "function <collections.setter>"
+
+        try:
+            if self._collections is None and self.dbName and self.dbAuthSource:
+                if self.dbType.lower() == 'mongodb':
+                    db = self.connect[self.dbName]
+                    _coll_list = db.list_collection_names()
+                elif self.dbType.lower() == 'cassendra':
+                    print('TBD')
+                else:
+                    raise AttributeError('Something was wring')
+                    
+        except Exception as err:
+            logger.error("%s %s \n",___s_fn_id____, err)
+            print("[Error]"+___s_fn_id____, err)
+            print(traceback.format_exc())
+
         return self._collections
 
     @collections.setter
     def collections(self, collection_properties:dict={}) -> list:
         
-        __s_fn_id__ = "function <collections.setter>"
+        ___s_fn_id____ = "function <collections.setter>"
         _coll_list=[]
 
         try:
             ''' set the dbName if specified '''
             if "DBNAME" in collection_properties.keys():
                 self.dbName = collection_properties['DBNAME']
-            if self.dbName is None:
-                raise AttributeError("Database name must be specified")
+#             if self.dbName is None:
+#                 raise AttributeError("Database name must be specified")
             ''' set the dbType if specified '''
             if "DBTYPE" in collection_properties.keys():
                 self.dbType = collection_properties['DBTYPE'].lower()
             if "DBAUTHSOURCE" in collection_properties.keys():
+                self.dbAuthSource = collection_properties['DBAUTHSOURCE']
                 self.connect = {'DBAUTHSOURCE':collection_properties['DBAUTHSOURCE']}
             else:
+                self.dbAuthSource = self.dbName
                 self.connect = {'DBAUTHSOURCE':self.dbName}
             
             if self.dbType.lower() == 'mongodb':
                 db = self.connect[self.dbName]
                 _coll_list = db.list_collection_names()
             ''' select collections with specified regex '''
-            if "HASINNAME" in collection_properties.keys() and len(_coll_list)>0:
+            if "NAMELIST" in collection_properties.keys() and len(_coll_list)>0:
+                self._collections = list(filter(lambda _coll: 
+                                                _coll in collection_properties['NAMELIST'],
+                                                _coll_list
+                                               ))
+            elif "HASINNAME" in collection_properties.keys() and len(_coll_list)>0:
                 r = re.compile(f".*{collection_properties['HASINNAME']}*")
                 self._collections = list(filter(r.match, _coll_list))
             else:
                 self._collections = _coll_list
 
         except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+__s_fn_id__, err)
+            logger.error("%s %s \n",___s_fn_id____, err)
+            print("[Error]"+___s_fn_id____, err)
             print(traceback.format_exc())
 
         return self._collections
@@ -538,7 +772,7 @@ class NoSQLWorkLoads():
     @documents.setter
     def documents(self, docMeta:dict):
     
-        _s_fn_id = "function @data.setter"
+        __s_fn_id__ = "function @data.setter"
 
         _asType = None  # mandatory - data convertion type from store dict
         _dbName = None  # database name to query collections
@@ -579,11 +813,11 @@ class NoSQLWorkLoads():
                 doc_find=_docFind,
 #                 doc_type=_fType,
             )
-            logger.debug("%s execute find {%s} from %s",_s_fn_id,str(_docFind), _dbColl)
+            logger.debug("%s execute find {%s} from %s",__s_fn_id__,str(_docFind), _dbColl)
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return self._documents
@@ -612,71 +846,150 @@ class NoSQLWorkLoads():
                   **kwargs,
                 ):
 
-            doc_list = func(self,as_type,db_name,db_coll,doc_find, **kwargs)
+            _the_docs = func(self,as_type,db_name,db_coll,doc_find, **kwargs)
 
             if as_type.upper() == 'DICT':
-                self._documents = list(doc_list)
+                self._documents = list(_the_docs)
             elif as_type.upper() == 'STR':
-                self._documents=' '.join(list(doc_list))
+                self._documents=' '.join(list(_the_docs))
             elif as_type.upper() == 'PANDAS':
-                self._documents=pd.DataFrame(list(doc_list))
+                self._documents=pd.DataFrame(list(_the_docs))
+            elif as_type.upper() == 'SPARK':
+                self._documents=_the_docs
 #                 print("pandas",type(self._documents))
             else:
                 ''' dtype unspecified return as dictionary '''
-                self._documents=list(doc_list)
+                self._documents=list(_the_docs)
 
             return self._documents
 
         return wrapper_converter
 
-    @converter
+#     @converter
     def read_documents(self, as_type, db_name, db_coll, doc_find, **kwargs):
 
-        _s_fn_id = "function <read_documents>"
-        doc_list=[]
+        __s_fn_id__ = "function <read_documents>"
+        _appName = " ".join([
+            self.__app__,
+            self.__name__,
+            self.__package__,
+            self.__module__
+        ])   # spark app name
+
+        doc_list = None
         doc_dics = None
+        _docs_sdf = None
 
         try:
-            logger.debug("Reading files from %s",db_coll)
-            
+            if db_name:
+                self.dbName = db_name
+            if db_coll:
+                self.collections=db_coll
             if doc_find is None:
                 doc_find = {}
             
+            logger.debug("Prepared to read documents from "+\
+                         "database %s, collection %s with %s find condition"\
+                         ,self.dbName,self.collections,str(doc_find))
+
             if self.dbType.lower() == 'mongodb':
                 ''' get data from MongoDB collection '''
-                db = self.connect[db_name]
+                db = self.connect[self.dbName]
                 _coll_list = db.list_collection_names()
-                if db_coll:
-#                     self._collections = [x for x in filter(db_coll, _coll_list)]
-                    self._collections = list(filter(lambda _coll: _coll == db_coll, _coll_list))
+                logger.debug("%s database has %d collections",self.dbName,len(_coll_list))
+                if self.collections:
+#                     logger.debug("Filtering collections by %s",str(self.collections))
+                    self._collections = list(filter(lambda _coll: 
+                                                    _coll in self.collections, 
+                                                    _coll_list
+                                                   ))
                 else:
+                    logger.debug("No filters appied collections are %s",str(self.collections))
                     self._collections = _coll_list
+                logger.debug("Filtered set of collection %s", str(self.collections))
 
-                for _coll in self.collections:
-                    try:
-                        _coll_cur = db[_coll].find(doc_find)
-                        if len(list(_coll_cur.clone())) <=0:
-                            raise ValueError("No data")
-                        doc_list.extend(list(_coll_cur.clone()))
+                ''' read data from all the collections '''
+                if as_type.upper() == "SPARK":
+                    ''' read with spark '''
+#                     spark = SparkSession.builder.appName(_appName).getOrCreate()
+#                     empty_rdd = spark.sparkContext.emptyRDD()
+#                     _docs_sdf = spark.createDataFrame(data=empty_rdd,schema=StructType([]))
+#                     _docs_sdf = spark.emptyDataFrame()
+#                     _inp_uri = f"{self.dbType}://"+\
+#                                 f"{self.dbUser}:"+\
+#                                 f"{self.dbPswd}@"+\
+#                                 f"{self.dbHostIP}/"+\
+#                                 f"{self.dbName}."
+                    for _coll_idx,_coll in enumerate(self.collections):
+                        try:
+                            _inp_uri = f"{self.dbType}://"+\
+                                        f"{self.dbUser}:"+\
+                                        f"{self.dbPswd}@"+\
+                                        f"{self.dbHostIP}/"+\
+                                        f"{self.dbName}."+\
+                                        f"{_coll}"+ \
+                                        f"?authSource={self.dbAuthSource}"
+#                             _inp_uri = _inp_uri + f"{_coll}" + f"?authSource={self.dbAuthSource}"
+                            logger.debug("input uri: %s",_inp_uri)
+                            
+                            # Create Spark session
+                            spark = SparkSession.builder \
+                                .appName(_appName) \
+                                .master(self.sparkMaster) \
+                                .config("spark.mongodb.input.uri", _inp_uri) \
+                                .getOrCreate()
 
-                        
-                    except Exception as err:
-                        logger.warning("collection: %s in database: %s had errors: %s \n",
-                                       _coll, db_name, err)
-                        pass
-                    
+                            sdf = spark.read.format(self.dbFormat)\
+                                .option( "uri", _inp_uri)\
+                                .load()
+
+                            if _coll_idx == 0:
+                                _docs_sdf = sdf.alias('_docs_sdf')
+                            else:
+                                _old_docs_sdf = _docs_sdf.alias('_docs_sdf')
+                                _docs_sdf = _old_docs_sdf.unionByName(sdf)
+                                logger.debug("%s",str(_docs_sdf.head(10)))
+                            logger.debug("Union sdf size %d",_docs_sdf.count())
+
+                        except Exception as err:
+                            logger.warning("collection: %s in database: %s had errors: %s \n",
+                                           _coll, self.dbName, err)
+                            logger.error(traceback.format_exc())
+                            pass
+
+                    if (not _docs_sdf is None) and (_docs_sdf.count() > 0):
+                        doc_list=_docs_sdf
+
+                    logger.info("Loaded %d documents from %d collections",
+                                doc_list.count(),len(self.collections))
+                else:
+                    ''' read with pymongo '''
+                    doc_list=[]
+                    for _coll in self.collections:
+                        try:
+                            logger.debug("selecting data from %s collection %s",_coll,doc_find)
+                            _coll_cur = db[_coll].find(doc_find)
+                            if len(list(_coll_cur.clone())) <=0:
+                                raise ValueError("No data")
+                            doc_list.extend(list(_coll_cur.clone()))
+
+                        except Exception as err:
+                            logger.warning("collection: %s in database: %s had errors: %s \n",
+                                           _coll, self.dbName, err)
+                            pass
+
+                    logger.info("Loaded %d documents from %d collections",
+                                len(doc_list),len(self.collections))
+
             elif self.dbType.lower() == 'cassandra':
                 ''' get data from Cassandra collection '''
                 raise RuntimeError("cassandra read is tbd")
             else:
                 raise ValueError("Something was wrong")
 
-            logger.info("Loaded %d documents from %d collections",
-                        len(doc_list),len(self.collections))
-
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return doc_list
@@ -739,7 +1052,7 @@ class NoSQLWorkLoads():
         uuid_list:list=[],   # unique identifier name to check if document exists
     ):
 
-        _s_fn_id = "function <write_data>"
+        __s_fn_id__ = "function <write_data>"
         _collection = None, 
         _objIds = None
 
@@ -836,8 +1149,8 @@ class NoSQLWorkLoads():
 
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return db[db_coll]
@@ -852,7 +1165,7 @@ class NoSQLWorkLoads():
 #     def get_db_collections(self,db_name:str, has_in_name):
 
         
-#         _s_fn_id = "function <get_db_collections>"
+#         __s_fn_id__ = "function <get_db_collections>"
 #         _collections = None, 
 #         try:
 #             if self.dbType.lower() == 'mongodb':
@@ -865,8 +1178,8 @@ class NoSQLWorkLoads():
 #                     _collections = _coll_list
 
 #         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             print("[Error]"+__s_fn_id__, err)
 #             print(traceback.format_exc())
 
 #         return _collections
