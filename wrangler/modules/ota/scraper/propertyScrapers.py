@@ -50,8 +50,14 @@ class PropertyScraper():
         self.__module__ = __module__
         self.__app__ = __app__
         self.__ini_fname__ = __ini_fname__
-        self.__desc__ = desc
-        _s_fn_id = "__init__"
+        if desc is None:
+            self.__desc__ = " ".join([self.__app__,
+                                      self.__module__,
+                                      self.__package__,
+                                      self.__name__])
+        else:
+            self.__desc__ = desc
+        __s_fn_id__ = "__init__"
 
         global config
         global logger
@@ -69,6 +75,13 @@ class PropertyScraper():
         self.rezHome = config.get("CWDS","REZAWARE")
         sys.path.insert(1,self.rezHome)
         
+        from utils.modules.etl.load import sparkwls as spark
+        from utils.modules.ml.natlang import nlp
+        ''' initialize util class to use common functions '''
+        clsUtil = otasu.Utils(desc='Utilities class for property data scraping')
+        clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
+        clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
+
         ''' import dataio utils to read and write data '''
         from utils.modules.etl.load import filesRW as rw
         clsRW = rw.FileWorkLoads(desc=self.__desc__)
@@ -100,13 +113,6 @@ class PropertyScraper():
         ''' set a new logger section '''
         logger.info('########################################################')
         logger.info(self.__name__,self.__package__)
-
-        from utils.modules.etl.load import sparkwls as spark
-        from utils.modules.ml.natlang import nlp
-        ''' initialize util class to use common functions '''
-        clsUtil = otasu.Utils(desc='Utilities class for property data scraping')
-        clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
-        clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
 
 #         ''' innitialize the logger '''
 #         logger = logs.get_logger(
@@ -182,8 +188,8 @@ class PropertyScraper():
 
         _l_dests = []
 
-        _s_fn_id = "function <get_scrape_output_params>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+        __s_fn_id__ = "function <get_scrape_output_params>"
+        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
 
         try:
             if not file_name:
@@ -205,8 +211,8 @@ class PropertyScraper():
 
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id,err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__,err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return _l_dests
@@ -239,8 +245,8 @@ class PropertyScraper():
         err_count = 0      # logging the number of errors
         _tmpFPath = None   # tempory file path to store the parameterized URL list
         
-        _s_fn_id = "function <build_scrape_url_list>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+        __s_fn_id__ = "function <build_scrape_url_list>"
+        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
 
         try:
             ''' validate and if given the dir path, else revert to defaul '''
@@ -345,10 +351,10 @@ class PropertyScraper():
                 except Exception as err:
                     ''' skip to processing the next OTA url if this one is None '''
                     err_count += 1
-                    logger.warning("%s", _s_fn_id+" "+err)
+                    logger.warning("%s", __s_fn_id__+" "+err)
                     print(err)
                     
-                logger.info("Build %s completed %d error ota urls", _s_fn_id, err_count)
+                logger.info("Build %s completed %d error ota urls", __s_fn_id__, err_count)
                 logger.info("Parameterized %d urls.",len(_ota_parameterized_url_list))
                 if len(_ota_parameterized_url_list) > 0 and self.tmpDIR:
                     print(len(_ota_parameterized_url_list))
@@ -360,8 +366,8 @@ class PropertyScraper():
                     logger.info("Data written to %s",_tmpFPath)
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return _tmpFPath, _ota_parameterized_url_list
@@ -385,8 +391,8 @@ class PropertyScraper():
     '''
     def make_storage_dir(self, **kwargs):
         
-        _s_fn_id = "function <make_storage_dir>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+        __s_fn_id__ = "function <make_storage_dir>"
+        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
         
         _prop_search_folder = None
         
@@ -403,8 +409,8 @@ class PropertyScraper():
             logger.info("Folder %s ready for storing scraped data" % _prop_search_folder)
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]",+self.__package__+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__, err)
+            print("[Error]",+self.__package__+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return _prop_search_folder
@@ -441,8 +447,8 @@ class PropertyScraper():
         saveTo = None
         _save_df = pd.DataFrame()
 
-        _s_fn_id = "function <_scrape_bookings_to_csv>"
-#        logger.info("Executing %s", _s_fn_id)
+        __s_fn_id__ = "function <_scrape_bookings_to_csv>"
+#        logger.info("Executing %s", __s_fn_id__)
 
         try:
             headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36'}
@@ -530,8 +536,8 @@ class PropertyScraper():
 #                _save_df.to_csv(saveTo,index=False, sep=',')
             
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return saveTo
@@ -559,8 +565,8 @@ class PropertyScraper():
         saveTo = None   # init file name
         _l_saved_files = []
 
-        _s_fn_id = "function <scrape_url_list>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+        __s_fn_id__ = "function <scrape_url_list>"
+        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
 
         try:
             if len(otasuRLlist) > 0:
@@ -593,8 +599,8 @@ class PropertyScraper():
                     _l_saved_files.append(saveTo)
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return _l_saved_files
@@ -624,8 +630,8 @@ class PropertyScraper():
                           **kwargs,       # kwargs = {}
                          ):
         
-        _s_fn_id = "function <extract_room_rate>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+        __s_fn_id__ = "function <extract_room_rate>"
+        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
 
         aug_rate_df = pd.DataFrame()
 
@@ -644,8 +650,8 @@ class PropertyScraper():
                          %(rate_col_name,aug_col_name))
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return aug_rate_df
@@ -669,8 +675,8 @@ class PropertyScraper():
 
     def merge_similar_room_cate(self, room_data_df, col_name, **kwargs):
         
-        _s_fn_id = "function <merge_similar_room_cate>"
-        logger.info("Executing %s %s",self.__package__, _s_fn_id)
+        __s_fn_id__ = "function <merge_similar_room_cate>"
+        logger.info("Executing %s %s",self.__package__, __s_fn_id__)
 
         emb_kwargs = {
             "LOWER":True,
@@ -741,8 +747,8 @@ class PropertyScraper():
                 raise ValueError("No similarity room categories assigned")
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return _merged_room_cate_df
@@ -771,8 +777,8 @@ class PropertyScraper():
 
         import glob
 
-        _s_fn_id = "function <assign_lx_name>"
-        logger.info("Executing %s %s",self.__package__, _s_fn_id)
+        __s_fn_id__ = "function <assign_lx_name>"
+        logger.info("Executing %s %s",self.__package__, __s_fn_id__)
 
         _lx_assign_df = pd.DataFrame()
         _dest_df = pd.DataFrame()
@@ -809,8 +815,8 @@ class PropertyScraper():
             _lx_assign_df["dest_lx_type"] = "city"
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return _lx_assign_df
@@ -837,8 +843,8 @@ class PropertyScraper():
 
     def save_to_db(self, data_df, table_name:str="ota_property_prices", **kwargs):
         
-        _s_fn_id = "function <merge_similar_room_cate>"
-        logger.info("Executing %s %s",self.__package__, _s_fn_id)
+        __s_fn_id__ = "function <merge_similar_room_cate>"
+        logger.info("Executing %s %s",self.__package__, __s_fn_id__)
 
         count = 0
 
@@ -860,8 +866,8 @@ class PropertyScraper():
             logger.info("Data %d rows loaded into %s table",count,table_name)
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n", __s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return count, data_df

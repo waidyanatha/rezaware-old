@@ -47,7 +47,13 @@ class Utils():
         self.__module__ = __module__
         self.__app__ = __app__
         self.__conf_fname__ = __conf_fname__
-        self.__desc__ = desc
+        if desc is None:
+            self.__desc__ = " ".join([self.__app__,
+                                      self.__module__,
+                                      self.__package__,
+                                      self.__name__])
+        else:
+            self.__desc__ = desc
 
         global config
         global logger
@@ -411,6 +417,8 @@ class Utils():
             print(traceback.format_exc())
 
         return _prop_data_df
+
+
     ''' Function
             name: scrape_url_list
             parameters:

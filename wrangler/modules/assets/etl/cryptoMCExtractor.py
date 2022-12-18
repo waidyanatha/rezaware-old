@@ -65,7 +65,7 @@ class CryptoMarkets():
         self._prices = None
 
         global pkgConf
-        global appConf
+#         global appConf
         global logger
         global clsRW
         global clsNoSQL
@@ -83,9 +83,9 @@ class CryptoMarkets():
             ''' DEPRECATED: get the path to the input and output data '''
             self.dataDir = pkgConf.get("CWDS","DATA")
 
-            ''' set app configparser '''
-            appConf = configparser.ConfigParser()
-            appConf.read(os.path.join(self.appDir, self.__conf_fname__))
+#             ''' set app configparser '''
+#             appConf = configparser.ConfigParser()
+#             appConf.read(os.path.join(self.appDir, self.__conf_fname__))
             
             ''' innitialize the logger '''
             from rezaware import Logger as logs
@@ -106,6 +106,7 @@ class CryptoMarkets():
             clsRW.storeMode = pkgConf.get("DATASTORE","MODE")
             clsRW.storeRoot = pkgConf.get("DATASTORE","ROOT")
             logger.info("Files RW mode %s with root %s set",clsRW.storeMode,clsRW.storeRoot)
+
             ''' set the package specific storage path '''
             ''' TODO change to use the utils/FileRW package '''
             self.storePath = pkgConf.get("CWDS","DATA")
@@ -119,7 +120,8 @@ class CryptoMarkets():
             logger.info("%s package files stored in %s",self.__package__,self.storePath)
 
             ''' import mongo work load utils to read and write data '''
-            from utils.modules.etl.load import noSQLwls as nosql
+#             from utils.modules.etl.load import noSQLwls as nosql
+            from utils.modules.etl.load import sparkNoSQLwls as nosql
             clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
             
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
@@ -904,10 +906,21 @@ class CryptoMarkets():
     ''' Function
             name: trasnform_mcap
             parameters:
+                data_owner (str) - the name of the data source; e.g. coinmarketcap,
+                from_date (date) - start date to filter the data by
+                to_date (date) - end date to filter the data by
+                **kwargs (doct) - for non-existent key/val pairs; will use default values
+                                from the app.cfg file 
+                    "DBNAME" (str) - database name to retrieve data from
+                    "DBAUTHSOURCE" (str) - autherization database; else try with database name
+                    "HASINNAME" (str, optional) - matching text to filter collections
+                    "COLLLIST" (list, optional) - list of collections to consider
+                            collection list preceeds over has-in-name 
 
-            procedure: read all the historic data mongodb colelctions
-                       for a given data_owner. 
-            return None
+            procedure: with spark read all the mcap data from the mongodb colelctions
+                       for a given data_owner. Filter the data by date range. Construct
+                       a spark dataframe
+            return self._data (spark dataframe)
 
             author: <nuwan.waidyanatha@rezgateway.com>
 
@@ -928,46 +941,85 @@ class CryptoMarkets():
 #                     'symbol',   # source provided identifier
 #                     'date']     # crypto name
         __as_type__ = "pandas"
-        _hist_mcap_coll_list = []
+        __find__ = None
+        _data_obj_list = []
         _hist_mcap_df = pd.DataFrame()
 
         try:
+            if not "DBNAME" in kwargs.keys():
+                raise AttributeError("Missing madetory DBNAME kwarg key value pairs")
 
-            if "SOURCEDBNAME" in kwargs.keys():
-                _source_db = kwargs["SOURCEDBNAME"]
-            else:
-                _source_db = __source_db_name__
-            if "SOURCEDBAUTH" in kwargs.keys():
-                _source_db_auth = kwargs["SOURCEDBAUTH"]
-            else:
-                _source_db_auth = __source_db_name__
-            if "SOURCEDBCOLL" in kwargs.keys():
-                _source_coll_prefix = kwargs["SOURCEDBCOLL"]
-            else:
-#                     _destin_coll = ".".join([data_owner,str(from_date),str(to_date)])
-                _source_coll_prefix = ".".join([data_owner,str(from_date)])
+#             if "SOURCEDBNAME" in kwargs.keys():
+#                 _source_db = kwargs["SOURCEDBNAME"]
+#             else:
+#                 _source_db = __source_db_name__
+#             if "SOURCEDBAUTH" in kwargs.keys():
+#                 _source_db_auth = kwargs["SOURCEDBAUTH"]
+#             else:
+#                 _source_db_auth = __source_db_name__
+#             if "COLLLIST" in kwargs.keys():
+#                 _source_coll = kwargs["NAMELIST"]
+#             else:
+# #                     _destin_coll = ".".join([data_owner,str(from_date),str(to_date)])
+#                 _source_coll_prefix = ".".join([data_owner,str(from_date)])
 
-            clsNoSQL.connect={'DBAUTHSOURCE':_source_db}
-            _hist_mcap_coll_list = clsNoSQL.get_db_collections(
-                    db_name=_source_db,
-                    has_in_name=data_owner,
-            )
-            if len(_hist_mcap_coll_list)<=0:
-                raise ValueError("Unable to locate any collection in %sDB for %s"
-                                %(_source_db,data_owner))        
+            clsNoSQL.dbName = kwargs['DBNAME']
+            if "DBAUTHSOURCE" in kwargs.keys():
+                clsNoSQL.dbAuthSource = kwargs['DBAUTHSOURCE']
+            if "COLLLIST" in kwargs.keys() and isinstance(kwargs['COLLLIST'],list):
+                clsNoSQL.collections = {"COLLLIST":kwargs['COLLLIST']}
+            elif "HASINNAME" in kwargs.keys() and isinstance(kwargs['HASINNAME'],str):
+                clsNoSQL.collections = {"HASINNAME":kwargs['HASINNAME']}
+#             clsNoSQL.connect={'DBAUTHSOURCE':kwargs['DBAUTHSOURCE']}
+            else:
+                pass
+#             _mcap_coll_list = clsNoSQL.collections
+#             _hist_mcap_coll_list = clsNoSQL.get_db_collections(
+#                     db_name=_source_db,
+#                     has_in_name=data_owner,
+#             )
+            if len(clsNoSQL.collections)<=0:
+                raise ValueError("Unable to locate any collection in %s database for %s"
+                                %(kwargs['DBNAME'],data_owner))        
             logger.info("Found %d collection in %s DB for %s",
-                        len(_hist_mcap_coll_list),_source_db,data_owner)
+                        len(clsNoSQL.collections),kwargs['DBNAME'],data_owner)
+            self._data = clsNoSQL.read_documents(
+                as_type=__as_type__,
+                db_name=None,   #clsNoSQL.dbName,
+                db_coll=None,   #clsNoSQL.collections,
+                doc_find=__find__
+            )
 
-            for _coll_name in _hist_mcap_coll_list:
-                tmp_df = pd.DataFrame()
-                tmp_df = clsNoSQL.read_documents(
-                    as_type = __as_type__,
-                    db_name = _source_db,
-                    db_coll = _coll_name, 
-                    doc_find = {}
-                )
-                _hist_mcap_df = pd.concat([_hist_mcap_df,tmp_df])
-            self._data = _hist_mcap_df.drop_duplicates()
+#             for _coll_name in _mcap_coll_list:
+#                 try:
+#                     self.collections = {"COLLLIST":[_coll_name]}
+#                     _data = clsNoSQL.read_documents(
+#                         as_type=__as_type__,
+#                         db_name=None,   #clsNoSQL.dbName,
+#                         db_coll=None,   #clsNoSQL.collections,
+#                         doc_find=__find__
+#                     )
+#                     if _data:
+#                         _data_obj_list.append(_data)
+#                     else:
+#                         logger.debug("No documents found for %s",_coll_name)
+
+#                 except Exception as err:
+#                     logger.warning("collection: %s had errors: %s \n",
+#                                    _coll_name, err)
+#                     print(traceback.format_exc())
+#                     pass
+#                 tmp_df = pd.DataFrame()
+#                 tmp_df = clsNoSQL.read_documents(
+#                     as_type = __as_type__,
+#                     db_name = _source_db,
+#                     db_coll = _coll_name, 
+#                     doc_find = {}
+#                 )
+#                 _hist_mcap_df = pd.concat([_hist_mcap_df,tmp_df])
+#             self._data = _hist_mcap_df.drop_duplicates()
+
+#             self._data = _data_obj_list
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)

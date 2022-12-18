@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "mongodbwls"
+__name__ = "sparkNoSQLwls"
 __module__ = "etl"
 __package__ = "load"
 __app__ = "utils"
@@ -645,10 +645,12 @@ class NoSQLWorkLoads():
             ''' check and set DBAUTHSOURCE from args or app config '''
             if "DBAUTHSOURCE" in connect_properties.keys():
                 _db_auth = connect_properties['DBAUTHSOURCE']
-            elif appConf.get('NOSQLDB','DBAUTHSOURCE'):
-                _db_auth = appConf.get('NOSQLDB','DBAUTHSOURCE')
             elif not self.dbName is None:
                 _db_auth = self.dbName
+                logger.warning("Unspecified DBAUTHSOURCE try with authSource = dbName")
+            elif appConf.get('NOSQLDB','DBAUTHSOURCE'):
+                _db_auth = appConf.get('NOSQLDB','DBAUTHSOURCE')
+                logger.warning("Trying db auth source with %s value",self.__conf_fname__)
             else:
                 raise ValueError("Undefined DBAUTHSOURCE in function args and app config file. aborting")
 
@@ -737,9 +739,9 @@ class NoSQLWorkLoads():
                 db = self.connect[self.dbName]
                 _coll_list = db.list_collection_names()
             ''' select collections with specified regex '''
-            if "NAMELIST" in collection_properties.keys() and len(_coll_list)>0:
+            if "COLLLIST" in collection_properties.keys() and len(_coll_list)>0:
                 self._collections = list(filter(lambda _coll: 
-                                                _coll in collection_properties['NAMELIST'],
+                                                _coll in collection_properties['COLLLIST'],
                                                 _coll_list
                                                ))
             elif "HASINNAME" in collection_properties.keys() and len(_coll_list)>0:
@@ -853,7 +855,12 @@ class NoSQLWorkLoads():
             elif as_type.upper() == 'STR':
                 self._documents=' '.join(list(_the_docs))
             elif as_type.upper() == 'PANDAS':
-                self._documents=pd.DataFrame(list(_the_docs))
+#                 tmp_df = pd.DataFrame()
+#                 for _docs in _the_docs:
+#                     tmp_df = pd.concat([tmp_df,pd.DataFrame(_docs)])
+# #                     logger.debug("tmp_df type %s",type(tmp_df))
+#                 self._documents=tmp_df
+                self._documents=pd.DataFrame(_the_docs)
             elif as_type.upper() == 'SPARK':
                 self._documents=_the_docs
 #                 print("pandas",type(self._documents))
@@ -865,7 +872,7 @@ class NoSQLWorkLoads():
 
         return wrapper_converter
 
-#     @converter
+    @converter
     def read_documents(self, as_type, db_name, db_coll, doc_find, **kwargs):
 
         __s_fn_id__ = "function <read_documents>"
