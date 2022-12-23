@@ -64,11 +64,14 @@ class CryptoMarkets():
         self._connection = None
         self._prices = None
 
+        __s_fn_id__ = "__init__"
+
         global pkgConf
 #         global appConf
         global logger
         global clsRW
         global clsNoSQL
+        global clsSpark
 
         try:
             self.cwd=os.path.dirname(__file__)
@@ -100,12 +103,20 @@ class CryptoMarkets():
             logger.info('########################################################')
             logger.info("%s Class",self.__name__)
 
-            ''' import file work load utils to read and write data '''
-            from utils.modules.etl.load import filesRW as rw
-            clsRW = rw.FileWorkLoads(desc=self.__desc__)
-            clsRW.storeMode = pkgConf.get("DATASTORE","MODE")
-            clsRW.storeRoot = pkgConf.get("DATASTORE","ROOT")
-            logger.info("Files RW mode %s with root %s set",clsRW.storeMode,clsRW.storeRoot)
+            ''' import mongo work load utils to read and write data '''
+#             from utils.modules.etl.load import noSQLwls as nosql
+            from utils.modules.etl.load import sparkNoSQLwls as nosql
+            clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
+            ''' import sparkDBwls to write collections to db '''
+            from utils.modules.etl.load import sparkDBwls
+            clsSpark = sparkDBwls.SQLWorkLoads(desc=self.__desc__)
+            
+#             ''' import file work load utils to read and write data '''
+#             from utils.modules.etl.load import filesRW as rw
+#             clsRW = rw.FileWorkLoads(desc=self.__desc__)
+#             clsRW.storeMode = pkgConf.get("DATASTORE","MODE")
+#             clsRW.storeRoot = pkgConf.get("DATASTORE","ROOT")
+#             logger.info("Files RW mode %s with root %s set",clsRW.storeMode,clsRW.storeRoot)
 
             ''' set the package specific storage path '''
             ''' TODO change to use the utils/FileRW package '''
@@ -119,11 +130,6 @@ class CryptoMarkets():
     
             logger.info("%s package files stored in %s",self.__package__,self.storePath)
 
-            ''' import mongo work load utils to read and write data '''
-#             from utils.modules.etl.load import noSQLwls as nosql
-            from utils.modules.etl.load import sparkNoSQLwls as nosql
-            clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
-            
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
                            self.__module__,
@@ -147,8 +153,8 @@ class CryptoMarkets():
             print("%s Class initialization complete" % self.__name__)
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return None
@@ -904,7 +910,7 @@ class CryptoMarkets():
         return write_data
 
     ''' Function
-            name: trasnform_mcap
+            name: nosql_to_sql_db
             parameters:
                 data_owner (str) - the name of the data source; e.g. coinmarketcap,
                 from_date (date) - start date to filter the data by
@@ -926,100 +932,88 @@ class CryptoMarkets():
 
     '''
 
-    def trasnform_mcap(
+    def nosql_to_sql(
         self,
-        data_owner:str,
-        from_date,
-        to_date,
+        source_db:str="",
+        coll_list:list=[],
+        destin_db:str="",
+        table_name:str="",
         **kwargs
     ):
 
-        __s_fn_id__ = "function <trasnform_mcap>"
-
-        __source_db_name__ = "tip-historic-marketcap"
-#         __uids__ = ['source',   # coingeko or coinmarketcap
-#                     'symbol',   # source provided identifier
-#                     'date']     # crypto name
+        __s_fn_id__ = "function <nosql_to_sql>"
         __as_type__ = "pandas"
-        __find__ = None
-        _data_obj_list = []
-        _hist_mcap_df = pd.DataFrame()
+        _find = None
+        _colls_list = []
+        _data_df = pd.DataFrame() 
 
         try:
-            if not "DBNAME" in kwargs.keys():
-                raise AttributeError("Missing madetory DBNAME kwarg key value pairs")
+            if "".join(source_db.split())=="":
+                raise AttributeError("Invalid SOURCE DB NAME")
+#             clsNoSQL.dbName = kwargs['DBNAME']
+            clsNoSQL.dbName = source_db
+#             if "".join(destin_db.split())!="":
+#                 clsSpark.dbName = destin_db
 
-#             if "SOURCEDBNAME" in kwargs.keys():
-#                 _source_db = kwargs["SOURCEDBNAME"]
-#             else:
-#                 _source_db = __source_db_name__
-#             if "SOURCEDBAUTH" in kwargs.keys():
-#                 _source_db_auth = kwargs["SOURCEDBAUTH"]
-#             else:
-#                 _source_db_auth = __source_db_name__
-#             if "COLLLIST" in kwargs.keys():
-#                 _source_coll = kwargs["NAMELIST"]
-#             else:
-# #                     _destin_coll = ".".join([data_owner,str(from_date),str(to_date)])
-#                 _source_coll_prefix = ".".join([data_owner,str(from_date)])
-
-            clsNoSQL.dbName = kwargs['DBNAME']
             if "DBAUTHSOURCE" in kwargs.keys():
                 clsNoSQL.dbAuthSource = kwargs['DBAUTHSOURCE']
-            if "COLLLIST" in kwargs.keys() and isinstance(kwargs['COLLLIST'],list):
+            if len(coll_list) > 0:
+                clsNoSQL.collections = {"COLLLIST":coll_list}
+            elif "COLLLIST" in kwargs.keys() and isinstance(kwargs['COLLLIST'],list):
                 clsNoSQL.collections = {"COLLLIST":kwargs['COLLLIST']}
             elif "HASINNAME" in kwargs.keys() and isinstance(kwargs['HASINNAME'],str):
                 clsNoSQL.collections = {"HASINNAME":kwargs['HASINNAME']}
-#             clsNoSQL.connect={'DBAUTHSOURCE':kwargs['DBAUTHSOURCE']}
             else:
                 pass
-#             _mcap_coll_list = clsNoSQL.collections
-#             _hist_mcap_coll_list = clsNoSQL.get_db_collections(
-#                     db_name=_source_db,
-#                     has_in_name=data_owner,
-#             )
+            ''' valiate collection list '''
             if len(clsNoSQL.collections)<=0:
-                raise ValueError("Unable to locate any collection in %s database for %s"
-                                %(kwargs['DBNAME'],data_owner))        
-            logger.info("Found %d collection in %s DB for %s",
-                        len(clsNoSQL.collections),kwargs['DBNAME'],data_owner)
-            self._data = clsNoSQL.read_documents(
-                as_type=__as_type__,
-                db_name=None,   #clsNoSQL.dbName,
-                db_coll=None,   #clsNoSQL.collections,
-                doc_find=__find__
-            )
+                raise ValueError("Unable to locate any collection in %s database"
+                                %(clsNoSQL.dbName))
+            _coll_list = clsNoSQL.collections
+            logger.info("Found %d collection in %s DB",
+                        len(clsNoSQL.collections),clsNoSQL.dbName)
+            ''' loop through collections to read into dataframe and write to DB '''
+            _colls_list = clsNoSQL.collections
+            ''' assign the find filter '''
+            if "FIND" in kwargs.keys() and isinstance(kwargs['FIND'],dict):
+                _find = kwargs['FIND']
+            ''' set data to empty dataframe '''
+            self._data = pd.DataFrame()
+            
+            try:
+                ''' loop through collection to get the read data '''
+                for _coll in _colls_list:
+                    _data_df = clsNoSQL.read_documents(
+                        as_type=__as_type__,
+                        db_name=None,   #clsNoSQL.dbName is already set above,
+                        db_coll=[_coll],   #one collection at a time to reduce the load
+                        doc_find=_find
+                    )
+                    if _data_df.shape[0] > 0:
+                        logger.debug("read %d records from %s collection",_data_df.shape[0],_coll)
+                        ''' write dataframe to table with sparksqlwls'''
+                        self._data = pd.concat([self._data,_data_df])
 
-#             for _coll_name in _mcap_coll_list:
-#                 try:
-#                     self.collections = {"COLLLIST":[_coll_name]}
-#                     _data = clsNoSQL.read_documents(
-#                         as_type=__as_type__,
-#                         db_name=None,   #clsNoSQL.dbName,
-#                         db_coll=None,   #clsNoSQL.collections,
-#                         doc_find=__find__
-#                     )
-#                     if _data:
-#                         _data_obj_list.append(_data)
-#                     else:
-#                         logger.debug("No documents found for %s",_coll_name)
+            except Exception as coll_err:
+                logger.error("Collection %s hadd errors: %s \n",_coll,coll_err)
+#                 print("[Error]"+__s_fn_id__, coll_err)
+                logger.debug("%s",traceback.format_exc())
 
-#                 except Exception as err:
-#                     logger.warning("collection: %s had errors: %s \n",
-#                                    _coll_name, err)
-#                     print(traceback.format_exc())
-#                     pass
-#                 tmp_df = pd.DataFrame()
-#                 tmp_df = clsNoSQL.read_documents(
-#                     as_type = __as_type__,
-#                     db_name = _source_db,
-#                     db_coll = _coll_name, 
-#                     doc_find = {}
-#                 )
-#                 _hist_mcap_df = pd.concat([_hist_mcap_df,tmp_df])
-#             self._data = _hist_mcap_df.drop_duplicates()
-
-#             self._data = _data_obj_list
+            if self.data.shape[0] > 0:
+                if "COLUMNSMAP" in kwargs.keys() and isinstance(kwargs['COLUMNSMAP'],dict):
+                    self._data.rename(columns=kwargs['COLUMNSMAP'],inplace=True)
+#                     for col_name in kwargs['COLUMNSMAP'].keys():
+#                         self._data = self._data.withColumnRenamed(
+#                             col_name, 
+#                             kwargs['COLUMNSMAP'][col_name])
+                    logger.debug("Column renamed in dataframe %s", str(kwargs['COLUMNSMAP']))
+                _saved_rec_count=clsSpark.insert_sdf_into_table(
+                    save_sdf=self.data,
+                    db_table=table_name,
+                    session_args = kwargs
+                )
+            logger.info("%d records inserted into table %s in database %s"
+                        ,_saved_rec_count,table_name,destin_db)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1041,7 +1035,7 @@ class CryptoMarkets():
 
     '''
 
-#     def load_mcap_to_sqldb(
+#     def load_collection_to_sqldb(
 #         self,
 #         data_owner:str,
 #         from_date,

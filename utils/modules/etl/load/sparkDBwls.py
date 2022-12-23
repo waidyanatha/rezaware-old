@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "sparkwls"
+__name__ = "sparkdbwls"
 __module__ = "etl"
 __package__ = "load"
 __app__ = "utils"
@@ -41,7 +41,7 @@ except Exception as e:
     Resources:
         https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
 '''
-class SparkWorkLoads():
+class SQLWorkLoads():
     ''' Function
             name: __init__
             parameters:
@@ -66,20 +66,46 @@ class SparkWorkLoads():
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
-        self._data = None
-        self._dType = None
-        self._dTypeList = [
-            'RDD',     # spark resilient distributed dataset
-            'SDF',     # spark DataFrame
-            'PANDAS',  # pandas dataframe
-            'ARRAY',   # numpy array
-            'DICT',    # data dictionary
-        ]
+#         self._dType = None
+#         self._dTypeList = [
+#             'RDD',     # spark resilient distributed dataset
+#             'SDF',     # spark DataFrame
+#             'PANDAS',  # pandas dataframe
+#             'ARRAY',   # numpy array
+#             'DICT',    # data dictionary
+#         ]
 
+        ''' Initialize the DB parameters '''
+        self._dbType = None
+        self._dbDriver = None
+        self._dbHostIP = None
+        self._dbPort = None
+        self._dbDriver = None
+        self._dbName = None
+        self._dbSchema = None
+        self._dbUser = None
+        self._dbPswd = None
+        self._dbConnURL = None
+
+        ''' Initialize DB connection parameters '''
+#         self._sparkDIR = None
+#         self._sparkJAR = None
+
+        ''' Initialize spark session parameters '''
+        self._homeDir = None
+        self._binDir = None
+        self._config = None
+        self._jarDir = None
+        self._appName = None
+        self._master = None
+        self._rwFormat = None
         self._session = None
-        self._dbConnection = None
+        self._saveMode = None
 
-        _s_fn_id = "__init__"
+        ''' Initialize property var to hold the data '''
+        self._data = None
+
+        __s_fn_id__ = "__init__"
 
         ''' initiate to load app.cfg data '''
         global logger
@@ -121,113 +147,9 @@ class SparkWorkLoads():
             if not os.path.exists(self.tmpDIR):
                 os.makedirs(self.tmpDIR)
 
-        ''' Initialize the DB connection parameters '''
-        self.db_port = None
-        self.db_driver = None
-        self.db_name = None
-        self.db_schema = None
-        self.db_user = None
-        self.db_pswd = None
-
-        ''' Initialize spark connection parameters '''
-        self.spark_dir = None
-        self.spark_jar = None
-        self.spark_url = None
-        self.spark_session = None
-
-        ''' Spark function parameters '''
-        self.spark_save_mode = "Append"
         try:
-#             ''' --- DATABASE ---
-#                 set the host IP '''
-#             self.host_ip = None
-#             if "hostIP" in kwargs.keys():
-#                 self.host_ip = kwargs['hostIP']
-#             elif appConf.get('HOSTS','HOSTIP'):
-#                 self.host_ip = appConf.get('HOSTS','HOSTIP')
-#             else:
-#                 raise ConnectionError("Undefined host IP. Set the host_ip in app.cfg")
-
-#             ''' set the database type '''
-#             self.db_type = None
-#             if "dbType" in kwargs.keys():
-#                 self.db_type = kwargs['dbType']
-#             elif appConf.get('DATABASE','DBTYPE'):
-#                 self.db_type = appConf.get('DATABASE','DBTYPE')
-#             else:
-#                 raise ConnectionError("Undefined database type. Set the db_type in app.cfg")
-
-#             ''' set the database port '''
-#             if "dbPort" in kwargs.keys():
-#                 self.db_port = kwargs['dbPort']
-#             elif appConf.get('DATABASE','DBPORT'):
-#                 self.db_port = appConf.get('DATABASE','DBPORT')
-#             else:
-#                 raise ConnectionError("Undefined database port. Set the db_port in app.cfg")
-
-#             ''' set the database driver '''
-#             if "dbDriver" in kwargs.keys():
-#                 self.db_driver = kwargs['dbDriver']
-#             elif appConf.get('DATABASE','DBDRIVER'):
-#                 self.db_driver = appConf.get('DATABASE','DBDRIVER')
-#             else:
-#                 raise ConnectionError("Undefined database password. Set the db_driver in app.cfg")
-
-#             ''' set the database name '''
-#             if "dbName" in kwargs.keys():
-#                 self.db_name = kwargs['dbName']
-#             elif appConf.get('DATABASE','DBNAME'):
-#                 self.db_name = appConf.get('DATABASE','DBNAME')
-#             else:
-#                 raise ConnectionError("Undefined database name. Set the db_name in app.cfg")
-
-#             ''' set the database schema '''
-#             if "dbSchema" in kwargs.keys():
-#                 self.db_schema = kwargs['dbSchema']
-#             elif appConf.get('DATABASE','DBSCHEMA'):
-#                 self.db_schema = appConf.get('DATABASE','DBSCHEMA')
-#             else:
-#                 raise ConnectionError("Undefined database schema. Set the db_schema in app.cfg")
-
-#             ''' set the database username '''
-#             if "dbUser" in kwargs.keys():
-#                 self.db_user = kwargs['dbUser']
-#             elif appConf.get('DATABASE','DBUSER'):
-#                 self.db_user = appConf.get('DATABASE','DBUSER')
-#             else:
-#                 raise ConnectionError("Undefined database username. Set the db_user in app.cfg")
-
-#             ''' set the database password '''
-#             if "dbPswd" in kwargs.keys():
-#                 self.db_pswd = kwargs['DBPSWD']
-#             elif appConf.get('DATABASE','DBPSWD'):
-#                 self.db_pswd = appConf.get('DATABASE','DBPSWD')
-#             else:
-#                 raise ConnectionError("Undefined database password. Set the db_pswd in app.cfg")
-
-
-#             ''' --- SPARK --- DEPRECATED Moved to property
-#                 set the spark home directory '''
-#             if not (sparkPath or appConf.get('SPARK','SPARKHOMEDIR')):
-#                 raise ValueError("Spark directory required to proceed. \
-#                                 Must be specified in app_config.py or \
-#                                 spark_path %s must be valid" % sparkPath)
-#             if sparkPath:
-#                 ''' override config.spark_install_director '''
-#                 ''' TODO validate spark_dir '''
-#                 self.spark_dir = sparkPath
-#             else:
-#                 self.spark_dir = appConf.get('SPARK','SPARKHOMEDIR')
-            
-#             findspark.init(self.spark_dir)
+#             findspark.init(self.sparkDIR)
 #             from pyspark.sql import SparkSession
-#             logger.info("Importing %s library from spark dir: %s" % (SparkSession.__name__, self.spark_dir))
-
-#             ''' set the db_type specific jar '''
-#             if not appConf.get('SPARK','SPARKJARDIR'):
-#                 raise ConnectionError("Spark requires a valid jar file to use with %s" % self.db_type)
-#             self.spark_jar = appConf.get('SPARK','SPARKJARDIR')
-#             logger.info("Defining Spark Jar dir: %s" % (self.spark_jar))
 
 #             ''' the Spark session should be instantiated as follows '''
 #             if not "DATA_STORE" in kwargs.keys():
@@ -253,23 +175,17 @@ class SparkWorkLoads():
 #                 hadoopConf.set('fs.s3a.endpoint', pkgConf.get('AWSAUTH','REGION'))
 #                 hadoopConf.set('fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
 
-#                 self.spark_session=SparkSession(sc)
+#                 self.session=SparkSession(sc)
                 
 #             elif kwargs['DATA_STORE']=="LOCAL":
 #                 print("setting up spark session for local files")
-#             self.spark_session = SparkSession \
+#             self.session = SparkSession \
 #                                 .builder \
 #                                 .appName(self.__app__) \
-#                                 .config("spark.jars", self.spark_jar) \
+#                                 .config("spark.jars", self.sparkJAR) \
 #                                 .getOrCreate()
 #             else:
 #                 raise ValueError("Invalid DATA_STORE value defined to set the spark session")
-
-#             logger.info("Starting a Spark Session: %s" % (self.spark_session))
-
-            ''' build the url for db connection '''
-#             self.spark_url = "jdbc:"+self.db_type+"://"+self.host_ip+":"+self.db_port+"/"+self.db_name
-            logger.info("Defined spark database connection url: %s" % (self.spark_url))
 
             logger.info("Connection complete! ready to load data.")
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
@@ -280,109 +196,318 @@ class SparkWorkLoads():
                            self.__desc__))
 
         except Exception as err:
-            _s_fn_id = "Class <SparkWorkLoads> Function <__init__>"
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return None
 
-    
-        ''' Function --- SPARK SESSION ---
+    ''' Function --- SPARK DB PROPERTIES ---
             name: session @property and @setter functions
             parameters:
 
             procedure: 
-            return self._session
+                @property - if None try __conf_file__; else throw exception
+                @setter - if None or Empty throw exception; else set it
+            return self._* (* is the property attribute name)
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
+    ''' --- TYPE --- '''
     @property
-    def session(self):
-        return self._session
+    def dbType(self):
 
-    @session.setter
-    def session(self,session_args:dict={}):
-
-        __s_fn_id__ = "function <@session.setter>"
+        __s_fn_id__ = "function <@property dbType>"
 
         try:
-            ''' 
-                set the spark home directory '''
-            if "HOMEDIR" in session_args.keys():
-                _spark_home_dir = session_args['HOMEDIR']
-            elif appConf.has_option('SPARK','HOMEDIR'):
-                _spark_home_dir = appConf.get('SPARK','HOMEDIR')
-            else:
-                raise AttributeError("Spark home directory is required to proceed "+ \
-                                "It must be specified in app.cfg or "+ \
-                                "passed as a **session_args key value pair")
-            
-            findspark.init(_spark_home_dir)
-            from pyspark.sql import SparkSession
-            logger.debug("Importing %s library from spark dir: %s"
-                         % (SparkSession.__name__, _spark_home_dir))
-
-            if "CONFIG" in session_args.keys():
-                _conf_opt = session_args['CONFIG']
-            elif appConf.has_option('SPARK','CONFIG'):
-                _conf_opt = appConf.get('SPARK','CONFIG')
-            else:
-                _conf_opt = "spark.jars"
-
-            ''' set master cluster setup local[x], yarn or mesos '''
-            if "MASTER" in session_args.keys():
-                _master = session_args['MASTER']
-            elif appConf.has_option('SPARK','MASTER'):
-                _master = appConf.get('SPARK','MASTER')
-            else:
-                _master = "local[1]"     
-
-            if "APPNAME" in session_args.keys():
-                _app_name = session_args['APPNAME']
-            elif appConf.has_option('SPARK','APPNAME'):
-                _app_name = appConf.get('SPARK','APPNAME')
-            else:
-                _app_name = self.__app__     
-
-            ''' set the db_type specific jar '''
-            if "JARDIR" in session_args.keys():
-                _jar_dir = session_args['JARDIR']
-            elif appConf.has_option('SPARK','JARDIR'):
-                _jar_dir = appConf.get('SPARK','JARDIR')
-            else:
-                _jar_dir = None
-#                 raise ConnectionError("Spark requires a valid jar file to use with %s" % self.db_type)
-#             self.spark_jar = appConf.get('SPARK','JARDIR')
-#             logger.info("Defining Spark Jar dir: %s" % (self.spark_jar))
-
-            if _jar_dir is None:
-                self._session = SparkSession \
-                                    .builder \
-                                    .master(_master) \
-                                    .appName(_app_name) \
-                                    .getOrCreate()
-            else:
-                self._session = SparkSession \
-                                    .builder \
-                                    .master(_master) \
-                                    .appName(_app_name) \
-                                    .config(_conf_opt, self.spark_jar) \
-                                    .getOrCreate()
-                
-            logger.info("Starting a Spark Session: %s" % (self._session))
-
-            ''' TODO Deprate after all functions are working '''
-            self.spark_session=self._session
-
+            if self._dbType is None and appConf.has_option('DATABASE','DBTYPE'):
+                self._dbType = appConf.get('DATABASE','DBTYPE')
+                logger.debug("@property Database dbType set to: %s",self._dbType)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
-        return self._session
+        return self._dbType
 
+    @dbType.setter
+    def dbType(self,db_type:str=''):
+
+        __s_fn_id__ = "function <@dbType.setter>"
+
+        try:
+            if db_type is None or "".join(db_type.strip()) == "":
+                raise ConnectionError("Invalid database TYPE %s" % db_type)
+
+            self._dbType = db_type
+            logger.debug("@setter Database dbType set to: %s",self._dbType)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbType
+
+    ''' --- DRIVER --- '''
+    @property
+    def dbDriver(self):
+
+        __s_fn_id__ = "function <@property dbDriver>"
+
+        try:
+            if self._dbDriver is None and appConf.has_option('DATABASE','DBDRIVER'):
+                self._dbDriver = appConf.get('DATABASE','DBDRIVER')
+                logger.debug("@property Database dbDriver set to: %s",self._dbDriver)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbDriver
+
+    @dbDriver.setter
+    def dbDriver(self,db_driver:str=''):
+
+        __s_fn_id__ = "function <@dbDriver.setter>"
+
+        try:
+            if db_driver is None or "".join(db_driver.strip()) == "":
+                raise ConnectionError("Invalid database DRIVER %s" % db_driver)
+
+            self._dbDriver = db_driver
+            logger.debug("@setter Database dbDriver set to: %s",self._dbDriver)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbDriver
+
+    ''' --- IP --- '''
+    @property
+    def dbHostIP(self):
+
+        __s_fn_id__ = "function <@property dbHostIP>"
+
+        try:
+            if self._dbHostIP is None and appConf.has_option('DATABASE','DBHOSTIP'):
+                self._dbHostIP = appConf.get('DATABASE','DBHOSTIP')
+                logger.debug("@property Database dbHostIP set to: %s",self._dbHostIP)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbHostIP
+
+    @dbHostIP.setter
+    def dbHostIP(self,db_host_ip:str='127.0.0.1'):
+
+        __s_fn_id__ = "function <@dbHostIP.setter >"
+
+        try:
+            if db_host_ip is None or "".join(db_host_ip.strip()) == "":
+                raise ConnectionError("Invalid database host IP %s" % db_host_ip)
+
+            self._dbHostIP = db_host_ip
+            logger.debug("@setter Database dbHostIP set to: %s",self._dbHostIP)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbHostIP
+
+    ''' --- PORT --- '''
+    @property
+    def dbPort(self):
+
+        __s_fn_id__ = "function <@property dbPort>"
+
+        try:
+            if self._dbPort is None and appConf.has_option('DATABASE','DBPORT'):
+                self._dbPort = appConf.get('DATABASE','DBPORT')
+                logger.debug("@property Database Port set to: %s",self._dbPort)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbPort
+
+    @dbPort.setter
+    def dbPort(self,db_port:int=5432):
+
+        __s_fn_id__ = "function <@dbPort.setter dbPort>"
+
+        try:
+            if db_port is None or not isinstance(db_type,int):
+                raise ConnectionError("Invalid database port integer %s" % str(db_port))
+
+            self._dbPort = str(db_port)
+            logger.debug("@setter Database Port set to: %s",self._dbPort)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self.__dbPort
+
+    ''' --- NAME --- '''
+    @property
+    def dbName(self):
+
+        __s_fn_id__ = "function <@property dbName>"
+
+        try:
+            if self._dbName is None and appConf.has_option('DATABASE','DBNAME'):
+                self._dbName = appConf.get('DATABASE','DBNAME')
+                logger.debug("@property Database dbName set to: %s",self._dbName)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbName
+
+    @dbName.setter
+    def dbName(self,db_name:str=''):
+
+        __s_fn_id__ = "function <@dbName.setter>"
+
+        try:
+            if db_name is None or "".join(db_name.strip()) == "":
+                raise ConnectionError("Invalid database NAME %s" % db_name)
+
+            self._dbName = db_name
+            logger.debug("@setter Database dbName set to: %s",self._dbName)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbName
+
+    ''' --- SCHEMA --- '''
+    @property
+    def dbSchema(self):
+
+        __s_fn_id__ = "function <@property dbSchema>"
+
+        try:
+            if self._dbSchema is None and appConf.has_option('DATABASE','DBSCHEMA'):
+                self._dbSchema = appConf.get('DATABASE','DBSCHEMA')
+                logger.debug("@property Database dbSchema set to: %s",self._dbSchema)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbSchema
+
+    @dbSchema.setter
+    def dbSchema(self,db_schema:str=''):
+
+        __s_fn_id__ = "function <@dbSchema.setter>"
+
+        try:
+            if db_schema is None or "".join(db_schema.strip()) == "":
+                raise ConnectionError("Invalid database SCHEMA %s" % db_schema)
+
+            self._dbSchema = db_schema
+            logger.debug("@setter Database dbSchema set to: %s",self._dbSchema)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbSchema
+
+    ''' --- USER --- '''
+    @property
+    def dbUser(self):
+
+        __s_fn_id__ = "function <@property dbUser>"
+
+        try:
+            if self._dbUser is None and appConf.has_option('DATABASE','DBUSER'):
+                self._dbUser = appConf.get('DATABASE','DBUSER')
+                logger.debug("@property Database dbUser set to: %s",self._dbUser)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbUser
+
+    @dbUser.setter
+    def dbUser(self,db_user:str=''):
+
+        __s_fn_id__ = "function <@dbPswd.setter>"
+
+        try:
+            if db_user is None or "".join(db_user.strip()) == "":
+                raise ConnectionError("Invalid database USER %s" % db_user)
+
+            self._dbUser = db_user
+            logger.debug("@setter Database dbUser set to: %s",self._dbUser)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbUser
+
+    ''' --- PASSWORD --- '''
+    @property
+    def dbPswd(self):
+
+        __s_fn_id__ = "function <@property dbPswd>"
+
+        try:
+            if self._dbPswd is None and appConf.has_option('DATABASE','DBPSWD'):
+                self._dbPswd = appConf.get('DATABASE','DBPSWD')
+                logger.debug("@property Database dbPswd set to: %s",self._dbPswd)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbPswd
+
+    @dbPswd.setter
+    def dbPswd(self,db_driver:str=''):
+
+        __s_fn_id__ = "function <@session.setter dbPswd>"
+
+        try:
+            if db_driver is None or "".join(db_driver.strip()) == "":
+                raise ConnectionError("Invalid database PASSWORD %s" % db_driver)
+
+            self._dbPswd = db_driver
+            logger.debug("@setter Database dbPswd set to: %s",self._dbPswd)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dbPswd
 
     ''' Function
             name: reset_type to the original data type
@@ -395,87 +520,498 @@ class SparkWorkLoads():
     '''
     @property
     def dbConnURL(self):
+
+        __s_fn_id__ = "function <@property dbConnURL>"
+
+        try:
+            if self._dbConnURL is None and \
+                not self.dbType is None and \
+                not self.dbHostIP is None and \
+                not self.dbPort is None and \
+                not self.dbName is None:
+                self._dbConnURL = "jdbc:"+self.dbType+\
+                                    "://"+self.dbHostIP+":"+\
+                                    self.dbPort+"/"+self.dbName
+            logger.debug("@property Database dbConnURL set to: %s",self._dbConnURL)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug("%s",traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
         return self._dbConnURL
 
     @dbConnURL.setter
     def dbConnURL(self,**kwargs):
 
-        try:
-            ''' --- DATABASE ---
-                set the host IP '''
-            self.host_ip = None
-            if "HOSTIP" in kwargs.keys():
-                self.host_ip = kwargs['HOSTIP']
-            elif appConf.get('HOSTS','HOSTIP'):
-                self.host_ip = appConf.get('HOSTS','HOSTIP')
-            else:
-                raise ConnectionError("Undefined host IP. Set the host_ip in app.cfg")
+        __s_fn_id__ = "function <@dbConnURL.setter dbConnURL>"
 
-            ''' set the database type '''
-            self.db_type = None
+        try:
+            ''' --- DATABASE PROPERTY **KWARGS --- '''
             if "DBTYPE" in kwargs.keys():
                 self.db_type = kwargs['DBTYPE']
-            elif appConf.get('DATABASE','DBTYPE'):
-                self.db_type = appConf.get('DATABASE','DBTYPE')
-            else:
-                raise ConnectionError("Undefined database type. Set the db_type in app.cfg")
-
-            ''' set the database port '''
-            if "DBPORT" in kwargs.keys():
-                self.db_port = kwargs['DBPORT']
-            elif appConf.get('DATABASE','DBPORT'):
-                self.db_port = appConf.get('DATABASE','DBPORT')
-            else:
-                raise ConnectionError("Undefined database port. Set the db_port in app.cfg")
-
-            ''' set the database driver '''
             if "DBDRIVER" in kwargs.keys():
-                self.db_driver = kwargs['DBDRIVER']
-            elif appConf.get('DATABASE','DBDRIVER'):
-                self.db_driver = appConf.get('DATABASE','DBDRIVER')
-            else:
-                raise ConnectionError("Undefined database password. Set the db_driver in app.cfg")
-
-            ''' set the database name '''
+                self.dbDriver = kwargs['DBDRIVER']
+            if "DBHOSTIP" in kwargs.keys():
+                self.dbHostIP = kwargs['DBHOSTIP']
+            if "DBPORT" in kwargs.keys():
+                self.dbPort = kwargs['DBPORT']
             if "DBNAME" in kwargs.keys():
-                self.db_name = kwargs['DBNAME']
-            elif appConf.get('DATABASE','DBNAME'):
-                self.db_name = appConf.get('DATABASE','DBNAME')
-            else:
-                raise ConnectionError("Undefined database name. Set the db_name in app.cfg")
-
-            ''' set the database schema '''
+                self.dbName = kwargs['DBNAME']
             if "DBSCHEMA" in kwargs.keys():
-                self.db_schema = kwargs['DBSCHEMA']
-            elif appConf.get('DATABASE','DBSCHEMA'):
-                self.db_schema = appConf.get('DATABASE','DBSCHEMA')
-            else:
-                raise ConnectionError("Undefined database schema. Set the db_schema in app.cfg")
-
-            ''' set the database username '''
+                self.dbSchema = kwargs['DBSCHEMA']
             if "DBUSER" in kwargs.keys():
-                self.db_user = kwargs['DBUSER']
-            elif appConf.get('DATABASE','DBUSER'):
-                self.db_user = appConf.get('DATABASE','DBUSER')
-            else:
-                raise ConnectionError("Undefined database username. Set the db_user in app.cfg")
-
-            ''' set the database password '''
+                self.dbUser = kwargs['DBUSER']
             if "DBPSWD" in kwargs.keys():
-                self.db_pswd = kwargs['DBPSWD']
-            elif appConf.get('DATABASE','DBPSWD'):
-                self.db_pswd = appConf.get('DATABASE','DBPSWD')
-            else:
-                raise ConnectionError("Undefined database password. Set the db_pswd in app.cfg")
+                self.dbPswd = kwargs['DBPSWD']
 
-            self._dbConnURL = "jdbc:"+self.db_type+"://"+self.host_ip+":"+self.db_port+"/"+self.db_name
+            self._dbConnURL = "jdbc:"+self.dbType+"://"+self.dbHostIP+":"+self.dbPort+"/"+self.dbName
+            logger.debug("@dbConnURL.setter Database dbConnURL set to: %s",self._dbConnURL)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug("%s",traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._dbConnURL
+
+    ''' Function --- SPARK SESSION PROPERTIES ---
+            name: session @property and @setter functions
+            parameters:
+
+            procedure: 
+                @property - if None try __conf_file__; else throw exception
+                @setter - if None or Empty throw exception; else set it
+            return self._* (* is the property attribute name)
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    ''' HOMEDIR '''
+    ''' TODO - check if evn var $SPARK_HOME and $JAVA_HOME is set '''
+    @property
+    def homeDir(self):
+
+        __s_fn_id__ = "function <@property homeDir>"
+
+        try:
+            if self._homeDir is None and appConf.has_option('SPARK','HOMEDIR'):
+                self._homeDir = appConf.get('SPARK','HOMEDIR')
+                logger.debug("@property Spark homeDir set to: %s",self._homeDir)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._homeDir
+
+    @homeDir.setter
+    def homeDir(self,home_dir:str=''):
+
+        __s_fn_id__ = "function <@homeDir.setter>"
+
+        try:
+            if home_dir is None or "".join(home_dir.strip()) == "":
+                raise ConnectionError("Invalid spark HOMEDIR %s" % home_dir)
+
+            self._homeDir = home_dir
+            logger.debug("@setter Spark homeDir set to: %s",self._homeDir)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._homeDir
+
+    ''' BINDIR '''
+    @property
+    def binDir(self):
+
+        __s_fn_id__ = "function <@property binDir>"
+
+        try:
+            if self._binDir is None and appConf.has_option('SPARK','BINDIR'):
+                self._binDir = appConf.get('SPARK','BINDIR')
+                logger.debug("@property Spark binDir set to: %s",self._binDir)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._binDir
+
+    @binDir.setter
+    def binDir(self,bin_dir:str=''):
+
+        __s_fn_id__ = "function <@binDir.setter>"
+
+        try:
+            if bin_dir is None or "".join(bin_dir.strip()) == "":
+                raise ConnectionError("Invalid spark BINDIR %s" % bin_dir)
+
+            self._binDir = bin_dir
+            logger.debug("@setter Spark binDir set to: %s",self._binDir)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._binDir
+
+    ''' APPNAME '''
+    @property
+    def appName(self):
+
+        __s_fn_id__ = "function <@property appName>"
+
+        try:
+            if self._appName is None or "".join(self._appName.split())=="":
+                self._appName = " ".join([self.__app__,
+                                          self.__module__,
+                                          self.__package__,
+                                          self.__name__])
+                logger.debug("@property Spark appName set to: %s",self._appName)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._appName
+
+    @appName.setter
+    def appName(self,app_name:str=''):
+
+        __s_fn_id__ = "function <@appName.setter>"
+
+        try:
+            if app_name is None or "".join(app_name.strip()) == "":
+                raise ConnectionError("Invalid spark APPNAME %s" % app_name)
+
+            self._appName = app_name
+            logger.debug("@setter Spark appName set to: %s",self._appName)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._appName
+
+    ''' CONFIG '''
+    @property
+    def config(self):
+
+        __s_fn_id__ = "function <@property config>"
+
+        try:
+            if self._config is None and appConf.has_option('SPARK','CONFIG'):
+                self._config = appConf.get('SPARK','CONFIG')
+                logger.debug("@property Spark config set to: %s",self._config)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._config
+
+    @config.setter
+    def config(self,config:str=''):
+
+        __s_fn_id__ = "function <@config.setter>"
+
+        try:
+            if config is None or "".join(config.strip()) == "":
+                raise ConnectionError("Invalid spark CONFIG %s" % config)
+
+            self._config = config
+            logger.debug("@setter Spark config set to: %s",self._config)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._config
+
+    ''' JARDIR '''
+    @property
+    def jarDir(self):
+
+        __s_fn_id__ = "function <@property jarDir>"
+
+        try:
+            if self._jarDir is None and appConf.has_option('SPARK','JARDIR'):
+                self._jarDir = appConf.get('SPARK','JARDIR')
+                logger.debug("@property Spark jarDir set to: %s",self._jarDir)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._jarDir
+
+    @jarDir.setter
+    def jarDir(self,jar_dir:str=''):
+
+        __s_fn_id__ = "function <@jarDir.setter>"
+
+        try:
+            if jar_dir is None or "".join(jar_dir.strip()) == "":
+                raise ConnectionError("Invalid spark JARDIR %s" % jar_dir)
+
+            self._jarDir = jar_dir
+            logger.debug("@setter Spark jarDir set to: %s",self._jarDir)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._jarDir
+
+    ''' MASTER '''
+    @property
+    def master(self):
+
+        __s_fn_id__ = "function <@property master>"
+
+        try:
+            if self._master is None and appConf.has_option('SPARK','MASTER'):
+                self._master = appConf.get('SPARK','MASTER')
+                logger.debug("@property Spark master set to: %s",self._master)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._master
+
+    @master.setter
+    def master(self,master:str='local[1]'):
+
+        __s_fn_id__ = "function <@master.setter>"
+
+        try:
+            if master is None or "".join(master.strip()) == "":
+                self._master = "local[1]"
+                logger.warning("SparkSession master set to default %s",self._master)
+
+            self._master = master
+            logger.debug("@setter Spark master set to: %s",self._master)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._master
+
+    ''' RWFORMAT '''
+    @property
+    def rwFormat(self):
+
+        __s_fn_id__ = "function <@property rwFormat>"
+
+        try:
+            if self._rwFormat is None and appConf.has_option('SPARK','FORMAT'):
+                self._rwFormat = appConf.get('SPARK','FORMAT')
+                logger.debug("@property Spark rwFormat set to: %s",self._rwFormat)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._rwFormat
+
+    @rwFormat.setter
+    def rwFormat(self,rw_format:str='jdbc'):
+
+        __s_fn_id__ = "function <@saveMode.setter>"
+
+        try:
+            if rw_format.lower() not in ['jdbc']:
+                raise ConnectionError("Invalid spark RWFORMAT %s" % rw_format)
+
+            self._rwFormat = rw_format
+            logger.debug("@setter Spark rwFormat set to: %s",self._rwFormat)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._rwFormat
+
+
+    ''' SAVEMODE '''
+    @property
+    def saveMode(self):
+
+        __s_fn_id__ = "function <@property saveMode>"
+
+        try:
+            if self._saveMode is None and appConf.has_option('SPARK','SAVEMODE'):
+                self._saveMode = appConf.get('SPARK','SAVEMODE')
+                logger.debug("@property Spark saveMode set to: %s",self._saveMode)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._saveMode
+
+    @saveMode.setter
+    def saveMode(self,save_mode:str='Append'):
+
+        __s_fn_id__ = "function <@saveMode.setter>"
+
+        try:
+            if save_mode not in ['Append','Overwrite']:
+                raise ConnectionError("Invalid spark SAVEMODE %s" % save_mode)
+
+            self._saveMode = save_mode
+            logger.debug("@setter Spark saveMode set to: %s",self._saveMode)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._saveMode
+
+
+    ''' Function --- SPARK SESSION ---
+            name: session @property and @setter functions
+            parameters:
+
+            procedure: 
+            return self._session
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @property
+    def session(self):
+
+        __s_fn_id__ = "function <@property session>"
+
+        try:
+            if self._session is None and \
+                not self.homeDir is None and \
+                not self.appName is None and \
+                not self.config is None and \
+                not self.jarDir is None and \
+                not self.master is None:
+                findspark.init(self.homeDir)
+                from pyspark.sql import SparkSession
+                logger.debug("%s importing %s library from spark dir: %s"
+                         % (__s_fn_id__,SparkSession.__name__, self.homeDir))
+
+                self._session = SparkSession \
+                                .builder \
+                                .master(self.master) \
+                                .appName(self.appName) \
+                                .config(self.config, self.jarDir) \
+                                .getOrCreate()
+                
+            logger.info("Starting a Spark Session: %s",self._session)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug("%s",traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._session
+
+    @session.setter
+#     def session(self,**kwargs):
+    def session(self,session_args:dict={}):
+
+        __s_fn_id__ = "function <@session.setter session>"
+
+        try:
+            ''' 
+                set the spark home directory '''
+            if "HOMEDIR" in session_args.keys():
+                self.homeDir = session_args['HOMEDIR']
+#             elif appConf.has_option('SPARK','HOMEDIR'):
+#                 _spark_home_dir = appConf.get('SPARK','HOMEDIR')
+#             else:
+#                 raise AttributeError("Spark home directory is required to proceed "+ \
+#                                 "It must be specified in app.cfg or "+ \
+#                                 "passed as a **session_args key value pair")
+            
+            findspark.init(self.homeDir)
+            from pyspark.sql import SparkSession
+            logger.debug("Importing %s library from spark dir: %s"
+                         % (SparkSession.__name__, self.homeDir))
+
+            if "CONFIG" in session_args.keys():
+                self.config = session_args['CONFIG']
+#             elif appConf.has_option('SPARK','CONFIG'):
+#                 _conf_opt = appConf.get('SPARK','CONFIG')
+#             else:
+#                 _conf_opt = "spark.jars"
+
+            ''' set master cluster setup local[x], yarn or mesos '''
+            if "MASTER" in session_args.keys():
+                self.master = session_args['MASTER']
+#             elif appConf.has_option('SPARK','MASTER'):
+#                 _master = appConf.get('SPARK','MASTER')
+#             else:
+#                 _master = "local[1]"     
+
+            if "APPNAME" in session_args.keys():
+                self.appName = session_args['APPNAME']
+#             elif appConf.has_option('SPARK','APPNAME'):
+#                 _app_name = appConf.get('SPARK','APPNAME')
+#             else:
+#                 _app_name = self.__app__     
+
+            ''' set the db_type specific jar '''
+            if "JARDIR" in session_args.keys():
+                self.jarDir = session_args['JARDIR']
+#             elif appConf.has_option('SPARK','JARDIR'):
+#                 _jar_dir = appConf.get('SPARK','JARDIR')
+#             else:
+#                 _jar_dir = None
+#                 raise ConnectionError("Spark requires a valid jar file to use with %s" % self.db_type)
+#             self.sparkJAR = appConf.get('SPARK','JARDIR')
+#             logger.info("Defining Spark Jar dir: %s" % (self.sparkJAR))
+
+#             if _jar_dir is None:
+#                 self._session = SparkSession \
+#                                     .builder \
+#                                     .master(_master) \
+#                                     .appName(_app_name) \
+#                                     .getOrCreate()
+#             else:
+            self._session = SparkSession \
+                                .builder \
+                                .master(self.master) \
+                                .appName(self.appName) \
+                                .config(self.config, self.jarDir) \
+                                .getOrCreate()
+                
+            logger.info("Starting a Spark Session: %s" % (self._session))
+
+#             ''' TODO Deprate after all functions are working '''
+#             self.session=self._session
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._session
 
 
     ''' Function
@@ -489,29 +1025,43 @@ class SparkWorkLoads():
     '''
     @property
     def data(self):
+
+        __s_fn_id__ = "function <@property data>"
+
+        try:
+            if not isinstance(self._data,DataFrame):
+                self._data = self.session.createDataFrame(self._data)
+            if self._data.count() <= 0:
+                raise ValueError("No records found in data") 
+                
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
         return self._data
 
     @data.setter
     def data(self,data):
 
         __s_fn_id__ = "function <@data.setter>"
-        
-#         self.spark_session.conf.set("spark.sql.execution.arrow.enabled","true")
+
+#         self.session.conf.set("spark.sql.execution.arrow.enabled","true")
 
         try:
             if data is None:
                 raise AttributeError("Dataset cannot be empty")
+            self._data = data
 
-            if not isinstance(data,DataFrame):
-                self._data = self.session.createDataFrame(data)
-                self.dType = 'OTHER'
-            else:
-                self._data = data
-                self.dType = 'SDF'
+#             if not isinstance(data,DataFrame):
+#                 self._data = self.session.createDataFrame(data)
+# #                 self.dType = 'OTHER'
+#             else:
+#                 self.dType = 'SDF'
 #             elif isinstance(data, pd.DataFrame) and not data.empty:
 #                 ''' pandas dataframe convert to pyspark DataFrame '''
 #                 self.dType = 'PANDAS'
-#                 self._data = self.spark_session.createDataFrame(data)
+#                 self._data = self.session.createDataFrame(data)
 #             elif isinstance(data, dict) and len(data) > 0:
 #                 ''' dict convert to spark dataframe '''
 #                 self.dType = 'DICT'
@@ -526,74 +1076,74 @@ class SparkWorkLoads():
                 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._data
 
-    ''' Function
-            name: reset_type to the original data type
-            parameters:
+#     ''' Function
+#             name: reset_type to the original data type
+#             parameters:
 
-            procedure: 
-            return self._data
+#             procedure: 
+#             return self._data
 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    def reset_dtype(self,data):
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     def reset_dtype(self,data):
         
-        __s_fn_id__ = "function <reset_dtype>"
-        reset_data = None
+#         ___s_fn_id____ = "function <reset_dtype>"
+#         reset_data = None
 
-        try:
-            if self.dType == 'RDD':
-                reset_data=self.data
-            elif self.dType == 'PANDAS':
-                reset_data=self.data.toPandas()
-            elif self.dType == 'DICT':
-                print('Method to be done')
-            elif self.dType == 'ARRAY':
-                print('Method to be done')
-            else:
-                raise RuntimeError("Something went wrong?")
+#         try:
+#             if self.dType == 'RDD':
+#                 reset_data=self.data
+#             elif self.dType == 'PANDAS':
+#                 reset_data=self.data.toPandas()
+#             elif self.dType == 'DICT':
+#                 print('Method to be done')
+#             elif self.dType == 'ARRAY':
+#                 print('Method to be done')
+#             else:
+#                 raise RuntimeError("Something went wrong?")
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
+#         except Exception as err:
+#             logger.error("%s %s \n",___s_fn_id____, err)
+#             print("[Error]"+___s_fn_id____, err)
+#             print(traceback.format_exc())
 
-        return reset_data
+#         return reset_data
 
 
-    ''' Function
-            name: dType @property and @setter functions
-            parameters:
+#     ''' Function
+#             name: dType @property and @setter functions
+#             parameters:
 
-            procedure: 
-            return self._dType
+#             procedure: 
+#             return self._dType
 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @property
-    def dType(self):
-        return self._dType
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @property
+#     def dType(self):
+#         return self._dType
 
-    @dType.setter
-    def dType(self,data_type:str):
+#     @dType.setter
+#     def dType(self,data_type:str):
 
-        __s_fn_id__ = "function <@dType.setter>"
+#         ___s_fn_id____ = "function <@dType.setter>"
 
-        try:
-            if data_type is None and not data_type in self._dTypeList:
-                raise AttributeError('Invalid data_type or is set to empty string')
-            self._dType = data_type
+#         try:
+#             if data_type is None and not data_type in self._dTypeList:
+#                 raise AttributeError('Invalid data_type or is set to empty string')
+#             self._dType = data_type
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
+#         except Exception as err:
+#             logger.error("%s %s \n",___s_fn_id____, err)
+#             print("[Error]"+___s_fn_id____, err)
+#             print(traceback.format_exc())
 
-        return self._dType
+#         return self._dType
 
 
     ''' Function
@@ -606,9 +1156,10 @@ class SparkWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def get_data_from_table(self, dbTable:str, **kwargs):
+    def read_data_from_table(self, db_table:str, **kwargs):
 
         load_sdf = None   # initiatlize return var
+        __s_fn_id__ = "function <read_data_from_table>"
 
         try:
             ''' validate table '''
@@ -620,13 +1171,13 @@ class SparkWorkLoads():
             ''' jdbc:postgresql://<host>:<port>/<database> '''
             
             # driver='org.postgresql.Driver').\
-            load_sdf = self.spark_session.read.format("jdbc").\
+            load_sdf = self.session.read.format("jdbc").\
                 options(
-                    url=self.spark_url,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
-                    dbtable=self.db_schema+"."+dbTable,      # '_issuefix_bkdata.customerbookings',
-                    user=self.db_user,     # 'postgres',
-                    password=self.db_pswd, # 'postgres',
-                    driver=self.db_driver).load()
+                    url=self.dbConnURL,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
+                    dbtable=self.dbSchema+"."+db_table,      # '_issuefix_bkdata.customerbookings',
+                    user=self.dbUser,     # 'postgres',
+                    password=self.dbPswd, # 'postgres',
+                    driver=self.dbDriver).load()
             logger.debug("loaded %d rows into pyspark dataframe" % load_sdf.count())
 
             ''' drop duplicates '''
@@ -642,10 +1193,9 @@ class SparkWorkLoads():
             print("Loading complete!")
 
         except Exception as err:
-            _s_fn_id = "Class <SparkWorkLoads> Function <get_data_from_table>"
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return load_sdf
 
@@ -659,55 +1209,69 @@ class SparkWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def insert_sdf_into_table(self, save_sdf, dbTable:str, **kwargs):
+    def insert_sdf_into_table(self, save_sdf, db_table:str, **kwargs):
         
+        __s_fn_id__ = "function <insert_sdf_into_table>"
         _num_records_saved = 0
         
         try:
-            ''' convert pandas to spark dataframe '''
-            if isinstance(save_sdf,pd.DataFrame):
-                save_sdf = self.spark_session.createDataFrame(save_sdf) 
-            ''' validate sdf have data '''
-            if save_sdf.count() <= 0:
-                raise ValueError("Invalid spark dataframe with %d records" % (save_sdf.count())) 
-            ''' validate table '''
+            if not save_sdf is None:
+                self.data = save_sdf
+            if self.data.count() <= 0:
+                raise ValueError("No data to insert into database table %s"% db_table)
+            if len(kwargs) > 0:
+                self.session = kwargs
+            else:
+                self.session = {}
+#             ''' convert pandas to spark dataframe '''
+#             if isinstance(save_sdf,pd.DataFrame):
+# #                 save_sdf = self.session.createDataFrame(save_sdf) 
+#                 save_sdf = self.session.createDataFrame(save_sdf) 
+#             ''' validate sdf have data '''
+#             if save_sdf.count() <= 0:
+#                 raise ValueError("Invalid spark dataframe with %d records" % (save_sdf.count())) 
+            ''' TODO validate table exists '''
             
             ''' if created audit columns don't exist add them '''
-            listColumns=save_sdf.columns
+            listColumns=self.data.columns
             if "created_dt" not in listColumns:
-                save_sdf = save_sdf.withColumn("created_dt", current_timestamp())
+                self.data = self.data.withColumn("created_dt", current_timestamp())
             if "created_by" not in listColumns:
-                save_sdf = save_sdf.withColumn("created_by", lit(self.db_user))
+                self.data = self.data.withColumn("created_by", lit(self.dbUser))
             if "created_proc" not in listColumns:
-                save_sdf = save_sdf.withColumn("created_proc", lit("Unknown"))
+                self.data = self.data.withColumn("created_proc", lit("Unknown"))
             
             ''' TODO: add code to accept options() to manage schema specific
                 authentication and access to tables '''
 
-            if "saveMode" in kwargs.keys():
-                self.spark_save_mode = kwargs['saveMode']
+#             if "saveMode" in kwargs.keys():
+# #                 self.sparkSaveMode = kwargs['saveMode']
+#                 self.sparkSaveMode = kwargs['SAVEMODE']
                 
-            print("Wait a moment while we insert data int %s" % dbTable)
+            logger.info("Wait a moment while we insert data int %s", db_table)
             ''' jdbc:postgresql://<host>:<port>/<database> '''
             
             # driver='org.postgresql.Driver').\
-            save_sdf.select(save_sdf.columns).write.format("jdbc").mode(self.spark_save_mode).\
+            self.data.select(self.data.columns).\
+                    write.format(self.rwFormat).\
+                    mode(self.saveMode).\
                 options(
-                    url=self.spark_url,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
-                    dbtable=self.db_schema+"."+dbTable,       # '_issuefix_bkdata.customerbookings',
-                    user=self.db_user,     # 'postgres',
-                    password=self.db_pswd, # 'postgres',
-                    driver=self.db_driver).save("append")
+                    url=self.dbConnURL,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
+                    dbtable=self.dbSchema+"."+db_table,       # '_issuefix_bkdata.customerbookings',
+                    user=self.dbUser,     # 'postgres',
+                    password=self.dbPswd, # 'postgres',
+                    driver=self.dbDriver).save(self.saveMode.lower())
+#                     driver=self.dbDriver).save("append")
 #            load_sdf.printSchema()
 
-            print("Save to %s complete!" % (dbTable))
-            _num_records_saved = save_sdf.count()
+            logger.info("Saved %d  rows into table %s in database %s complete!"
+                        ,self.data.count(), self.dbSchema+"."+db_table, self.dbName)
+            _num_records_saved = self.data.count()
 
         except Exception as err:
-            _s_fn_id = "Class <SparkWorkLoads> Function <insert_sdf_into_table>"
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return _num_records_saved
 
@@ -724,8 +1288,8 @@ class SparkWorkLoads():
     '''
     def read_csv_to_sdf(self,filesPath: str, **kwargs):
 
-        _csv_to_sdf = self.spark_session.sparkContext.emptyRDD()     # initialize the return var
-#         _tmp_df = self.spark_session.sparkContext.emptyRDD()
+        _csv_to_sdf = self.session.sparkContext.emptyRDD()     # initialize the return var
+#         _tmp_df = self.session.sparkContext.emptyRDD()
         _start_dt = None
         _end_dt = None
         _sdf_cols = []
@@ -753,7 +1317,7 @@ class SparkWorkLoads():
             if 'end_datetime' in kwargs.keys():
                 _start_dt = kwargs['end_datetime']
 
-            _csv_to_sdf = self.spark_session.read.options( \
+            _csv_to_sdf = self.session.read.options( \
                                                           header='True', \
                                                           inferSchema=_csv_inferSchema, \
                                                           delimiter=',') \
@@ -766,9 +1330,9 @@ class SparkWorkLoads():
                              % _csv_to_sdf.shape[0])
 
         except Exception as err:
-            _s_fn_id = "Class <SparkWorkLoads> Function <read_folder_csv_to_sdf>"
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            __s_fn_id__ = "Class <SparkWorkLoads> Function <read_folder_csv_to_sdf>"
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             _traceback = traceback.format_exc()
             print(traceback.format_exc())
 
@@ -788,12 +1352,12 @@ class SparkWorkLoads():
         
         _csv_file_path = None
 
-        _s_fn_id = "function <read_folder_csv_to_sdf>"
-        logger.info("Executing %s in %s",_s_fn_id, __name__)
+        __s_fn_id__ = "function <read_folder_csv_to_sdf>"
+        logger.info("Executing %s in %s",__s_fn_id__, __name__)
 
         try:
             if isinstance(sdf,pd.DataFrame):
-                sdf = self.spark_session.createDataFrame(sdf) 
+                sdf = self.session.createDataFrame(sdf) 
             ''' data exists? '''
             if sdf.count() <= 0:
                 raise ValueError("No data for input dataframe to save")
@@ -819,8 +1383,8 @@ class SparkWorkLoads():
             logger.info("%d rows of data written to %s",sdf.count(), _csv_file_path)
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return _csv_file_path
@@ -840,16 +1404,16 @@ class SparkWorkLoads():
 
 #         import boto3
         
-#         _csv_to_sdf = self.spark_session.sparkContext.emptyRDD()     # initialize the return var
-# #         _tmp_df = self.spark_session.sparkContext.emptyRDD()
+#         _csv_to_sdf = self.session.sparkContext.emptyRDD()     # initialize the return var
+# #         _tmp_df = self.session.sparkContext.emptyRDD()
 #         _start_dt = None
 #         _end_dt = None
 #         _sdf_cols = []
 #         _l_cols = []
 #         _traceback = None
         
-#         _s_fn_id = "function <read_s3csv_to_sdf>"
-#         logger.info("Executing %s in %s",_s_fn_id, __name__)
+#         __s_fn_id__ = "function <read_s3csv_to_sdf>"
+#         logger.info("Executing %s in %s",__s_fn_id__, __name__)
 
 #         try:
 
@@ -867,11 +1431,11 @@ class SparkWorkLoads():
 #                 region_name=AWS_REGION_NAME,
 #             )
 # #             response = s3.get_object(Bucket=bucketName, Key=str(key))
-# #             print(self.spark_session.__dict__)
-# #             self.spark_session.sparkContext.hadoopConfiguration.set("fs.s3a.access.key", AWS_ACCESS_KEY_ID)
-# #             self.spark_session.sparkContext\
+# #             print(self.session.__dict__)
+# #             self.session.sparkContext.hadoopConfiguration.set("fs.s3a.access.key", AWS_ACCESS_KEY_ID)
+# #             self.session.sparkContext\
 # #                     .hadoopConfiguration.set("fs.s3a.secret.key", AWS_SECRET_ACCESS_KEY)
-# #             self.spark_session.sparkContext\
+# #             self.session.sparkContext\
 # #                   .hadoopConfiguration.set("fs.s3a.endpoint", "s3.amazonaws.com")
 
 # #             os.environ['PYSPARK_SUBMIT_ARGS'] = '-- packages com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.3 pyspark-shell'
@@ -884,7 +1448,7 @@ class SparkWorkLoads():
 # #                             .setMaster('local[*]')
             
 # #             sc=SparkContext(conf=conf)
-# # #             sc=self.spark_session.sparkContext(conf=conf)
+# # #             sc=self.session.sparkContext(conf=conf)
 # #             sc.setSystemProperty('com.amazonaws.services.s3.enableV4', 'true')
             
 # #             hadoopConf = sc._jsc.hadoopConfiguration()
@@ -904,17 +1468,17 @@ class SparkWorkLoads():
 # #             response = s3.get_object(Bucket=bucketName, Key=str(keyFPath))
 # #             _s3_obj = "s3a://"+bucketName+"/"+objPath
 # #             _csv_to_sdf=spark.read.csv(
-# #             _csv_to_sdf=self.spark_session.read.csv(
-#             _csv=self.spark_session.read.csv(
+# #             _csv_to_sdf=self.session.read.csv(
+#             _csv=self.session.read.csv(
 #                 obj,
 # #                 _s3_obj,
 #                 header=True,
 #                 inferSchema=True)
-# #             _csv_to_sdf = self.spark_session.read.csv(_s3_obj)
+# #             _csv_to_sdf = self.session.read.csv(_s3_obj)
 
 #         except Exception as err:
-#             logger.error("%s %s \n",_s_fn_id, err)
-#             print("[Error]"+_s_fn_id, err)
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             print("[Error]"+__s_fn_id__, err)
 #             print(traceback.format_exc())
 
 #         return _csv_to_sdf

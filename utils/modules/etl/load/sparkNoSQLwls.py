@@ -861,6 +861,8 @@ class NoSQLWorkLoads():
 # #                     logger.debug("tmp_df type %s",type(tmp_df))
 #                 self._documents=tmp_df
                 self._documents=pd.DataFrame(_the_docs)
+                if "_id" in self._documents.columns:
+                    self._documents['_id'] = self._documents['_id'].astype('str')
             elif as_type.upper() == 'SPARK':
                 self._documents=_the_docs
 #                 print("pandas",type(self._documents))
@@ -873,7 +875,13 @@ class NoSQLWorkLoads():
         return wrapper_converter
 
     @converter
-    def read_documents(self, as_type, db_name, db_coll, doc_find, **kwargs):
+    def read_documents(
+        self,
+        as_type:str="",
+        db_name:str="",
+        db_coll:list=[],
+        doc_find:dict={},
+        **kwargs):
 
         __s_fn_id__ = "function <read_documents>"
         _appName = " ".join([
@@ -890,14 +898,14 @@ class NoSQLWorkLoads():
         try:
             if db_name:
                 self.dbName = db_name
-            if db_coll:
-                self.collections=db_coll
+            if len(db_coll)>0:
+                self.collections={"COLLLIST":db_coll}
             if doc_find is None:
                 doc_find = {}
-            
+
             logger.debug("Prepared to read documents from "+\
                          "database %s, collection %s with %s find condition"\
-                         ,self.dbName,self.collections,str(doc_find))
+                         ,self.dbName,self.collections,doc_find)
 
             if self.dbType.lower() == 'mongodb':
                 ''' get data from MongoDB collection '''
@@ -974,7 +982,7 @@ class NoSQLWorkLoads():
                     doc_list=[]
                     for _coll in self.collections:
                         try:
-                            logger.debug("selecting data from %s collection %s",_coll,doc_find)
+                            logger.debug("Find %s in %s collection",doc_find,_coll)
                             _coll_cur = db[_coll].find(doc_find)
                             if len(list(_coll_cur.clone())) <=0:
                                 raise ValueError("No data")
@@ -1162,34 +1170,6 @@ class NoSQLWorkLoads():
 
         return db[db_coll]
 
-#     ''' Function - write collection
-
-#             parameters:
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-            
-#     '''
-#     def get_db_collections(self,db_name:str, has_in_name):
-
-        
-#         __s_fn_id__ = "function <get_db_collections>"
-#         _collections = None, 
-#         try:
-#             if self.dbType.lower() == 'mongodb':
-#                 db = self.connect[db_name]
-#                 _coll_list = db.list_collection_names()
-#                 if has_in_name:
-#                     r = re.compile(f".*{has_in_name}*")
-#                     _collections = list(filter(r.match, _coll_list))
-#                 else:
-#                     _collections = _coll_list
-
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             print("[Error]"+__s_fn_id__, err)
-#             print(traceback.format_exc())
-
-#         return _collections
 
     ''' convert to dict '''
     def convert_2_dict_mongodb(obj):
