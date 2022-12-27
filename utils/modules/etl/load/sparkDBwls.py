@@ -25,11 +25,12 @@ try:
 #     import pandas as pd
 #     import numpy as np
 
-    print("All packages in %s %s %s %s imported successfully!"
-          % (__app__,__module__,__package__,__name__))
+    print("All functional %s-libraries in %s-package of %s-module imported successfully!"
+          % (__name__.upper(),__package__.upper(),__module__.upper()))
 
 except Exception as e:
-    print("Some in packages in {0} didn't load\n{1}".format(__package__,e))
+    print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
+          .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
     CLASS create, update, and migrate databases using sql scripts

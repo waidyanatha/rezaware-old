@@ -945,7 +945,7 @@ class CryptoMarkets():
         __as_type__ = "pandas"
         _find = None
         _colls_list = []
-        _data_df = pd.DataFrame() 
+#         _data_df = pd.DataFrame() 
 
         try:
             if "".join(source_db.split())=="":
@@ -969,11 +969,12 @@ class CryptoMarkets():
             if len(clsNoSQL.collections)<=0:
                 raise ValueError("Unable to locate any collection in %s database"
                                 %(clsNoSQL.dbName))
-            _coll_list = clsNoSQL.collections
-            logger.info("Found %d collection in %s DB",
-                        len(clsNoSQL.collections),clsNoSQL.dbName)
-            ''' loop through collections to read into dataframe and write to DB '''
+#             _coll_list = clsNoSQL.collections
             _colls_list = clsNoSQL.collections
+            logger.info("Found %d collection in %s %s",
+                        len(_colls_list),clsNoSQL.dbName,clsNoSQL.dbType)
+#             ''' loop through collections to read into dataframe and write to DB '''
+#             _colls_list = clsNoSQL.collections
             ''' assign the find filter '''
             if "FIND" in kwargs.keys() and isinstance(kwargs['FIND'],dict):
                 _find = kwargs['FIND']
@@ -983,63 +984,61 @@ class CryptoMarkets():
             try:
                 ''' loop through collection to get the read data '''
                 for _coll in _colls_list:
+                    _data_df = pd.DataFrame()   # initialize the data frame
+                    ''' read data from nosql collection as pandas dataframe '''
                     _data_df = clsNoSQL.read_documents(
                         as_type=__as_type__,
                         db_name=None,   #clsNoSQL.dbName is already set above,
                         db_coll=[_coll],   #one collection at a time to reduce the load
                         doc_find=_find
                     )
+                    ''' write to sql db if data exists '''
                     if _data_df.shape[0] > 0:
-                        logger.debug("read %d records from %s collection",_data_df.shape[0],_coll)
+                        logger.debug("read %d records from collection %s"
+                                     ,_data_df.shape[0],_coll)
+#                     if self.data.shape[0] > 0:
+                        ''' rename columns to match the db table '''
+                        if "COLUMNSMAP" in kwargs.keys() and isinstance(kwargs['COLUMNSMAP'],dict):
+                            _data_df.rename(columns=kwargs['COLUMNSMAP'],inplace=True)
+#                             logger.debug("Column renamed in dataframe %s", str(kwargs['COLUMNSMAP']))
                         ''' write dataframe to table with sparksqlwls'''
+                        _saved_rec_count=clsSpark.insert_sdf_into_table(
+                            save_sdf=_data_df,
+                            db_table=table_name,
+                            session_args = kwargs
+                        )
+                        logger.info("%d records inserted into table %s in database %s"
+                            ,_saved_rec_count,table_name,destin_db)
                         self._data = pd.concat([self._data,_data_df])
+                    else:
+                        logger.debug("No records found in %s collection",_coll)
 
             except Exception as coll_err:
                 logger.error("Collection %s hadd errors: %s \n",_coll,coll_err)
 #                 print("[Error]"+__s_fn_id__, coll_err)
                 logger.debug("%s",traceback.format_exc())
 
-            if self.data.shape[0] > 0:
-                if "COLUMNSMAP" in kwargs.keys() and isinstance(kwargs['COLUMNSMAP'],dict):
-                    self._data.rename(columns=kwargs['COLUMNSMAP'],inplace=True)
-#                     for col_name in kwargs['COLUMNSMAP'].keys():
-#                         self._data = self._data.withColumnRenamed(
-#                             col_name, 
-#                             kwargs['COLUMNSMAP'][col_name])
-                    logger.debug("Column renamed in dataframe %s", str(kwargs['COLUMNSMAP']))
-                _saved_rec_count=clsSpark.insert_sdf_into_table(
-                    save_sdf=self.data,
-                    db_table=table_name,
-                    session_args = kwargs
-                )
-            logger.info("%d records inserted into table %s in database %s"
-                        ,_saved_rec_count,table_name,destin_db)
+#             if self.data.shape[0] > 0:
+#                 if "COLUMNSMAP" in kwargs.keys() and isinstance(kwargs['COLUMNSMAP'],dict):
+#                     self._data.rename(columns=kwargs['COLUMNSMAP'],inplace=True)
+#                     logger.debug("Column renamed in dataframe %s", str(kwargs['COLUMNSMAP']))
+#                 _saved_rec_count=clsSpark.insert_sdf_into_table(
+#                     save_sdf=self.data,
+#                     db_table=table_name,
+#                     session_args = kwargs
+#                 )
+#             logger.info("%d records inserted into table %s in database %s"
+#                         ,_saved_rec_count,table_name,destin_db)
 
+            if self._data.shape[0] > 0:
+                logger.info("Transfer of %d %s collection from %s database into "+\
+                           "%s %s database table %s with %d rows completed!", \
+                           len(_colls_list),clsNoSQL.dbType,source_db, \
+                           clsSpark.dbType,destin_db,table_name, self._data.shape[0]
+                          )
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return self._data
-
-
-    ''' Function
-            name: trasnform_historic_mcap
-            parameters:
-
-            procedure: read all the historic data mongodb colelctions
-                       for a given data_owner. 
-            return None
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-
-    '''
-
-#     def load_collection_to_sqldb(
-#         self,
-#         data_owner:str,
-#         from_date,
-#         to_date,
-#         **kwargs
-#     ):
-

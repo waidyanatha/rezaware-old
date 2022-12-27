@@ -2,15 +2,12 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "nlp"
+__name__ = "NatLanWorkLoads"
 __package__ = "natlang"
 __module__ = "ml"   # machine learning
 __app__ = "utils"
-# __root_dir__ = "/home/nuwan/workspace/rezgate/wrangler/"   # need for logger path
-# __utils_dir__ = '/home/nuwan/workspace/rezgate/utils/'
 __ini_fname__ = "app.ini"
-# __logs_dir__ = 'logs/'
-# __log_fname__ = 'app.log'
+__conf_fname__ = "app.cfg"
 
 ''' Load necessary and sufficient python librairies that are used throughout the class'''
 try:
@@ -30,10 +27,12 @@ try:
     import logging
     import traceback
 
-    print("All packages in nlp loaded successfully!")
+    print("All functional %s-libraries in %s-package of %s-module imported successfully!"
+          % (__name__.upper(),__package__.upper(),__module__.upper()))
 
 except Exception as e:
-    print("Some {0} packages didn't load\n{1}".format(__package__,e))
+    print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
+          .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
     CLASS run relevant natural language processing tasks
@@ -90,7 +89,7 @@ class NatLanWorkLoads():
                 ini_file=self.__ini_fname__)
             ''' set a new logger section '''
             logger.info('########################################################')
-            logger.info(self.__name__,self.__package__)
+            logger.info("%s %s",self.__name__,self.__package__)
 
             ''' set tmp storage location from app.cfg '''
             self.tmpDIR = None
@@ -105,6 +104,8 @@ class NatLanWorkLoads():
                            self.__package__,
                            self.__name__,
                            self.__desc__))
+
+            print("%s Class initialization complete" % self.__name__)
 
         except Exception as err:
             _s_fn_id = "Class <SparkWorkLoads> Function <__init__>"
@@ -129,7 +130,12 @@ class NatLanWorkLoads():
             TODO: complete the functions
 
     '''
-    def get_sentence_embeddings(self, sentences:list, **kwargs):
+    def get_sentence_embeddings(
+        self, 
+        sentences:list=[],   # list of word ngrams 
+        model_name:str='',   # https://www.sbert.net/docs/pretrained_models.html
+        **kwargs
+    ): 
 
         _s_fn_id = "function <create_embedding>"
         logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
@@ -137,11 +143,15 @@ class NatLanWorkLoads():
         embeddings = None
 
         try:
-            model = SentenceTransformer('all-MiniLM-L6-v2')
-            if "MODEL_NAME" in kwargs.keys():
-                model = SentenceTransformer(kwags['MODEL_NAME'])
+            if model_name in pre_trained_models:
+                model = SentenceTransformer(model_name)
+            else:
+                model = SentenceTransformer('all-MiniLM-L6-v2')
+                logger.warning("Invalid pretrained model, adopting defaule model: all-MiniLM-L6-v2")
+#             if "MODEL_NAME" in kwargs.keys():
+#                 model = SentenceTransformer(kwags['MODEL_NAME'])
 
-            if "NO_STOP_WORDS" in kwargs.keys() and kwargs["NO_STOP_WORDS"]==True:
+            if "NOSTOPWORDS" in kwargs.keys() and kwargs["NOSTOPWORDS"]==True:
                 sentences = sentences.apply(lambda x: ' '\
                                             .join([word for word in x.split()\
                                                    if word not in (stop)]))

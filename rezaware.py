@@ -17,10 +17,13 @@ try:
     import logging
     import traceback
 
-    print("All python packages in %s loaded successfully!" % __package__)
+    print("All functional %s-libraries in %s-package of %s-module imported successfully!"
+          % (__name__.upper(),__package__.upper(),__module__.upper()))
 
 except Exception as e:
-    print("Some in packages in {0} didn't load\n{1}".format(__package__,e))
+    print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
+          .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
+
 '''
     CLASS is a composite class that will:
     1. configures the app based on the deployment settings

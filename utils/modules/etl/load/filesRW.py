@@ -27,12 +27,12 @@ try:
     import csv
 #     import fsspec
 
-    print("All %s-module %s-packages in function-%s imported successfully!"
-          % (__module__,__package__,__name__))
+    print("All functional %s-libraries in %s-package of %s-module imported successfully!"
+          % (__name__.upper(),__package__.upper(),__module__.upper()))
 
 except Exception as e:
     print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
-          .format(__module__,__package__,__name__,e))
+          .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
     CLASS read and write data to a given location:
@@ -133,6 +133,8 @@ class FileWorkLoads():
             logger.info('########################################################')
             logger.info("%s Class",self.__name__)
 
+            print("%s Class initialization complete" % self.__name__)
+
         except Exception as err:
             logger.error("%s %s \n",_s_fn_id, err)
             print("[Error]"+_s_fn_id, err)
@@ -172,14 +174,20 @@ class FileWorkLoads():
 
         _s_fn_id = "function @mode.setter"
         try:
-            if not store_mode.lower() in self._storeModeList:
-                raise ValueError("Invalid mode = %s. Must be in %s" % (store_mode,self._storeModeList))
+            if not store_mode.lower() in self._storeModeList and \
+                appConf.has_option["DATASTORE","MODE"]:
+                self._storeMode = appConf.get["DATASTORE","MODE"]
+                logger.warning("%s is invalid MODE and reseting to default % mode",
+                              store_mode,self._storeMode)
+            else:
+                self._storeMode = store_mode.lower()
+#                 raise ValueError("Invalid mode = %s. Must be in %s" % (store_mode,self._storeModeList))
 
             if store_mode == 'google-storage':
                 os.environ["GCLOUD_PROJECT"] = appConf.get("GOOGLE","PROJECTID")
 
 
-            self._storeMode = store_mode.lower()
+#             self._storeMode = store_mode.lower()
 
         except Exception as err:
             logger.error("%s %s \n",_s_fn_id, err)
@@ -211,6 +219,15 @@ class FileWorkLoads():
         _s_fn_id = "function @store_root.setter"
 
         try:
+            if "".join(store_root.split())=="" and \
+                appConf.has_option["DATASTORE","ROOT"]:
+                self._storeRoot = appConf.get["DATASTORE","ROOT"]
+                logger.warning("%s is invalid ROOT and reseting to default %",
+                              store_root,self._storeRoot)
+            else:
+                self._storeRoot = store_root
+
+            ''' validate storeRoot '''
             if self.storeMode == "aws-s3-bucket":
                 ''' check if bucket exists '''
                 logger.debug("%s %s",_s_fn_id,self.storeMode)
@@ -242,7 +259,7 @@ class FileWorkLoads():
                 raise ValueError("Invalid mode = %s. First set mode to one of the %s values" 
                                  % (self.storeMode, str(self._storeModeList)))
 
-            self._storeRoot = store_root
+#             self._storeRoot = store_root
 
         except Exception as err:
             logger.error("%s %s \n",_s_fn_id, err)
@@ -452,7 +469,7 @@ class FileWorkLoads():
                     ''' multiple files of same file type '''
                     file_path = str(os.path.join(folder_path))
                     bucket_list = []
-                    for file in s3_bucket.objects.filter(Prefix = '2019/7/8'):
+                    for file in s3_bucket.objects.filter(Prefix = '???'):
                         file_name=file.key
                         if file_name.find(".csv")!=-1:
                             bucket_list.append(file.key)
