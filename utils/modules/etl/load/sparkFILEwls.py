@@ -13,15 +13,18 @@ __conf_fname__ = "app.cfg"
 try:
     import os
     import sys
-    import findspark
     import configparser    
     import logging
     import traceback
+    import functools
+    import findspark
     findspark.init()
 #     from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
     from pyspark.sql.functions import lit, current_timestamp
 #     from pyspark import SparkContext, SparkConf
     from pyspark.sql import DataFrame
+    import boto3   # handling AWS S3 
+    from google.cloud import storage   # handles GCS reads and writes
 #     import pandas as pd
 #     import numpy as np
 
@@ -55,7 +58,6 @@ class FileWorkLoads():
 
     '''
     def __init__(self, desc : str="spark workloads",   # identifier for the instances
-                 sparkPath:str=None,        # directory path to spark insallation
                  **kwargs:dict,   # can contain hostIP and database connection settings
                 ):
 
@@ -76,35 +78,43 @@ class FileWorkLoads():
 #             'DICT',    # data dictionary
 #         ]
 
-#         ''' Initialize the DB parameters '''
-#         self._dbType = None
-#         self._dbDriver = None
-#         self._dbHostIP = None
-#         self._dbPort = None
-#         self._dbDriver = None
-#         self._dbName = None
-#         self._dbSchema = None
-#         self._dbUser = None
-#         self._dbPswd = None
-#         self._dbConnURL = None
-
-        ''' Initialize DB connection parameters '''
-#         self._sparkDIR = None
-#         self._sparkJAR = None
-
-        ''' Initialize spark session parameters '''
-        self._homeDir = None
-        self._binDir = None
-        self._config = None
-        self._jarDir = None
-        self._appName = None
-        self._master = None
-        self._rwFormat = None
-        self._session = None
-        self._saveMode = None
-
         ''' Initialize property var to hold the data '''
         self._data = None
+        self._storeMode = None
+        self._storeModeList = [
+            'local-fs',     # local hard drive on personal computer
+            'aws-s3-bucket', # cloud amazon AWS S3 Bucket storage
+            'google-storage',   # google cloud storage buckets
+        ]
+        self._storeRoot = None   # holds the data root path or bucket name
+        self._storeData = None
+        self._asType = None
+        self._asTypeList = [
+            'str',   # text string ""
+            'list',  # list of values []
+            'dict',  # dictionary {}
+            'array', # numpy array ()
+            'set',   # set of values ()
+            'pandas', # pandas dataframe
+            'spark',  # spark dataframe
+        ]   # list of data types to convert content to
+        self._rwFormatTypes = [
+            'csv',   # comma separated value
+            'json',  # Javascript object notation
+            'text',  # text file
+        ]
+
+        ''' Initialize spark session parameters '''
+        self._homeDir = None   # spark $SPARK_HOME dir path property required for sessions
+        self._binDir = None    # spark $SPARK_BIN dir path property required for sessions
+        self._config = None    # spark .conf option property
+        self._jarDir = None    # spark JAR files dir path property
+        self._appName = None   # spark appName property with a valid string
+        self._master = None    # spark local[*], meso, or yarn property 
+        self._rwFormat = None  # spark read/write formats (jdbc, csv,json, text) property
+        self._session = None   # spark session is set based on the storeMode property
+        self._context = None   # spark context is set to support Hadoop & authentication
+        self._saveMode = None  # spark write append/overwrite save mode property
 
         __s_fn_id__ = "__init__"
 
@@ -167,17 +177,21 @@ class FileWorkLoads():
         return None
 
 
-    ''' Function
-            name: data @property and @setter functions
-            parameters:
-
-            procedure: 
-            return self._data
-
+    ''' Function -- DATA --
+            TODO: 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
     @property
     def data(self):
+        """ @propert data function
+
+            supports a class decorator @property that is used for getting the
+            instance specific datafame. The data must be a pyspark dataframe
+            and if it is not one, the function will try to convert the to a 
+            pyspark dataframe.
+
+            return self._data (pyspark dataframe)
+        """
 
         __s_fn_id__ = "function <@property data>"
 
@@ -196,6 +210,13 @@ class FileWorkLoads():
 
     @data.setter
     def data(self,data):
+        """ @data.setter function
+
+            supports the class propert for setting the instance specific data. 
+            The data must not be None-Type and must be a pyspark dataframe.
+
+            return self._data (pyspark dataframe)
+        """
 
         __s_fn_id__ = "function <@data.setter>"
 
@@ -227,12 +248,18 @@ class FileWorkLoads():
 
         __s_fn_id__= "function <@property.storeMode>"
         try:
-            if not self._storeMode.lower() in self._storeModeList:
-                raise ValueError("Parameter storeMode is not and must be set")
+#                 self._storeMode.lower() not in self._storeModeList and \
+            if self._storeMode is None and appConf.has_option("DATASTORE","MODE"):
+                self._storeMode = appConf.get("DATASTORE","MODE")
+                logger.warning("Reseting non-type storeMode to default %s from %s",
+                              self._storeMode, self.__conf_fname__)
+
+#             if not self._storeMode.lower() in self._storeModeList:
+#                 raise ValueError("Parameter storeMode is not and must be set")
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+_s_fn_id, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return self._storeMode
@@ -240,26 +267,32 @@ class FileWorkLoads():
     @storeMode.setter
     def storeMode(self, store_mode:str) -> str:
 
-        _s_fn_id = "function @mode.setter"
+        __s_fn_id__ = "function @mode.setter"
         try:
-            if not store_mode.lower() in self._storeModeList and \
-                appConf.has_option["DATASTORE","MODE"]:
-                self._storeMode = appConf.get["DATASTORE","MODE"]
-                logger.warning("%s is invalid MODE and reseting to default % mode",
-                              store_mode,self._storeMode)
-            else:
-                self._storeMode = store_mode.lower()
+            if not store_mode.lower() in self._storeModeList:
+                raise ValueError("Parameter storeMode is not and must be set")
+#             if not store_mode.lower() in self._storeModeList and \
+#                 appConf.has_option["DATASTORE","MODE"]:
+#                 self._storeMode = appConf.get["DATASTORE","MODE"]
+#                 logger.warning("%s is invalid MODE and reseting to default % mode from %s",
+#                               store_mode,self._storeMode, self.__conf_fname__)
+#             else:
+            self._storeMode = store_mode.lower()
 #                 raise ValueError("Invalid mode = %s. Must be in %s" % (store_mode,self._storeModeList))
 
-            if store_mode == 'google-storage':
-                os.environ["GCLOUD_PROJECT"] = appConf.get("GOOGLE","PROJECTID")
-
-
-#             self._storeMode = store_mode.lower()
+            if self._storeMode == 'google-storage' and os.environ.get('GCLOUD_PROJECT') is None:
+                if appConf.has_option("GOOGLE","PROJECTID"):
+                    os.environ["GCLOUD_PROJECT"] = appConf.get("GOOGLE","PROJECTID")
+                    logger.info("GCLOUD_PROJECT os.environment set to %s"
+                                % os.environ.get('GCLOUD_PROJECT'))
+                else:
+                    raise RuntimeError("PROJECTID of the google project, required to"+\
+                                       "set the environment variable is undefined in %s"
+                                       % (self.__conf_fname__))
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return self._storeMode
@@ -279,26 +312,44 @@ class FileWorkLoads():
     @property
     def storeRoot(self) -> str:
 
+        __s_fn_id__ = "function @property storeRoot"
+
+        try:
+            if self._storeRoot is None and appConf.has_option("DATASTORE","ROOT"):
+                self._storeRoot = appConf.get("DATASTORE","ROOT")
+                logger.warning("Non-type storeRoot set to default %s from %s"
+                               ,self._storeRoot,self.__conf_fname__)
+#             else:
+#                 raise ValueError("Invalid Non-Type %s. Set as a property of define in %s"
+#                                  % (self._storeRoot,self.__conf_fname__))
+
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
         return self._storeRoot
 
     @storeRoot.setter
-    def storeRoot(self, store_root:str) -> str:
+    def storeRoot(self, store_root:str="") -> str:
 
-        _s_fn_id = "function @store_root.setter"
+        __s_fn_id__ = "function @storeRoot.setter"
 
         try:
-            if "".join(store_root.split())=="" and \
-                appConf.has_option["DATASTORE","ROOT"]:
-                self._storeRoot = appConf.get["DATASTORE","ROOT"]
-                logger.warning("%s is invalid ROOT and reseting to default %",
-                              store_root,self._storeRoot)
-            else:
-                self._storeRoot = store_root
+            if store_root is None and "".join(store_root.split())=="":
+                raise AttributeError("Invalid store_root parameter %s" % store_root)
+#                 appConf.has_option["DATASTORE","ROOT"]:
+#                 self._storeRoot = appConf.get["DATASTORE","ROOT"]
+#                 logger.warning("%s is invalid ROOT and reseting to default %",
+#                               store_root,self._storeRoot)
+#             else:
+#                 self._storeRoot = store_root
 
             ''' validate storeRoot '''
             if self.storeMode == "aws-s3-bucket":
                 ''' check if bucket exists '''
-                logger.debug("%s %s",_s_fn_id,self.storeMode)
+                logger.debug("%s %s",__s_fn_id__,self.storeMode)
                 s3_resource = boto3.resource('s3')
                 s3_bucket = s3_resource.Bucket(name=store_root)
                 count = len([obj for obj in s3_bucket.objects.all()])
@@ -311,30 +362,81 @@ class FileWorkLoads():
 
             elif self.storeMode == "local-fs":
                 ''' check if folder path exists '''
-                logger.debug("%s %s",_s_fn_id,self.storeMode)
                 if not os.path.exists(store_root):
-                    raise ValueError("Invalid local folder path = %s does not exists." % (store_root))
+#                 logger.debug("%s %s",__s_fn_id__,self.storeMode)
+#                 if not os.path.exists(store_root):
+                    raise ValueError("Invalid local folder path = %s does not exists." 
+                                     % (store_root))
 
             elif self.storeMode == "google-storage":
                 ''' check if bucket exists '''
-                logger.debug("%s %s",_s_fn_id,self.storeMode)
-#                 client = storage.Client(project= 'glass-watch-369111')
-                client = storage.Client()
-                if not client.bucket(store_root).exists():
-                    raise ValueError("Invalid GCS bucket %s, does not exist." % (store_root))
+                logger.debug("%s %s",__s_fn_id__,self.storeMode)
+#                 client = storage.Client()
+#                 if not client.bucket(store_root).exists():
+#                     raise ValueError("Invalid GCS bucket %s, does not exist." % (store_root))
 
             else:
-                raise ValueError("Invalid mode = %s. First set mode to one of the %s values" 
-                                 % (self.storeMode, str(self._storeModeList)))
+                raise ValueError("storeRoot %s does not exist for storeMode %s" 
+                                 % (store_root,self.storeMode))
 
-#             self._storeRoot = store_root
+            self._storeRoot = store_root
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return self._storeRoot
+
+    @property
+    def asType(self) -> str:
+        """
+        Description: 
+            The asType property sets the dtype for returning the data. See self._asTypeList
+            for valid types. If the asType is not set then it will default to SPARK dataframe
+        
+        Returns:
+            self._asType (str) if unspecified default is SPARK
+        """
+        __s_fn_id__ = "function @property asType"
+
+        try:
+            if self._asType is None:
+                self._asType = 'spark'
+                logger.warning("Non-type asType value, set to default value SPARK")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._asType
+
+    @asType.setter
+    def asType(self, as_type:str="") -> str:
+        """
+        Description: 
+            The asType property is set to the value defined in the as_type input parameter.
+            If the value is not in self._asTypeList, the function will throw an exception.
+        
+        Returns:
+            self._asType (str)
+        """
+        __s_fn_id__ = "function @asType.setter"
+
+        try:
+            if as_type.lower() not in self._asTypeList:
+                raise AttributeError("Invaid attribute as_type; must be %s" % str(self._asTypeList))
+            self._asType = as_type.lower()
+            logger.debug("The asType property set to %s",self._asType)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._asType
+
 
     ''' Function --- SPARK SESSION PROPERTIES ---
             name: session @property and @setter functions
@@ -350,7 +452,7 @@ class FileWorkLoads():
     ''' HOMEDIR '''
     ''' TODO - check if evn var $SPARK_HOME and $JAVA_HOME is set '''
     @property
-    def homeDir(self):
+    def homeDir(self) -> str:
 
         __s_fn_id__ = "function <@property homeDir>"
 
@@ -367,7 +469,7 @@ class FileWorkLoads():
         return self._homeDir
 
     @homeDir.setter
-    def homeDir(self,home_dir:str=''):
+    def homeDir(self,home_dir:str='') -> str:
 
         __s_fn_id__ = "function <@homeDir.setter>"
 
@@ -387,7 +489,7 @@ class FileWorkLoads():
 
     ''' BINDIR '''
     @property
-    def binDir(self):
+    def binDir(self) -> str:
 
         __s_fn_id__ = "function <@property binDir>"
 
@@ -404,7 +506,7 @@ class FileWorkLoads():
         return self._binDir
 
     @binDir.setter
-    def binDir(self,bin_dir:str=''):
+    def binDir(self,bin_dir:str='') -> str:
 
         __s_fn_id__ = "function <@binDir.setter>"
 
@@ -424,7 +526,7 @@ class FileWorkLoads():
 
     ''' APPNAME '''
     @property
-    def appName(self):
+    def appName(self) -> str:
 
         __s_fn_id__ = "function <@property appName>"
 
@@ -444,7 +546,7 @@ class FileWorkLoads():
         return self._appName
 
     @appName.setter
-    def appName(self,app_name:str=''):
+    def appName(self,app_name:str='') -> str:
 
         __s_fn_id__ = "function <@appName.setter>"
 
@@ -464,7 +566,7 @@ class FileWorkLoads():
 
     ''' CONFIG '''
     @property
-    def config(self):
+    def config(self) -> str:
 
         __s_fn_id__ = "function <@property config>"
 
@@ -481,7 +583,7 @@ class FileWorkLoads():
         return self._config
 
     @config.setter
-    def config(self,config:str=''):
+    def config(self,config:str='') -> str:
 
         __s_fn_id__ = "function <@config.setter>"
 
@@ -501,7 +603,7 @@ class FileWorkLoads():
 
     ''' JARDIR '''
     @property
-    def jarDir(self):
+    def jarDir(self) -> str:
 
         __s_fn_id__ = "function <@property jarDir>"
 
@@ -518,7 +620,7 @@ class FileWorkLoads():
         return self._jarDir
 
     @jarDir.setter
-    def jarDir(self,jar_dir:str=''):
+    def jarDir(self,jar_dir:str='') -> str:
 
         __s_fn_id__ = "function <@jarDir.setter>"
 
@@ -538,7 +640,7 @@ class FileWorkLoads():
 
     ''' MASTER '''
     @property
-    def master(self):
+    def master(self) -> str:
 
         __s_fn_id__ = "function <@property master>"
 
@@ -555,7 +657,7 @@ class FileWorkLoads():
         return self._master
 
     @master.setter
-    def master(self,master:str='local[1]'):
+    def master(self,master:str='local[1]') -> str:
 
         __s_fn_id__ = "function <@master.setter>"
 
@@ -576,14 +678,15 @@ class FileWorkLoads():
 
     ''' RWFORMAT '''
     @property
-    def rwFormat(self):
+    def rwFormat(self) -> str:
 
         __s_fn_id__ = "function <@property rwFormat>"
 
         try:
             if self._rwFormat is None and appConf.has_option('SPARK','FORMAT'):
                 self._rwFormat = appConf.get('SPARK','FORMAT')
-                logger.debug("@property Spark rwFormat set to: %s",self._rwFormat)
+                logger.debug("Non-type Spark rwFormat set to default %s from %s"
+                             ,self._rwFormat,self.__conf_fname__)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -593,13 +696,14 @@ class FileWorkLoads():
         return self._rwFormat
 
     @rwFormat.setter
-    def rwFormat(self,rw_format:str='csv'):
+    def rwFormat(self,rw_format:str='csv') -> str:
 
         __s_fn_id__ = "function <@saveMode.setter>"
 
         try:
-            if rw_format.lower() not in ['csv']:
-                raise ConnectionError("Invalid spark RWFORMAT %s" % rw_format)
+            if rw_format.lower() not in self._rwFormatTypes:
+                raise AttributeError("Invalid spark read/write FORMAT %s must %s" 
+                                     % (rw_format,str(self._rwFormatTypes)))
 
             self._rwFormat = rw_format
             logger.debug("@setter Spark rwFormat set to: %s",self._rwFormat)
@@ -614,7 +718,7 @@ class FileWorkLoads():
 
     ''' SAVEMODE '''
     @property
-    def saveMode(self):
+    def saveMode(self) -> str:
 
         __s_fn_id__ = "function <@property saveMode>"
 
@@ -631,7 +735,7 @@ class FileWorkLoads():
         return self._saveMode
 
     @saveMode.setter
-    def saveMode(self,save_mode:str='Overwrite'):
+    def saveMode(self,save_mode:str='Overwrite') -> str:
 
         __s_fn_id__ = "function <@saveMode.setter>"
 
@@ -682,7 +786,9 @@ class FileWorkLoads():
                                 .appName(self.appName) \
                                 .config(self.config, self.jarDir) \
                                 .getOrCreate()
-                
+                logger.debug("Non-type spark session set with homeDir: %s appName: %s "+\
+                             "conf: %s jarDir: %s master: %s"
+                             ,self.homeDir,self.appName,self.config,self.jarDir,self.master)
             logger.info("Starting a Spark Session: %s",self._session)
 
         except Exception as err:
@@ -722,14 +828,26 @@ class FileWorkLoads():
             if "JARDIR" in session_args.keys():
                 self.jarDir = session_args['JARDIR']
 
+#             if self.storeMode == 'local-fs':
+            ''' create session to read from local file system '''
+            if self._session:
+                self._session.stop
             self._session = SparkSession \
                                 .builder \
                                 .master(self.master) \
                                 .appName(self.appName) \
                                 .config(self.config, self.jarDir) \
                                 .getOrCreate()
+#             elif self.storeMode == 'aws-s3-bucket':
+#                 pass
+#             elif self.storeMode == 'google-storage':
+#                 pass
+#             else:
+#                 raise RuntimeError("Unrecognized storeMode %s to start a spark session" 
+#                                    % self.storeMode)
 
-            logger.info("Starting a Spark Session: %s" % (self._session))
+            logger.info("Starting a Spark Session: %s for %s"
+                        ,self._session, self.storeMode)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -739,20 +857,342 @@ class FileWorkLoads():
         return self._session
 
 
-    ''' Function
-            name: read_csv_to_sdf
-            parameters:
-                    filesPath (str)
-                    @enrich (dict)
-            procedure: 
-            return DataFrame
+    ''' Function --- SPARK CONTEXT ---
 
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @property
+    def context(self):
+        """
+        Description:
+            Sets the spark contect to work with Hadoop necessary for AWS-S3, GCS, etc
+            If the context is None, @property will set the default values
+        Attributes:
+        Returns:
+            self._context (sparkConf object)
+        """
+
+        __s_fn_id__ = "function <@property context>"
+        _access_key=None
+        _secret_key=None
+
+        try:
+            if self._context is None:
+                conf = self.session.sparkContext._jsc.hadoopConfiguration()
+                if self.storeMode == 'aws-s3-bucket':
+                    _access_key, _secret_key = credentials.aws()
+                    conf.set("fs.s3a.access.key", _access_key)
+                    conf.set("fs.s3a.secret.key", _secret_key)
+                    conf.set("fs.s3a.impl","org.apache.hadoop.fs.s3a.S3AFileSystem")
+
+                elif self.storeMode == 'google-storage':
+                    conf.set("fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")
+                    conf.set("fs.AbstractFileSystem.gs.impl",
+                             "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS")
+                    # This is required if you are using service account and set true, 
+                    conf.set('fs.gs.auth.service.account.enable', 'true')
+                    ##conf.set('google.cloud.auth.service.account.json.keyfile', "/path/to/keyfile")
+                    # Following are required if you are using oAuth
+                    ##conf.set('fs.gs.auth.client.id', 'YOUR_OAUTH_CLIENT_ID')
+                    ##conf.set('fs.gs.auth.client.secret', 'OAUTH_SECRET')
+                else:
+                    pass
+
+                self._context = conf
+                logger.info("Non-type context configurered for Spark %s authentication with %s"
+                            ,self.storeMode,self._context)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug("%s",traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._context
+
+    @context.setter
+    def context(self,context_args:dict={}):
+
+        __s_fn_id__ = "function <@session.setter context>"
+        _access_key=None
+        _secret_key=None
+
+        try:
+            conf = self.session.sparkContext._jsc.hadoopConfiguration()
+            ''' -- AWS S3 --- '''
+            if self.storeMode == 'aws-s3-bucket':
+                _access_key, _secret_key = credentials.aws()
+                if "ACCESSKEY" in context_args.keys():
+                    _access_key = context_args['ACCESSKEY']
+                if "SECRETKEY" in context_args.keys():
+                    _secret_key = context_args['SECRETKEY']
+
+                conf.set("fs.s3a.access.key", _access_key)
+                conf.set("fs.s3a.secret.key", _secret_key)
+                conf.set("fs.s3a.impl","org.apache.hadoop.fs.s3a.S3AFileSystem")
+
+            elif self.storeMode == 'google-storage':
+                conf.set("fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")
+                conf.set("fs.AbstractFileSystem.gs.impl",
+                         "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS")
+                # This is required if you are using service account and set true, 
+                conf.set('fs.gs.auth.service.account.enable', 'true')
+                ##conf.set('google.cloud.auth.service.account.json.keyfile', "/path/to/keyfile")
+                # Following are required if you are using oAuth
+                ##conf.set('fs.gs.auth.client.id', 'YOUR_OAUTH_CLIENT_ID')
+                ##conf.set('fs.gs.auth.client.secret', 'OAUTH_SECRET')
+
+            else:
+                pass
+
+            self._context = conf
+            logger.info("Setting a new spark contex config: %s for %s"
+                        ,self._context, self.storeMode)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._context
+
+
+    ''' Function --- IMPORT_FILES ---
+
+        TODO : google-storage still not working
+        author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def converter(func):
+        """
+        Description:
+            The retrieved data is converted to the dtype specificed in the as_type
+            attribute. The self._data is returned in the prescribed format.
+        Arguments:
+            func inherits the import_files function
+        Returns:
+            self._data (pyspark dataframe)        
+        """
+        @functools.wraps(func)
+        def wrapper_converter(
+            self,
+            as_type,
+            folder_path,
+            file_name,
+            file_type,
+            **options,
+        ):
+            """
+                @functools.wraps receives the data, if not null and possible to convert
+                will convert to the requested dtype.
+            """
+            __s_fn_id__ = "Function <wrapper_converter>"
+
+            try:
+#                 format_, as_type_ = func(self,as_type,folder_path,file_name,file_type,**options)
+                data_ = func(self,as_type,folder_path,file_name,file_type,**options)
+
+                if data_ is None:
+                    raise AttributeError("Cannot initiate %s with Non-type dataset" % __s_fn_id__)
+
+                ''' convert to dtype '''
+                if self.asType == 'pandas':
+                    self._data = data_.toPandas()
+                    logger.debug("Converted %d rows to pandas dataframe",self._data.shape[0])
+                elif self.asType == 'dict':
+                    self._data = data_.toPandas().T.to_dict('list')
+                    logger.debug("Converted %d rows to dictionary",len(self._data))
+                elif self.asType == 'list':
+                    logger.warning("Returning data as pyspark dataframe. "+\
+                                   "Unsupported convertion, to be implemented in the future")
+                elif self.asType == 'str':
+                    logger.warning("Returning data as pyspark dataframe. "+\
+                                   "Unsupported convertion, to be implemented in the future")
+                else:
+                    self._data = data_
+                    logger.info("Retuning %d rows pyspark dataframe, no convertion required."
+                                ,self._data.count())
+
+            except Exception as err:
+                logger.error("%s %s",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._data
+            return self._data
+        return wrapper_converter
+
+    def importer(func):
+        """
+        Description:
+            Wrapper function will apply the storeMode specific import protocols
+            to read the data as a pyspark dataframe
+        Arguments:
+            func inherits the import_files function
+        Returns:
+            self._data (pyspark dataframe)        
+        """
+        @functools.wraps(func)
+        def wrapper_importer(
+            self,
+            as_type,
+            folder_path,
+            file_name,
+            file_type,
+            **options,
+        ):
+            """
+                @functools.wraps to read the data into a pyspark dataframe using the
+                established self_rwFormat and the self.session
+            """
+            __s_fn_id__ = "Function <wrapper_importer>"
+
+            try:
+                format_, as_type_ = func(self,as_type,folder_path,file_name,file_type,**options)
+                if format_ is None or as_type_ is None:
+                    raise AttributeError("The format_ or as_type_ can not be a Non-Types")
+
+                if self.storeMode == 'local-fs':
+                    ''' read content from local file system '''
+                    if file_name:
+                        file_path = str(os.path.join(self.storeRoot,folder_path,file_name))
+                    else:
+                        file_path = str(os.path.join(self.storeRoot,folder_path))
+
+                elif self.storeMode == 'aws-s3-bucket':
+                    ''' read content from s3 bucket '''
+                    if file_name:
+                        file_path = str(os.path.join(self.storeRoot,folder_path,file_name))
+                    else:
+                        file_path = str(os.path.join(self.storeRoot,folder_path))
+                    file_path = "s3a://"+file_path
+                    self.context = {}
+
+                elif self.storeMode == 'google-storage':
+                    ''' read content from google cloud storage '''
+                    if file_name:
+                        file_path = str(os.path.join(self.storeRoot,folder_path,file_name))
+#                         client = storage.Client()
+#                         bucket = client.bucket(self.storeRoot)
+#                         blob = bucket.blob(file_path)
+#     #                     blob.upload_from_filename(_tmp_file_path)
+#                         with blob.open("r") as f:
+#                             file_content = f.read()
+                    elif file_type:
+                        ''' multiple files of same file type '''
+                        file_path = str(os.path.join(self.storeRoot,folder_path))
+                    file_path = "gs://"+file_path
+                else:
+                    raise typeError("Invalid storage mode %s" % self.storeMode)
+
+                sdf = self.session.read\
+                                .format(self.rwFormat)\
+                                .options(**options)\
+                                .load(file_path)
+
+                if sdf.count() > 0:
+                    self._data = sdf
+                    logger.info("Read %d rows of data into dataframe",self._data.count())
+
+            except Exception as err:
+                logger.error("%s %s",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._data
+        return wrapper_importer
+
+
+    @converter
+    @importer
+    def read_files_to_dtype(
+        self,
+        as_type:str="",      # optional - define the data type to return
+        folder_path:str="",  # optional - relative path, w.r.t. self.storeRoot
+        file_name:str=None,  # optional - name of the file to read
+        file_type:str=None,  # optional - read all the files of same type
+        **options,
+    ):
+        """
+        Description:
+            When the direct file path or path to a folder is given, the function
+            will read the files and convert them to a dtype specified as_type.
+            If a file type is given, instead of the direct file path with name, 
+            the function will read all the files in the folder of the requested file
+            type. If both a file_name and file_type are specified, then only data
+            from the file_name is imported.
+            If a folder is not specified, then the function will import data from the
+            root folder (e.g. AWS S3 bucket)
+
+        Arguments:
+            as_type (str) the dtype to return data as; e.g. dataframe, dict, list
+                see self._asTypeList. If unspecified will return the default pyspark
+                dataframe
+            folder_path (str) a path to the folder relative to the storeRoot; if
+                unspecified, will use the self._storeRoot as the folder
+            file_name (str) specific a particular file of type
+            file_type (str) speficies a file type to read a collection of files; 
+                see self._rwFormatTypes for supported file types
+            kwargs
+
+        returns:
+            _read_mode (str) indicating whether a file name or file type read process
+        """
+
+        __s_fn_id__ = "Function <read_files_to_dtype>"
+        _read_mode = None
+        _read_format = None
+
+        try:
+            self.asType = as_type  # validate and set the property
+            logger.info("Reading data from %s at root %s",self.storeMode,self.storeRoot)
+            if  file_name is not None and \
+                "".join(file_name.split())!="":
+                ''' check if supported file type and set the reFormat propert '''
+                _fname, _fext = os.path.splitext(file_name)  
+                self.rwFormat = _fext.replace(".", "").lower()
+                logger.info("Reading format %s data from file %s from folder %s",
+                           self._rwFormat,_fname,folder_path)
+            elif file_type.replace(".", "").lower() in self._rwFormatTypes:
+                self.rwFormat = file_type.lower()
+                logger.info("Reading all files with read format %s from folder %s",
+                           self._rwFormat,folder_path)
+            else:
+                raise AttributeError("Either a file_name to read a single file "+\
+                                     "or a file_type to read all files of type "+\
+                                     "must be specified.")
+
+        except Exception as err:
+            logger.error("%s %s",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._rwFormat, self._asType
+        
+
+
+    ''' Function --- READ_CSV_TO_SDF ---
+            TODO:
             author: <nuwan.waidyanatha@rezgateway.com>
             
     '''
-    def read_csv_to_sdf(self,filesPath: str, **kwargs):
+    @classmethod
+    def read_csv_to_sdf(
+        self,
+        files_path:str="", 
+        **kwargs):
+        """ 
+            When the direct file path or path to a folder is given, the function
+            will read the files and convert them to a pyspark dataframe. If a folder
+            path is given, instead of the direct file path with name, the function
+            will read all the CSV files in that folder
+            
+            Arguments:
+                filesPath (str) a path relative to the storeRoot
+
+            return self._data (pyspark dataframe)
+        """
 
         __s_fn_id__ = "Class <SparkWorkLoads> Function <read_folder_csv_to_sdf>"
+
         _csv_to_sdf = self.session.sparkContext.emptyRDD()     # initialize the return var
 #         _tmp_df = self.session.sparkContext.emptyRDD()
         _start_dt = None
@@ -763,8 +1203,8 @@ class FileWorkLoads():
 
         try:
             ''' check if the folder and files exists '''
-            if not filesPath:
-                raise ValueError("Invalid folder path %s" % filesPath)
+            if not filesPath or "".join(files_path.split())=="":
+                raise ValueError("Invalid file or folder path %s" % filesPath)
             if "IS_FOLDER" in kwargs.keys() and kwargs['IS_FOLDER']:
                 filelist = os.listdir(filesPath)
                 if not (len(filelist) > 0):
@@ -787,10 +1227,10 @@ class FileWorkLoads():
             ''' extract data from **kwargs if exists '''
             if 'SCHEMA' in kwargs.keys():
                 _sdf_cols = kwargs['SCHEMA']
-            if 'FROM_DATETIME' in kwargs.keys():
-                _from_dt = kwargs['FROM_DATETIME']
-            if 'TO_DATETIME' in kwargs.keys():
-                _to_dt = kwargs['TO_DATETIME']
+            if 'FROMDATETIME' in kwargs.keys():
+                _from_dt = kwargs['FROMDATETIME']
+            if 'TODATETIME' in kwargs.keys():
+                _to_dt = kwargs['TODATETIME']
 
             _csv_to_sdf = self.session.read\
                             .options( \
@@ -802,7 +1242,7 @@ class FileWorkLoads():
                             .csv(filesPath)
 
 #            _csv_to_sdf.select(split(_csv_to_sdf.room_rate, '[US$]',2).alias('rate_curr')).show()
-            if 'TO_PANDAS' in kwargs.keys() and kwargs['TO_PANDAS']:
+            if 'TOPANDAS' in kwargs.keys() and kwargs['TOPANDAS']:
                 _csv_to_sdf = _csv_to_sdf.toPandas()
                 logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
                              % _csv_to_sdf.shape[0])
@@ -864,6 +1304,102 @@ class FileWorkLoads():
             print("[Error]"+__s_fn_id__, err)
 
         return _csv_file_path
+
+
+class credentials():
+    """
+    Description:
+        The class supports retrieving authentication credentials for establishing the
+        necessary cloud storage connections.
+    """
+
+    ''' Function --- GET_APP_CONF ---
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @staticmethod
+    def get_app_conf():
+        """
+        Description:
+            Uses the FileWorkLoads current working directory (cwd) and config file name
+        Attributes:
+        Returns: 
+            appCFG (configparser object)
+        """
+        __s_fn_id__ = "function <get_app_conf>"
+
+        try:
+#         self.cwd=os.path.dirname(__file__)
+            clsSpark = FileWorkLoads(desc=__s_fn_id__)
+            appCFG = configparser.ConfigParser()
+            appCFG.read(os.path.join(clsSpark.appDir,clsSpark.__conf_fname__))
+
+        except Exception as err:
+            logger.error("%s %s",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return appCFG
+
+    ''' Function --- GET_APP_CONF ---
+    
+        TODO: retrieve credentials from the name profile. Now it is reading
+              the default profile.
+
+        authors: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @staticmethod
+    def aws(**kwargs):
+        """ 
+        Description:
+            returns the aws credentials from the aws CLI established credentials
+            file stored in the local folder defined in the app config file (__conf_fname__)
+            to instatiate the configparser to read the key value pairs. 
+        Attributes:
+        Returns: 
+            aws_access_key_id (str) 
+            aws_secret_access_key (str)
+        """
+        __s_fn_id__ = "function <aws> credentials"
+        aws_access_key_id=None
+        aws_secret_access_key=None
+
+        try:
+            _appCFG = credentials.get_app_conf()
+            ''' --- profile --- '''
+            if "CREDPROFILE" in kwargs.keys():
+                _profile = kwargs['CREDPROFILE']
+            elif _appCFG.has_option('AWSAUTH','CREDPROFILE'):
+                _profile = _appCFG.get('AWSAUTH','CREDPROFILE')
+            else:
+                _profile = 'DEFAULT'
+
+            ''' --- file --- '''
+            if "CREDFILEPATH" in kwargs.keys():
+                _fpath = kwargs['CREDFILEPATH']
+            elif _appCFG.has_option('AWSAUTH','CREDFILEPATH'):
+                _fpath = _appCFG.get('AWSAUTH','CREDFILEPATH')
+            else:
+                _fpath = '~/.aws/credentials'
+                
+            with open(os.path.expanduser(_fpath)) as f:
+                for line in f:
+                    #print(line.strip().split(' = '))
+                    try:
+                        key, val = line.strip().split(' = ')
+                        if key == 'aws_access_key_id':
+                            aws_access_key_id = val
+                        elif key == 'aws_secret_access_key':
+                            aws_secret_access_key = val
+                    except ValueError:
+                        pass
+
+        except Exception as err:
+            logger.error("%s %s",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return aws_access_key_id, aws_secret_access_key
 
 #     ''' Function
 #             name: reset_type to the original data type

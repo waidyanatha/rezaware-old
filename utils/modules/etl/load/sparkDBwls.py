@@ -19,9 +19,10 @@ try:
     import traceback
     findspark.init()
 #     from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
-    from pyspark.sql.functions import lit, current_timestamp
-#     from pyspark import SparkContext, SparkConf
+    from pyspark.sql.functions import lit, current_timestamp,col,isnan, when, count, countDistinct
+    from pyspark.ml.feature import Imputer
     from pyspark.sql import DataFrame
+#     from pyspark import SparkContext, SparkConf
 #     import pandas as pd
 #     import numpy as np
 
@@ -84,6 +85,7 @@ class SQLWorkLoads():
         self._dbDriver = None
         self._dbName = None
         self._dbSchema = None
+        self._partitions = None
         self._dbUser = None
         self._dbPswd = None
         self._dbConnURL = None
@@ -121,7 +123,7 @@ class SQLWorkLoads():
         sys.path.insert(1,self.rezHome)
         from rezaware import Logger as logs
 
-        ''' Set the wrangler root directory '''
+        ''' Set the utils root directory '''
         self.pckgDir = pkgConf.get("CWDS",self.__package__)
         self.appDir = pkgConf.get("CWDS",self.__app__)
         ''' get the path to the input and output data '''
@@ -835,7 +837,7 @@ class SQLWorkLoads():
     @rwFormat.setter
     def rwFormat(self,rw_format:str='jdbc'):
 
-        __s_fn_id__ = "function <@saveMode.setter>"
+        __s_fn_id__ = "function <@rwFormat.setter>"
 
         try:
             if rw_format.lower() not in ['jdbc']:
@@ -1148,57 +1150,146 @@ class SQLWorkLoads():
 
 
     ''' Function
-            name: get_data_from_table
+            name: read options @property and @setter functions
             parameters:
-                    @name (str)
-                    @enrich (dict)
+
             procedure: 
-            return DataFrame
+            return self._* (* is a specific options parameter)
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def read_data_from_table(self, db_table:str, **kwargs):
+    ''' PARTITIONS '''
+    @property
+    def partitions(self):
 
-        load_sdf = None   # initiatlize return var
-        __s_fn_id__ = "function <read_data_from_table>"
+        __s_fn_id__ = "function <@property partitions>"
 
         try:
-            ''' validate table '''
-            
-            ''' TODO: add code to accept options() to manage schema specific
-                authentication and access to tables '''
-
-            print("Wait a moment, retrieving data ...")
-            ''' jdbc:postgresql://<host>:<port>/<database> '''
-            
-            # driver='org.postgresql.Driver').\
-            load_sdf = self.session.read.format("jdbc").\
-                options(
-                    url=self.dbConnURL,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
-                    dbtable=self.dbSchema+"."+db_table,      # '_issuefix_bkdata.customerbookings',
-                    user=self.dbUser,     # 'postgres',
-                    password=self.dbPswd, # 'postgres',
-                    driver=self.dbDriver).load()
-            logger.debug("loaded %d rows into pyspark dataframe" % load_sdf.count())
-
-            ''' drop duplicates '''
-            if "DROP_DUPLICATES" in kwargs.keys() and kwargs['DROP_DUPLICATES']:
-                load_sdf = load_sdf.distinct()
-
-            ''' convert to pandas dataframe '''
-            if 'TO_PANDAS' in kwargs.keys() and kwargs['TO_PANDAS']:
-                load_sdf = load_sdf.toPandas()
-                logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
-                             % load_sdf.shape[0])
-
-            print("Loading complete!")
+            if self._partitions is None and appConf.has_option('SPARK','PARTITIONS'):
+                self._partitions = appConf.get('SPARK','PARTITIONS')
+                logger.debug("@property Spark PARTITIONS set to: %s",self._partitions)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return load_sdf
+        return self._partitions
+
+    @partitions.setter
+    def partitions(self,num_partitions:int=2):
+
+        __s_fn_id__ = "function <@partitions.setter>"
+
+        try:
+            if num_partitions <= 0:
+                raise ConnectionError("Invalid  %d spark NUMBER of PARTIONS" % num_partitions)
+
+            self._partitions = num_partitions
+            logger.debug("@setter Spark PARTIONS set to: %s",self._partitions)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._partitions
+
+
+    ''' Function
+            name: get_data_from_table
+            parameters:
+
+            procedure: 
+            return DataFrame
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @classmethod
+    def read_data_from_table(self,
+                             select:str="",
+                             db_table:str="",
+                             db_column:str="",
+                             lower_bound=None,
+                             upper_bound=None,
+                             **kwargs):
+
+        load_sdf = None   # initiatlize return var
+        __s_fn_id__ = "function <read_data_from_table>"
+
+        try:
+            if len(kwargs) > 0:
+                self.session = kwargs
+            else:
+                self.session = {}
+            ''' set the partitions '''
+            if "PARTITIONS" in kwargs.keys():
+                self.partitions = kwargs['PARTITIONS']
+#             if "PARTCOLUMN" in kwargs.keys():
+#                 self.partColumn = kwargs['PARTCOLUMN']
+            ''' validate select '''
+#             if select is None or "".join(select.split()) == "":
+#                 raise AttributeError("Invalid select must be a valid SQL statement")
+            print("Wait a moment, retrieving data ...")
+            ''' use query else use partition column'''
+            if not select is None and "".join(select.split())!="":
+                load_sdf = self.session.read\
+                    .format("jdbc")\
+                    .option("url",self.dbConnURL)\
+                    .option("query",select)\
+                    .option("numPartitions",self.partitions)\
+                    .option("user",self.dbUser)\
+                    .option("password",self.dbPswd)\
+                    .option("driver",self.dbDriver)\
+                    .load()
+
+            elif not db_table is None and "".join(db_table.split())!="" \
+                and not db_column is None and "".join(db_column.split())!="" \
+                and not lower_bound is None and not upper_bound is None:
+
+                if db_table.find(self.dbSchema+".") == -1:
+                    db_table = self.dbSchema+"."+db_table
+
+                load_sdf = self.session.read\
+                    .format("jdbc")\
+                    .option("url",self.dbConnURL)\
+                    .option("dbtable",db_table)\
+                    .option("partitionColumn",db_column)\
+                    .option("lowerBound",lower_bound)\
+                    .option("upperBound",upper_bound)\
+                    .option("numPartitions",self.partitions)\
+                    .option("user",self.dbUser)\
+                    .option("password",self.dbPswd)\
+                    .option("driver",self.dbDriver)\
+                    .load()
+            else:
+                raise AttributeError("Invalid set of input variables necesssary "+\
+                                     "to determine the read operation")
+            
+            if load_sdf:
+                logger.debug("loaded %d rows into pyspark dataframe" % load_sdf.count())
+            else:
+                logger.debug("Something went wrong")
+
+            ''' drop duplicates '''
+            if "DROPDUPLICATES" in kwargs.keys() and kwargs['DROPDUPLICATES']:
+                load_sdf = load_sdf.distinct()
+                logger.debug("Removed duplicates, reduced dataframe with %d rows",load_sdf.count())
+
+            ''' convert to pandas dataframe '''
+            if 'TOPANDAS' in kwargs.keys() and kwargs['TOPANDAS']:
+                load_sdf = load_sdf.toPandas()
+                logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
+                             % load_sdf.shape[0])
+
+            self._data = load_sdf
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
 
     ''' Function
             name: insert_sdf_into_table
@@ -1210,6 +1301,7 @@ class SQLWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
+    @classmethod
     def insert_sdf_into_table(self, save_sdf, db_table:str, **kwargs):
         
         __s_fn_id__ = "function <insert_sdf_into_table>"
@@ -1287,6 +1379,7 @@ class SQLWorkLoads():
             author: <nuwan.waidyanatha@rezgateway.com>
             
     '''
+    @classmethod
     def read_csv_to_sdf(self,filesPath: str, **kwargs):
 
         _csv_to_sdf = self.session.sparkContext.emptyRDD()     # initialize the return var
@@ -1349,6 +1442,7 @@ class SQLWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
+    @classmethod
     def save_sdf_to_csv(self, sdf, filesPath=None, **kwargs):
         
         _csv_file_path = None
@@ -1389,6 +1483,105 @@ class SQLWorkLoads():
             print(traceback.format_exc())
 
         return _csv_file_path
+
+    ''' Function
+            name: impute_data
+            parameters:
+                    filesPath (str)
+                    @enrich (dict)
+            procedure: 
+            return DataFrame
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @classmethod
+    def impute_data(
+        self,
+        data,
+        column_subset:list=[],
+        strategy:str="mean",
+        **kwargs
+    ) -> DataFrame:
+
+        __s_fn_id__ = "function <impute_data>"
+
+        try:
+            ''' set and validate data '''
+            self.data = data
+            ''' validate column_subset, if none imupte all numeric columns '''
+            if len(column_subset) > 0:
+                non_num_cols = len([col_ for col_ in column_subset if
+                                    data.select(col_).dtypes[0][1] !="string"])
+                if non_num_cols < len(column_subset):
+                    raise AttributeError("%d invalid non-numeric columns in input var: column_subset"
+                                         % len(column_subset)-non_num_cols)
+            elif column_subset is None or column_subset==[]:
+                column_subset = [col_ for col_ in data.columns if
+                                 data.select(col_).dtypes[0][1] !="string"]
+            else:
+                raise RuntimeError("Something was wrong validating column_subset")
+
+            ''' validate strategy '''
+            _strategy = strategy
+            if not strategy.lower() in ['mean','median','mode']:
+                _strategy = 'mean'
+                logger.warning("Invalid strategy %s, reverting to default strategy = %s"
+                               ,strategy,_strategy)
+            ''' apply imputation '''
+            imputer = Imputer(inputCols=column_subset,
+                              outputCols=[col_ for col_ in column_subset]
+                             ).setStrategy(_strategy)
+            self._data = imputer.fit(data).transform(data)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._data
+
+    ''' Function
+            name: impute_data
+            parameters:
+                    filesPath (str)
+                    @enrich (dict)
+            procedure: 
+            return DataFrame
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @staticmethod
+    def count_column_nulls(
+#         self,
+        data,
+        column_subset:list=[],
+        **kwargs,
+    ) -> DataFrame:
+
+        __s_fn_id__ = "function <count_column_nulls>"
+        _nan_counts_sdf = None
+
+        try:
+            ''' drop any columns not specified in column_subset; else use all '''
+            if len([col_ for col_ in column_subset if col_ not in data.columns]) > 0:
+                column_subset = data.columns
+
+            _nan_counts_sdf = data.select([count(when(col(c).contains('None') | \
+                                        col(c).contains('NULL') | \
+                                        (col(c) == '' ) | \
+                                        col(c).isNull() | \
+                                        isnan(c), c )).alias(c)
+                                for c in column_subset])
+
+            if _nan_counts_sdf.count() > 0:
+                logger.debug("NULL count completed for %d columns",len(_nan_counts_sdf.columns))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return _nan_counts_sdf
 
 #     ''' Function
 #             name: read_s3obj_to_sdf
