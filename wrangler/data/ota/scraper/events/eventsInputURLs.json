@@ -1,0 +1,7 @@
+{
+    "10TimesNiagaraFalls": [{
+        "url": "https://10times.com/[{destinationID}",
+        "inputs": ["destinationID"],
+        "destinationID": "cityCodes10Times.csv"
+    }]    
+}
