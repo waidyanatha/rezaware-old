@@ -789,7 +789,7 @@ class FileWorkLoads():
                 logger.debug("Non-type spark session set with homeDir: %s appName: %s "+\
                              "conf: %s jarDir: %s master: %s"
                              ,self.homeDir,self.appName,self.config,self.jarDir,self.master)
-            logger.info("Starting a Spark Session: %s",self._session)
+#             logger.info("Starting a Spark Session: %s",self._session)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -816,14 +816,11 @@ class FileWorkLoads():
 
             if "CONFIG" in session_args.keys():
                 self.config = session_args['CONFIG']
-
             ''' set master cluster setup local[x], yarn or mesos '''
             if "MASTER" in session_args.keys():
                 self.master = session_args['MASTER'] 
-
             if "APPNAME" in session_args.keys():
                 self.appName = session_args['APPNAME']  
-
             ''' set the db_type specific jar '''
             if "JARDIR" in session_args.keys():
                 self.jarDir = session_args['JARDIR']
@@ -1121,7 +1118,6 @@ class FileWorkLoads():
             from the file_name is imported.
             If a folder is not specified, then the function will import data from the
             root folder (e.g. AWS S3 bucket)
-
         Arguments:
             as_type (str) the dtype to return data as; e.g. dataframe, dict, list
                 see self._asTypeList. If unspecified will return the default pyspark
@@ -1132,7 +1128,6 @@ class FileWorkLoads():
             file_type (str) speficies a file type to read a collection of files; 
                 see self._rwFormatTypes for supported file types
             kwargs
-
         returns:
             _read_mode (str) indicating whether a file name or file type read process
         """

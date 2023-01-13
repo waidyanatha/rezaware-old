@@ -59,7 +59,8 @@ class RatioOfReturns():
         global pkgConf
         global appConf
         global logger
-        global clsSpark
+        global clsSDB
+        global clsSCNR
 
         try:
             self.cwd=os.path.dirname(__file__)
@@ -92,8 +93,10 @@ class RatioOfReturns():
             logger.info("%s Class",self.__name__)
 
             ''' import file work load utils to read and write data '''
-            from utils.modules.etl.load import sparkDBwls as db
-            clsSpark = db.SQLWorkLoads(desc=self.__desc__)
+            from utils.modules.etl.load import sparkDBwls as sparkDB
+            clsSDB = sparkDB.SQLWorkLoads(desc=self.__desc__)
+            from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
+            clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
             from utils.modules.ml.timeseries import rollingstats as stats
             clsStats = stats.RollingStats(desc=self.__desc__)
 #             clsRW.storeMode = pkgConf.get("DATASTORE","MODE")
@@ -174,20 +177,31 @@ class RatioOfReturns():
 
         return self._data
 
-    ''' Function
-            name: read_past_data
-            parameters:
-
-            procedure: 
-            return None
+    ''' Function --- READ N CLEAN ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
 #     @countNulls
 #     @impute
     def read_n_clean_mcap(self, query:str="", **kwargs):
+        """
+        Description:
+            The key feature is to read the mcap data from postgresql and impute to ensure
+            the data is clean and useable. There are two options for reading the data
+             (i) giving an SQL query as a string
+            (ii) defining the table name to read the entire dataset
+            Makes use of sparkDBwls package to read the data from the DB
+        Arguments:
+            query (str) - valid SQL select statement with any SQl clauses
+            **kwargs - specifying key value pairs
+                TABLENAME - db_able name with or without the schema name
+                COLUMN - partition column name
+                FROMDATETIME - timestamp setting the partition column lower-bound
+                TODATETIME - timestamp setting the partition column upper-bound
+        Returns: self._data (dataframe)
+        """
 
-        __s_fn_id__ = "function <read_past_data>"
+        __s_fn_id__ = "function <read_n_clean_mcap>"
         _table ='warehouse.mcap_past'
         _column='mcap_date'
         _to_date =date.today()
@@ -196,7 +210,7 @@ class RatioOfReturns():
 
         try:
             if "TABLENAME" in kwargs.keys():
-                _column=kwargs['TABLENAME']
+                _table=kwargs['TABLENAME']
             if "COLUMN" in kwargs.keys():
                 _column=kwargs['COLUMN']
             if "FROMDATETIME" in kwargs.keys():
@@ -204,10 +218,10 @@ class RatioOfReturns():
             if "TODATETIME" in kwargs.keys():
                 _to_date=kwargs['TODATETIME']
 
-            if not query is None and "".join(query.split())!="":
-                self._data = clsSpark.read_data_from_table(select=query, **kwargs)
+            if query is not None and "".join(query.split())!="":
+                self._data = clsSDB.read_data_from_table(select=query, **kwargs)
             else:
-                self._data = clsSpark.read_data_from_table(
+                self._data = clsSDB.read_data_from_table(
                     db_table=_table,
                     db_column=_column,
                     lower_bound=_from_date,
@@ -220,11 +234,18 @@ class RatioOfReturns():
                 raise ValueError("%s did not read any data",__s_fn_id__)
 
             ''' transpose to get assets in the columns '''
-            pivot_mcap=self._data.groupBy("mcap_date").pivot("asset_name").sum("mcap_value")
+            pivot_mcap=clsSCNR.pivot_data(
+                data=self._data,
+                group_columns='mcap_date',
+                pivot_column='asset_name',
+                agg_column='mcap_value',
+                **kwargs,
+            )
+#             pivot_mcap=self._data.groupBy("mcap_date").pivot("asset_name").avg("mcap_value")
             ''' impute to fill the gaps '''
             _col_subset = pivot_mcap.columns
             _col_subset.remove('mcap_date')
-            self._data = clsSpark.impute_data(
+            self._data = clsSCNR.impute_data(
                 data=pivot_mcap,
                 column_subset=_col_subset,
                 strategy=__strategy__,
@@ -232,7 +253,7 @@ class RatioOfReturns():
             ''' ensure there are no non-numeric values '''
 #             _col_subset = mcap_sdf.columns
 #             _col_subset.remove('mcap_date')
-            _nan_counts_sdf = clsSpark.count_column_nulls(
+            _nan_counts_sdf = clsSCNR.count_column_nulls(
                 data=self._data,
                 column_subset=_col_subset
             )
@@ -244,13 +265,37 @@ class RatioOfReturns():
 
         return self._data
 
-    ''' Function
-            name: pivot and clean data
-            parameters:
-
-            procedure: 
-            return None
+    ''' Function --- GET LOG ROR ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
+    def get_log_ror(
+        self,
+        data,
+        columns:list=[]
+    ):
+        """
+        Description:
+            Computes the logarithmic ratio of returns for a specific numeric columns.
+            If the numeric columns are specified, then the log ROR is calculated for them;
+            else for all identified numeric columns. The dataset is augmented with a new
+            column with the log ROR for those respective numeric columns.
+        Attributes:
+            data (dataframe) - mandatory valid timeseries dataframe with, at least, one numeric column
+            columns (list) - optional list of column names to compute and augment the log ROR
+            **kwargs
+        Returns:
+            self._data (dataframe)
+        """
+
+        __s_fn_id__ = "function <get_log_ror>"
+
+        try:
+            pass
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
 
