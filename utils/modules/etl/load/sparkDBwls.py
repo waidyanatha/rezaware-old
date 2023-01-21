@@ -1174,7 +1174,7 @@ class SQLWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    @classmethod
+#     @classmethod
     def insert_sdf_into_table(
         self,
         save_sdf,

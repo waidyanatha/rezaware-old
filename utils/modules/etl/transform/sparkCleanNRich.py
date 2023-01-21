@@ -20,6 +20,7 @@ try:
     import findspark
     findspark.init()
     from pyspark.sql import functions as F
+    from pyspark.sql.window import Window
     from pyspark.ml.feature import Imputer
     from pyspark.sql import DataFrame
 
@@ -31,12 +32,13 @@ except Exception as e:
           .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
-    CLASS Enrich and Clean dataframes
+    CLASS Enrich and Clean pyspark dataframes. Utility for data governance data standardization.
 
-    Contributors:
+    Contributor(s):
         * nuwan.waidyanatha@rezgateway.com
 
-    Resources:
+    Resources: 
+        Data Governance in Wiki: https://tinyurl.com/rezaware-datagovernance
 '''
 class Transformer():
     ''' Function
@@ -428,6 +430,62 @@ class Transformer():
         return _unpiv_data
 
 
+
+#     ''' Function --- PREVIOUS VAL DIFFERENCE ---
+
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @staticmethod
+#     def prev_val_diff(
+#         data:DataFrame,
+#         num_column:str,
+#         part_column:str,
+#         **kwargs,
+#     ) -> DataFrame:
+#         """
+#         Description:
+#             for a given numeric column, the function computes the difference between
+#             the current cell and the previous cell
+#         Attributes:
+#             data (DataFrame) a valid pyspark dataframe
+#             column - specifies column to compute the difference
+#             **kwargs
+#                 DIFFCOLNAME - the column name
+#         Returns:
+#         """
+
+#         __s_fn_id__ = "function <unpivot_table>"
+#         _diff_data = None
+#         prev_value = "prev_value"
+
+#         try:
+#             if data.count() <= 2:
+#                 raise AttributeError("Dataframe must have, at least, 2 rows to compute the difference ")
+#             if num_column not in data.columns and \
+#                 not isinstance(data.num_column,int) and\
+#                 not isinstance(data.num_column,float):
+#                 raise AttributeError("%s must be a numeric dataframe column" % num_column)
+#             if part_column not in data.columns:
+#                 raise AttributeError("%s must be a column in the dataframe: %s" 
+#                                      % (num_column,data.columns))
+#             if "DIFFCOLNAME" in kwargs.keys():
+#                 prev_value = kwargs['DIFFCOLNAME']
+
+#             _win = Window.partitionBy(part_column).orderBy(part_column)
+#             _diff_data = data.withColumn(prev_value, F.lag(data[num_column]).over(_win))
+#             _diff_data = _diff_data.withColumn("diff",\
+#                                     F.when(\
+#                                       F.isnull(_diff_data[num_column] - _diff_data[prev_value]), 0)\
+#                                       .otherwise(_diff_data[num_column] - _diff_data[prev_value]))
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             print("[Error]"+__s_fn_id__, err)
+#             print(traceback.format_exc())
+
+#         return _diff_data
+
+
     ''' Function --- DROP DUPLICATES ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
@@ -436,6 +494,12 @@ class Transformer():
     def drop_duplicates(
         data
     ) -> DataFrame:
+        """
+        Description:
+            To Be Developed
+        Attributes:
+        Returns:
+        """
 
         try:
             ''' drop duplicates 
