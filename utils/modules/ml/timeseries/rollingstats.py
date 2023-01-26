@@ -45,19 +45,6 @@ except Exception as e:
     (2) utils/etl/load/filesrw - to read/write files stored in local, remote, or cloud storage
     (3) rezaware - application specific configuration and logging functions
     
-    The properties implement
-    * data [rdd] - in the form of a pyspark dataframe and any other dataframe will be converted
-            into a resilient distributed dataset (rdd). However, the processed data is returned
-            in the original dtype
-    * datetimeAttr [str/int] - tells the class which of the columns is to be considered as the
-            datetime of the timeseries. If unspecified, then the first detected datetime column
-            is considered
-    * startDateTime/endDateTime [datetime] - define the overall timeseries window boundaries. If
-            undefined, the default will consider the Min datetime as the startDateTime and the
-            Max datetime as the endDateTime
-    * rollingWindow [dict] - with two key value pairs that defines an integer value of the window
-            lengthe (LENGTH) and the unit of measure (UNIT) that can only be [MINUTE, HOUR, DAY]
-
     contributors:
         * nuwan.waidyanatha@rezgateway.com
         
@@ -156,12 +143,28 @@ class RollingStats():
 
             procedure: uses the clsSparkWL data@setter method to convert the data
                         to a pyspark DataFrame
+    The properties implement
+    * data [rdd] - in the form of a pyspark dataframe and any other dataframe will be converted
+            into a resilient distributed dataset (rdd). However, the processed data is returned
+            in the original dtype
+    * datetimeAttr [str/int] - tells the class which of the columns is to be considered as the
+            datetime of the timeseries. If unspecified, then the first detected datetime column
+            is considered
+
             return self._data
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
     @property
     def spark(self):
+        """
+        Description:
+
+        Atributes:
+
+        Returns:
+            self._spark (SparkSession)
+        """
         try:
             if self._spark is None:
                 from utils.modules.etl.load import sparkwls as spark
@@ -179,6 +182,14 @@ class RollingStats():
 
     @spark.setter
     def spark(self,session):
+        """
+        Description:
+
+        Atributes:
+
+        Returns:
+            self._spark (SparkSession)
+        """
 
         try:
             ''' TODO validate if active spark session '''
@@ -192,24 +203,30 @@ class RollingStats():
 
         return self._spark
 
-    
-    ''' Function
-            name: data @property and @setter functions
-            parameters:
-
-            procedure: uses the clsSparkWL data@setter method to convert the data
-                        to a pyspark DataFrame
-            return self._data
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
+    ''' --- DATA --- '''
     @property
-    def data(self):
+    def data(self) -> DataFrame:
+        """
+        Description:
+
+        Atributes:
+
+        Returns:
+            self._data (DataFrame)
+        """
         return self._data
 
     @data.setter
 #     def data(self,data:DataFrame=clsSparkWL.spark_session.sparkContext.emptyRDD()):
-    def data(self,data):
+    def data(self,data) -> DataFrame:
+        """
+        Description:
+
+        Atributes:
+
+        Returns:
+            self._data (DataFrame)
+        """
 
         __s_fn_id__ = "function <@data.setter>"
 #         clsSparkWL.data=data
@@ -230,18 +247,17 @@ class RollingStats():
 
         return self._data
 
-
-    ''' Function
-            name: startDateTime @property and @setter functions
-            parameters:
-
-            procedure: 
-            return self._data
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
+    ''' --- START DATETIME --- '''
     @property
     def startDateTime(self):
+        """
+        Description:
+
+        Atributes:
+
+        Returns:
+            self._startDateTime (timestamp)
+        """
         if self._startDT is None and not self.data.isEmpty():
             self._startDT = self.data.select(F.min(self.datetimeAttr)).collect()
 
@@ -249,6 +265,16 @@ class RollingStats():
 
     @startDateTime.setter
     def startDateTime(self,start_date_time=None):
+        """
+        Description:
+            Define the overall timeseries window boundaries. If undefined, the default
+            will consider the Min datetime as the startDateTime and the Max datetime 
+            as the endDateTime
+        Atributes:
+            start_date_time (timestamp)
+        Returns:
+            self._startDateTime (timestamp)
+        """
 
         __s_fn_id__ = "function <@startDateTime.setter>"
 
@@ -264,24 +290,31 @@ class RollingStats():
 
         return self._startDT
 
-
-    ''' Function
-            name: endDateTime @property and @setter functions
-            parameters:
-
-            procedure: 
-            return self._data
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
+    ''' --- END DATETIME --- '''
     @property
     def endDateTime(self):
+        """
+        Description:
+
+        Atributes:
+
+        Returns:
+            self._endDateTime (timestamp)
+        """
         if self._endDT is None and not self.data.isEmpty():
             self._endDT = self.data.select(F.max(self.datetimeAttr)).collect()
         return self._endDT
 
     @endDateTime.setter
     def endDateTime(self,end_date_time:datetime=datetime.now()):
+        """
+        Description:
+
+        Atributes:
+
+        Returns:
+            self._endDateTime (timestamp)
+        """
 
         __s_fn_id__ = "function <@endDateTime.setter>"
 
@@ -297,20 +330,19 @@ class RollingStats():
 
         return self._endDT
 
-
-    ''' Function
-            name: datetimeAttr @property and @setter functions
-            parameters:
-
-            procedure: 
-            return self._data
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
+    ''' --- DATETIME ATTRIBUTE --- '''
     @property
     def datetimeAttr(self):
+        """
+        Description:
 
-        __s_fn_id__ = "function <@datetimeAttr.setter>"
+        Atributes:
+
+        Returns:
+            self._datetimeAttr (timestamp)
+        """
+
+        __s_fn_id__ = "function <@property datetimeAttr>"
 
         try:
             if self._dtAttr is None: # or \
@@ -321,10 +353,10 @@ class RollingStats():
 #                 self.data.schema[self._dtAttr].dataType !=date or \
 #                 self.data.schema[self._dtAttr].dataType !=datetime:
 
-                logger.info("The datetimeAttr was not explicitly set as a valid "+ \
-                            "DateType of TimestampType and will try to set the first"+ \
-                            "found valid column")
-                print(self.data.dtypes)
+                logger.debug("The datetimeAttr was not explicitly set as a valid "+ \
+                            "DateType or TimestampType and will try to set the first"+ \
+                            "found valid column %s",self.data.dtypes)
+#                 print(self.data.dtypes)
                 _dt_attr_list = next(
                     (x for x, y in self.data.dtypes 
                      if y==DateType or y==TimestampType),# or y==date or y==datetime),
@@ -344,16 +376,23 @@ class RollingStats():
 
         return self._dtAttr
 
-
     @datetimeAttr.setter
     def datetimeAttr(self,date_time_attr:str=''):
+        """
+        Description:
+
+        Atributes:
+
+        Returns:
+            self._datetimeAttr (timestamp)
+        """
 
         __s_fn_id__ = "function <@datetimeAttr.setter>"
 
         try:
             if self.data is None:
                 raise ValueError("The dataset property must be defined before setting the datetimeAttr")
-            if date_time_attr!='':
+            if "".join(date_time_attr.split())!="":
                 self._dtAttr = date_time_attr
                 self.data = self.data.withColumn(
                     self._dtAttr,
@@ -369,22 +408,51 @@ class RollingStats():
 
         return self._dtAttr
 
-
-    ''' Function
-            name: windowSpec @property and @setter functions
-            parameters:
-
-            procedure: 
-            return self._data
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
+    ''' --- WINDOW SPECIFICATION --- '''
     @property
-    def windowSpec(self):
+    def windowSpec(self) -> int:
+        """
+        Description:
+            If the property is None, will set to a default 7 DAY window specification.
+            Requires a valid datetimeAttr.
+        Atributes:
+            None
+        Returns:
+            self._winSpec (int)
+        """
+
+        __s_fn_id__ = "function <@property windowSpec>"
+        __win_len__ = 7
+
+        try:
+            ''' function to calculate number of seconds from number of days '''
+            if self._winSpec is None:
+                days = lambda i: i * 86400
+                self._winSpec = Window \
+                    .orderBy(F.col(self.datetimeAttr).cast('long')) \
+                    .rangeBetween(-days(__win_len__),0)
+                logger.debug("Class property winSpec was not explicitly set "+\
+                             "Setting to $d DAY",__win_len__)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
         return self._winSpec
 
     @windowSpec.setter
-    def windowSpec(self,window_spec:dict={}):
+    def windowSpec(self,window_spec:dict={}) -> int:
+        """
+        Description:
+            With two key value pairs that defines an integer value of the window
+            lengthe (LENGTH) and the unit of measure (UNIT) that can only be 
+            [MINUTE, HOUR, DAY]. The datetimeAttr is required to 
+        Atributes:
+            window_spec(dict) - LENGTH (int) and UNIT (str) MINUTE, HOUR, DAY 
+        Returns:
+            self._winSpec (int)
+        """
 
         __s_fn_id__ = "function <@windowSpec.setter>"
 
@@ -392,7 +460,7 @@ class RollingStats():
             if not len(window_spec)>0 or \
                 not 'LENGTH' in window_spec.keys() or \
                 not 'UNIT' in window_spec.keys():
-                raise AttributeError("Missing one or more keys LENGTH and UNIT")
+                raise AttributeError("Missing one or more keys LENGTH and UNIT input parameters")
             if not (isinstance(window_spec['LENGTH'],int) or window_spec['LENGTH'] > 0):
                 raise AttributeError("The window_spec LENGTH must be of dtype int > 0")
             if window_spec['UNIT'] not in self._winSpecUnits:
@@ -402,17 +470,22 @@ class RollingStats():
             if self.datetimeAttr is None:
                 raise AttributeError("A valid datetimeAttr property must be specified to proceed")
             
-            #function to calculate number of seconds from number of days
-            days = lambda i: i * 86400
-
+            ''' function to calculate number of seconds from number of days '''
             if window_spec['UNIT'] == "DAY":
+                days = lambda i: i * 86400
                 self._winSpec = Window \
                     .orderBy(F.col(self.datetimeAttr).cast('long')) \
                     .rangeBetween(-days(window_spec['LENGTH']),0)
             elif window_spec['UNIT'] == "HOUR":
-                print("method TBD")
+                hours = lambda i: i * 3600
+                self._winSpec = Window \
+                    .orderBy(F.col(self.datetimeAttr).cast('long')) \
+                    .rangeBetween(-hours(window_spec['LENGTH']),0)
             elif window_spec['UNIT'] == "MINUTE":
-                print("method TBD")
+                minutes = lambda i: i * 60
+                self._winSpec = Window \
+                    .orderBy(F.col(self.datetimeAttr).cast('long')) \
+                    .rangeBetween(-minutes(window_spec['LENGTH']),0)
             else:
                 raise RuntimeError("Something was wrong")
 
@@ -423,25 +496,27 @@ class RollingStats():
 
         return self._winSpec
 
-    ''' Function
-            name: simple_moving_stats functions
-            parameters:
-
-            procedure: 
-            return self._data
+    ''' Function --- SIMPLE MOVING STATS ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def rollingstat(func):
+        """
+        Description:
         
+        Attributes:
+        
+        Returns:
+        """
         @functools.wraps(func)
-        def calc_roll_stat(
-            self,
-            column:str='',   # column name to apply the rolling computation
-            stat_op:str="mean", # stat operation sum, mean or standard deviation
-            data=None,   # data set
-            **kwargs,    #
-        ):
+        def calc_roll_stat(self,column,stat_op,data,**kwargs):
+            """
+            Description:
+
+            Attributes:
+
+            Returns:
+            """
             __s_fn_id__ = "function <roll_stat_wrapper>"
 
             try:
@@ -483,6 +558,13 @@ class RollingStats():
         data=None,   # data set
         **kwargs,    # 
     ):
+        """
+        Description:
+        
+        Attributes:
+        
+        Returns:
+        """
 
         __s_fn_id__ = "function <simple_moving_stats>"
         _winspec = {}

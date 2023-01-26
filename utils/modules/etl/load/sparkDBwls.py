@@ -13,13 +13,14 @@ __conf_fname__ = "app.cfg"
 try:
     import os
     import sys
-    import findspark
     import configparser    
     import logging
     import traceback
+
+    import findspark
     findspark.init()
-#     from pyspark.sql.functions import split, col,substring,regexp_replace, lit, current_timestamp
-    from pyspark.sql.functions import lit, current_timestamp,col,isnan, when, count, countDistinct
+    from pyspark.sql import functions as F
+#     from pyspark.sql.functions import lit, current_timestamp,col,isnan, when, count, countDistinct
     from pyspark.ml.feature import Imputer
     from pyspark.sql import DataFrame
 #     from pyspark import SparkContext, SparkConf
@@ -82,7 +83,7 @@ class SQLWorkLoads():
         self._dbDriver = None
         self._dbHostIP = None
         self._dbPort = None
-        self._dbDriver = None
+#         self._dbDriver = None
         self._dbName = None
         self._dbSchema = None
         self._partitions = None
@@ -107,6 +108,12 @@ class SQLWorkLoads():
 
         ''' Initialize property var to hold the data '''
         self._data = None
+        
+        self._aggList = [
+            'sum',
+            'avg',
+            'stdv',
+        ]
 
         __s_fn_id__ = "__init__"
 
@@ -115,82 +122,43 @@ class SQLWorkLoads():
         global pkgConf
         global appConf
 
-        self.cwd=os.path.dirname(__file__)
-        pkgConf = configparser.ConfigParser()
-        pkgConf.read(os.path.join(self.cwd,__ini_fname__))
-
-        self.rezHome = pkgConf.get("CWDS","REZAWARE")
-        sys.path.insert(1,self.rezHome)
-        from rezaware import Logger as logs
-
-        ''' Set the utils root directory '''
-        self.pckgDir = pkgConf.get("CWDS",self.__package__)
-        self.appDir = pkgConf.get("CWDS",self.__app__)
-        ''' get the path to the input and output data '''
-        self.dataDir = pkgConf.get("CWDS","DATA")
-
-        appConf = configparser.ConfigParser()
-        appConf.read(os.path.join(self.appDir, self.__conf_fname__))
-        
-        ''' innitialize the logger '''
-        logger = logs.get_logger(
-            cwd=self.rezHome,
-            app=self.__app__, 
-            module=self.__module__,
-            package=self.__package__,
-            ini_file=self.__ini_fname__)
-        ''' set a new logger section '''
-        logger.info('########################################################')
-        logger.info("%s %s",self.__name__,self.__package__)
-        
-        ''' get tmp storage location '''
-        self.tmpDIR = None
-        if "WRITE_TO_FILE" in kwargs.keys():
-            self.tmpDIR = os.path.join(self.dataDir,"tmp/")
-            if not os.path.exists(self.tmpDIR):
-                os.makedirs(self.tmpDIR)
-
         try:
-#             findspark.init(self.sparkDIR)
-#             from pyspark.sql import SparkSession
+            self.cwd=os.path.dirname(__file__)
+            pkgConf = configparser.ConfigParser()
+            pkgConf.read(os.path.join(self.cwd,__ini_fname__))
 
-#             ''' the Spark session should be instantiated as follows '''
-#             if not "DATA_STORE" in kwargs.keys():
-#                 kwargs['DATA_STORE']="LOCAL"
-#             if kwargs['DATA_STORE']=="AWS-S3":
-#                 print("setting up spark session for AWS S3")
-#                 os.environ['PYSPARK_SUBMIT_ARGS'] = '-- packages com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.3 pyspark-shell'
+            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            sys.path.insert(1,self.rezHome)
+            from rezaware import Logger as logs
 
-#                 conf = SparkConf().set('spark.executor.extraJavaOptions', \
-#                                        '-Dcom.amazonaws.services.s3.enableV4=true')\
-#                                 .set('spark.driver.extraJavaOptions', \
-#                                      '-Dcom.amazonaws.services.s3.enableV4=true')\
-#                                 .setAppName(self.__app__)\
-#                                 .setMaster('local[*]')
+            ''' Set the utils root directory '''
+            self.pckgDir = pkgConf.get("CWDS",self.__package__)
+            self.appDir = pkgConf.get("CWDS",self.__app__)
+            ''' get the path to the input and output data '''
+            self.dataDir = pkgConf.get("CWDS","DATA")
 
-#                 sc=SparkContext(conf=conf)
-#                 print(sc)
-#                 sc.setSystemProperty('com.amazonaws.services.s3.enableV4', 'true')
+            appConf = configparser.ConfigParser()
+            appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
-#                 hadoopConf = sc._jsc.hadoopConfiguration()
-#                 hadoopConf.set('fs.s3a.access.key', pkgConf.get('AWSAUTH','ACCESSKEY'))
-#                 hadoopConf.set('fs.s3a.secret.key', pkgConf.get('AWSAUTH','SECURITYKEY'))
-#                 hadoopConf.set('fs.s3a.endpoint', pkgConf.get('AWSAUTH','REGION'))
-#                 hadoopConf.set('fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
+            ''' innitialize the logger '''
+            logger = logs.get_logger(
+                cwd=self.rezHome,
+                app=self.__app__, 
+                module=self.__module__,
+                package=self.__package__,
+                ini_file=self.__ini_fname__)
+            ''' set a new logger section '''
+            logger.info('########################################################')
+            logger.info("%s %s",self.__name__,self.__package__)
+        
+#         ''' get tmp storage location '''
+#         self.tmpDIR = None
+#         if "WRITE_TO_FILE" in kwargs.keys():
+#             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+#             if not os.path.exists(self.tmpDIR):
+#                 os.makedirs(self.tmpDIR)
 
-#                 self.session=SparkSession(sc)
-                
-#             elif kwargs['DATA_STORE']=="LOCAL":
-#                 print("setting up spark session for local files")
-#             self.session = SparkSession \
-#                                 .builder \
-#                                 .appName(self.__app__) \
-#                                 .config("spark.jars", self.sparkJAR) \
-#                                 .getOrCreate()
-#             else:
-#                 raise ValueError("Invalid DATA_STORE value defined to set the spark session")
-
-            logger.info("Connection complete! ready to load data.")
+#         try:
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
                            self.__module__,
@@ -218,7 +186,7 @@ class SQLWorkLoads():
     '''
     ''' --- TYPE --- '''
     @property
-    def dbType(self):
+    def dbType(self) -> str:
 
         __s_fn_id__ = "function <@property dbType>"
 
@@ -235,7 +203,7 @@ class SQLWorkLoads():
         return self._dbType
 
     @dbType.setter
-    def dbType(self,db_type:str=''):
+    def dbType(self,db_type:str='') -> str:
 
         __s_fn_id__ = "function <@dbType.setter>"
 
@@ -255,7 +223,7 @@ class SQLWorkLoads():
 
     ''' --- DRIVER --- '''
     @property
-    def dbDriver(self):
+    def dbDriver(self) -> str:
 
         __s_fn_id__ = "function <@property dbDriver>"
 
@@ -272,7 +240,7 @@ class SQLWorkLoads():
         return self._dbDriver
 
     @dbDriver.setter
-    def dbDriver(self,db_driver:str=''):
+    def dbDriver(self,db_driver:str='') -> str:
 
         __s_fn_id__ = "function <@dbDriver.setter>"
 
@@ -292,7 +260,7 @@ class SQLWorkLoads():
 
     ''' --- IP --- '''
     @property
-    def dbHostIP(self):
+    def dbHostIP(self) -> str:
 
         __s_fn_id__ = "function <@property dbHostIP>"
 
@@ -309,7 +277,7 @@ class SQLWorkLoads():
         return self._dbHostIP
 
     @dbHostIP.setter
-    def dbHostIP(self,db_host_ip:str='127.0.0.1'):
+    def dbHostIP(self,db_host_ip:str='127.0.0.1') -> str:
 
         __s_fn_id__ = "function <@dbHostIP.setter >"
 
@@ -329,7 +297,7 @@ class SQLWorkLoads():
 
     ''' --- PORT --- '''
     @property
-    def dbPort(self):
+    def dbPort(self) -> str:
 
         __s_fn_id__ = "function <@property dbPort>"
 
@@ -343,10 +311,10 @@ class SQLWorkLoads():
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._dbPort
+        return str(self._dbPort)
 
     @dbPort.setter
-    def dbPort(self,db_port:int=5432):
+    def dbPort(self,db_port:int=5432) -> str:
 
         __s_fn_id__ = "function <@dbPort.setter dbPort>"
 
@@ -362,7 +330,7 @@ class SQLWorkLoads():
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self.__dbPort
+        return self._dbPort
 
     ''' --- NAME --- '''
     @property
@@ -403,7 +371,7 @@ class SQLWorkLoads():
 
     ''' --- SCHEMA --- '''
     @property
-    def dbSchema(self):
+    def dbSchema(self) -> str:
 
         __s_fn_id__ = "function <@property dbSchema>"
 
@@ -420,7 +388,7 @@ class SQLWorkLoads():
         return self._dbSchema
 
     @dbSchema.setter
-    def dbSchema(self,db_schema:str=''):
+    def dbSchema(self,db_schema:str='') -> str:
 
         __s_fn_id__ = "function <@dbSchema.setter>"
 
@@ -440,7 +408,7 @@ class SQLWorkLoads():
 
     ''' --- USER --- '''
     @property
-    def dbUser(self):
+    def dbUser(self) -> str:
 
         __s_fn_id__ = "function <@property dbUser>"
 
@@ -457,7 +425,7 @@ class SQLWorkLoads():
         return self._dbUser
 
     @dbUser.setter
-    def dbUser(self,db_user:str=''):
+    def dbUser(self,db_user:str='') -> str:
 
         __s_fn_id__ = "function <@dbPswd.setter>"
 
@@ -477,7 +445,7 @@ class SQLWorkLoads():
 
     ''' --- PASSWORD --- '''
     @property
-    def dbPswd(self):
+    def dbPswd(self) -> str:
 
         __s_fn_id__ = "function <@property dbPswd>"
 
@@ -494,7 +462,7 @@ class SQLWorkLoads():
         return self._dbPswd
 
     @dbPswd.setter
-    def dbPswd(self,db_driver:str=''):
+    def dbPswd(self,db_driver:str='') -> str:
 
         __s_fn_id__ = "function <@session.setter dbPswd>"
 
@@ -522,7 +490,7 @@ class SQLWorkLoads():
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
     @property
-    def dbConnURL(self):
+    def dbConnURL(self) -> str:
 
         __s_fn_id__ = "function <@property dbConnURL>"
 
@@ -545,14 +513,14 @@ class SQLWorkLoads():
         return self._dbConnURL
 
     @dbConnURL.setter
-    def dbConnURL(self,**kwargs):
+    def dbConnURL(self,**kwargs) -> str:
 
         __s_fn_id__ = "function <@dbConnURL.setter dbConnURL>"
 
         try:
             ''' --- DATABASE PROPERTY **KWARGS --- '''
             if "DBTYPE" in kwargs.keys():
-                self.db_type = kwargs['DBTYPE']
+                self.dbType = kwargs['DBTYPE']
             if "DBDRIVER" in kwargs.keys():
                 self.dbDriver = kwargs['DBDRIVER']
             if "DBHOSTIP" in kwargs.keys():
@@ -589,10 +557,10 @@ class SQLWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    ''' HOMEDIR '''
+    ''' --- HOMEDIR --- '''
     ''' TODO - check if evn var $SPARK_HOME and $JAVA_HOME is set '''
     @property
-    def homeDir(self):
+    def homeDir(self) -> str:
 
         __s_fn_id__ = "function <@property homeDir>"
 
@@ -609,7 +577,7 @@ class SQLWorkLoads():
         return self._homeDir
 
     @homeDir.setter
-    def homeDir(self,home_dir:str=''):
+    def homeDir(self,home_dir:str='') -> str:
 
         __s_fn_id__ = "function <@homeDir.setter>"
 
@@ -627,9 +595,9 @@ class SQLWorkLoads():
 
         return self._homeDir
 
-    ''' BINDIR '''
+    ''' --- BINDIR --- '''
     @property
-    def binDir(self):
+    def binDir(self) -> str:
 
         __s_fn_id__ = "function <@property binDir>"
 
@@ -646,7 +614,7 @@ class SQLWorkLoads():
         return self._binDir
 
     @binDir.setter
-    def binDir(self,bin_dir:str=''):
+    def binDir(self,bin_dir:str='') -> str:
 
         __s_fn_id__ = "function <@binDir.setter>"
 
@@ -664,9 +632,9 @@ class SQLWorkLoads():
 
         return self._binDir
 
-    ''' APPNAME '''
+    ''' --- APPNAME --- '''
     @property
-    def appName(self):
+    def appName(self) -> str:
 
         __s_fn_id__ = "function <@property appName>"
 
@@ -686,7 +654,7 @@ class SQLWorkLoads():
         return self._appName
 
     @appName.setter
-    def appName(self,app_name:str=''):
+    def appName(self,app_name:str='') -> str:
 
         __s_fn_id__ = "function <@appName.setter>"
 
@@ -704,9 +672,9 @@ class SQLWorkLoads():
 
         return self._appName
 
-    ''' CONFIG '''
+    ''' --- CONFIG --- '''
     @property
-    def config(self):
+    def config(self) -> str:
 
         __s_fn_id__ = "function <@property config>"
 
@@ -723,7 +691,7 @@ class SQLWorkLoads():
         return self._config
 
     @config.setter
-    def config(self,config:str=''):
+    def config(self,config:str='') -> str:
 
         __s_fn_id__ = "function <@config.setter>"
 
@@ -741,9 +709,9 @@ class SQLWorkLoads():
 
         return self._config
 
-    ''' JARDIR '''
+    ''' --- JARDIR --- '''
     @property
-    def jarDir(self):
+    def jarDir(self) -> str:
 
         __s_fn_id__ = "function <@property jarDir>"
 
@@ -760,7 +728,7 @@ class SQLWorkLoads():
         return self._jarDir
 
     @jarDir.setter
-    def jarDir(self,jar_dir:str=''):
+    def jarDir(self,jar_dir:str='') -> str:
 
         __s_fn_id__ = "function <@jarDir.setter>"
 
@@ -778,9 +746,9 @@ class SQLWorkLoads():
 
         return self._jarDir
 
-    ''' MASTER '''
+    ''' --- MASTER --- '''
     @property
-    def master(self):
+    def master(self) -> str:
 
         __s_fn_id__ = "function <@property master>"
 
@@ -797,7 +765,7 @@ class SQLWorkLoads():
         return self._master
 
     @master.setter
-    def master(self,master:str='local[1]'):
+    def master(self,master:str='local[1]') -> str:
 
         __s_fn_id__ = "function <@master.setter>"
 
@@ -816,9 +784,9 @@ class SQLWorkLoads():
 
         return self._master
 
-    ''' RWFORMAT '''
+    ''' --- RWFORMAT --- '''
     @property
-    def rwFormat(self):
+    def rwFormat(self) -> str:
 
         __s_fn_id__ = "function <@property rwFormat>"
 
@@ -835,7 +803,7 @@ class SQLWorkLoads():
         return self._rwFormat
 
     @rwFormat.setter
-    def rwFormat(self,rw_format:str='jdbc'):
+    def rwFormat(self,rw_format:str='jdbc') -> str:
 
         __s_fn_id__ = "function <@rwFormat.setter>"
 
@@ -854,9 +822,9 @@ class SQLWorkLoads():
         return self._rwFormat
 
 
-    ''' SAVEMODE '''
+    ''' --- SAVEMODE --- '''
     @property
-    def saveMode(self):
+    def saveMode(self) -> str:
 
         __s_fn_id__ = "function <@property saveMode>"
 
@@ -873,7 +841,7 @@ class SQLWorkLoads():
         return self._saveMode
 
     @saveMode.setter
-    def saveMode(self,save_mode:str='Append'):
+    def saveMode(self,save_mode:str='Append') -> str:
 
         __s_fn_id__ = "function <@saveMode.setter>"
 
@@ -908,11 +876,11 @@ class SQLWorkLoads():
 
         try:
             if self._session is None and \
-                not self.homeDir is None and \
-                not self.appName is None and \
-                not self.config is None and \
-                not self.jarDir is None and \
-                not self.master is None:
+                self.homeDir is not None and \
+                self.appName is not None and \
+                self.config is not None and \
+                self.jarDir is not None and \
+                self.master is not None:
                 findspark.init(self.homeDir)
                 from pyspark.sql import SparkSession
                 logger.debug("%s importing %s library from spark dir: %s"
@@ -924,8 +892,11 @@ class SQLWorkLoads():
                                 .appName(self.appName) \
                                 .config(self.config, self.jarDir) \
                                 .getOrCreate()
+                logger.debug("Non-type spark session set with homeDir: %s appName: %s "+\
+                             "conf: %s jarDir: %s master: %s"
+                             ,self.homeDir,self.appName,self.config,self.jarDir,self.master)
                 
-            logger.info("Starting a Spark Session: %s",self._session)
+#             logger.info("Starting a Spark Session: %s",self._session)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -935,68 +906,31 @@ class SQLWorkLoads():
         return self._session
 
     @session.setter
-#     def session(self,**kwargs):
     def session(self,session_args:dict={}):
 
         __s_fn_id__ = "function <@session.setter session>"
 
         try:
-            ''' 
-                set the spark home directory '''
+            ''' set the spark home directory '''
             if "HOMEDIR" in session_args.keys():
                 self.homeDir = session_args['HOMEDIR']
-#             elif appConf.has_option('SPARK','HOMEDIR'):
-#                 _spark_home_dir = appConf.get('SPARK','HOMEDIR')
-#             else:
-#                 raise AttributeError("Spark home directory is required to proceed "+ \
-#                                 "It must be specified in app.cfg or "+ \
-#                                 "passed as a **session_args key value pair")
-            
             findspark.init(self.homeDir)
             from pyspark.sql import SparkSession
             logger.debug("Importing %s library from spark dir: %s"
                          % (SparkSession.__name__, self.homeDir))
-
             if "CONFIG" in session_args.keys():
                 self.config = session_args['CONFIG']
-#             elif appConf.has_option('SPARK','CONFIG'):
-#                 _conf_opt = appConf.get('SPARK','CONFIG')
-#             else:
-#                 _conf_opt = "spark.jars"
-
             ''' set master cluster setup local[x], yarn or mesos '''
             if "MASTER" in session_args.keys():
-                self.master = session_args['MASTER']
-#             elif appConf.has_option('SPARK','MASTER'):
-#                 _master = appConf.get('SPARK','MASTER')
-#             else:
-#                 _master = "local[1]"     
-
+                self.master = session_args['MASTER']    
             if "APPNAME" in session_args.keys():
-                self.appName = session_args['APPNAME']
-#             elif appConf.has_option('SPARK','APPNAME'):
-#                 _app_name = appConf.get('SPARK','APPNAME')
-#             else:
-#                 _app_name = self.__app__     
-
+                self.appName = session_args['APPNAME']  
             ''' set the db_type specific jar '''
             if "JARDIR" in session_args.keys():
                 self.jarDir = session_args['JARDIR']
-#             elif appConf.has_option('SPARK','JARDIR'):
-#                 _jar_dir = appConf.get('SPARK','JARDIR')
-#             else:
-#                 _jar_dir = None
-#                 raise ConnectionError("Spark requires a valid jar file to use with %s" % self.db_type)
-#             self.sparkJAR = appConf.get('SPARK','JARDIR')
-#             logger.info("Defining Spark Jar dir: %s" % (self.sparkJAR))
 
-#             if _jar_dir is None:
-#                 self._session = SparkSession \
-#                                     .builder \
-#                                     .master(_master) \
-#                                     .appName(_app_name) \
-#                                     .getOrCreate()
-#             else:
+            if self._session:
+                self._session.stop
             self._session = SparkSession \
                                 .builder \
                                 .master(self.master) \
@@ -1004,10 +938,8 @@ class SQLWorkLoads():
                                 .config(self.config, self.jarDir) \
                                 .getOrCreate()
                 
-            logger.info("Starting a Spark Session: %s" % (self._session))
-
-#             ''' TODO Deprate after all functions are working '''
-#             self.session=self._session
+            logger.info("Starting a Spark Session: %s for %s"
+                        ,self._session, self.storeMode)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1049,33 +981,10 @@ class SQLWorkLoads():
 
         __s_fn_id__ = "function <@data.setter>"
 
-#         self.session.conf.set("spark.sql.execution.arrow.enabled","true")
-
         try:
             if data is None:
                 raise AttributeError("Dataset cannot be empty")
             self._data = data
-
-#             if not isinstance(data,DataFrame):
-#                 self._data = self.session.createDataFrame(data)
-# #                 self.dType = 'OTHER'
-#             else:
-#                 self.dType = 'SDF'
-#             elif isinstance(data, pd.DataFrame) and not data.empty:
-#                 ''' pandas dataframe convert to pyspark DataFrame '''
-#                 self.dType = 'PANDAS'
-#                 self._data = self.session.createDataFrame(data)
-#             elif isinstance(data, dict) and len(data) > 0:
-#                 ''' dict convert to spark dataframe '''
-#                 self.dType = 'DICT'
-#                 print('Method To Be Defined')
-#             elif isinstance(data, np.ndarray) and data.size > 0:
-#                 ''' ndarray convert to spark dataframe '''
-#                 self.dType = 'ARRAY'
-#                 print('Method To Be Defined')
-#             else:
-#                 raise AttributeError('Invalid data set of dtype %s and must be none empty of type %s'
-#                                      % (type(data),str(self._dTypeList)))
                 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1084,83 +993,19 @@ class SQLWorkLoads():
 
         return self._data
 
-#     ''' Function
-#             name: reset_type to the original data type
-#             parameters:
-
-#             procedure: 
-#             return self._data
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def reset_dtype(self,data):
-        
-#         ___s_fn_id____ = "function <reset_dtype>"
-#         reset_data = None
-
-#         try:
-#             if self.dType == 'RDD':
-#                 reset_data=self.data
-#             elif self.dType == 'PANDAS':
-#                 reset_data=self.data.toPandas()
-#             elif self.dType == 'DICT':
-#                 print('Method to be done')
-#             elif self.dType == 'ARRAY':
-#                 print('Method to be done')
-#             else:
-#                 raise RuntimeError("Something went wrong?")
-
-#         except Exception as err:
-#             logger.error("%s %s \n",___s_fn_id____, err)
-#             print("[Error]"+___s_fn_id____, err)
-#             print(traceback.format_exc())
-
-#         return reset_data
-
-
-#     ''' Function
-#             name: dType @property and @setter functions
-#             parameters:
-
-#             procedure: 
-#             return self._dType
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     @property
-#     def dType(self):
-#         return self._dType
-
-#     @dType.setter
-#     def dType(self,data_type:str):
-
-#         ___s_fn_id____ = "function <@dType.setter>"
-
-#         try:
-#             if data_type is None and not data_type in self._dTypeList:
-#                 raise AttributeError('Invalid data_type or is set to empty string')
-#             self._dType = data_type
-
-#         except Exception as err:
-#             logger.error("%s %s \n",___s_fn_id____, err)
-#             print("[Error]"+___s_fn_id____, err)
-#             print(traceback.format_exc())
-
-#         return self._dType
-
 
     ''' Function
-            name: read options @property and @setter functions
-            parameters:
-
-            procedure: 
-            return self._* (* is a specific options parameter)
-
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    ''' PARTITIONS '''
+    ''' --- PARTITIONS --- '''
     @property
     def partitions(self):
+        """
+        Description:
+            partition options @property and @setter functions
+        Attributes:
+        Returns: self._partitions (int)
+        """
 
         __s_fn_id__ = "function <@property partitions>"
 
@@ -1197,90 +1042,118 @@ class SQLWorkLoads():
 
 
     ''' Function
-            name: get_data_from_table
-            parameters:
-
-            procedure: 
-            return DataFrame
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    @classmethod
-    def read_data_from_table(self,
-                             select:str="",
-                             db_table:str="",
-                             db_column:str="",
-                             lower_bound=None,
-                             upper_bound=None,
-                             **kwargs):
+#     @classmethod
+    def read_data_from_table(
+        self,
+        select:str="",
+        db_table:str="",
+        db_column:str="",
+        lower_bound=None,
+        upper_bound=None,
+        **options) -> DataFrame:
+#         **kwargs) -> DataFrame:
+        """
+        Description:
+            There is the option of speficing a valid SQL select statement with clauses to
+            retrieve the data from one or more tables. The option is to provide table name
+        Attributes:
+            select (str)
+            db_table (str)
+        db_column:str="",
+        lower_bound=None,
+        upper_bound=None,
+        **options) -> DataFrame:
+
+        Returns:
+        """
 
         load_sdf = None   # initiatlize return var
         __s_fn_id__ = "function <read_data_from_table>"
 
         try:
-            if len(kwargs) > 0:
-                self.session = kwargs
-            else:
-                self.session = {}
             ''' set the partitions '''
-            if "PARTITIONS" in kwargs.keys():
-                self.partitions = kwargs['PARTITIONS']
-#             if "PARTCOLUMN" in kwargs.keys():
-#                 self.partColumn = kwargs['PARTCOLUMN']
-            ''' validate select '''
-#             if select is None or "".join(select.split()) == "":
-#                 raise AttributeError("Invalid select must be a valid SQL statement")
+            if "PARTITIONS" in options.keys():
+                self.partitions = options['PARTITIONS']
+            if "FORMAT" in options.keys():
+                self.rwFormat = options['FORMAT']
+            if "url" not in options.keys():
+                options['url'] = self.dbConnURL
+            if "numPartitions" not in options.keys():
+                options['numPartitions'] = self.partitions
+            if "user" not in options.keys():
+                options['user'] = self.dbUser
+            if "password" not in options.keys():
+                options['password'] = self.dbPswd
+            if "numPartitions" not in options.keys():
+                options['driver'] = self.dbDriver
+
             print("Wait a moment, retrieving data ...")
             ''' use query else use partition column'''
-            if not select is None and "".join(select.split())!="":
-                load_sdf = self.session.read\
-                    .format("jdbc")\
-                    .option("url",self.dbConnURL)\
-                    .option("query",select)\
-                    .option("numPartitions",self.partitions)\
-                    .option("user",self.dbUser)\
-                    .option("password",self.dbPswd)\
-                    .option("driver",self.dbDriver)\
-                    .load()
-
-            elif not db_table is None and "".join(db_table.split())!="" \
-                and not db_column is None and "".join(db_column.split())!="" \
-                and not lower_bound is None and not upper_bound is None:
-
+            if select is not None and "".join(select.split())!="":
+                options['query'] = select
+            elif db_table is not None and "".join(db_table.split())!="":
                 if db_table.find(self.dbSchema+".") == -1:
                     db_table = self.dbSchema+"."+db_table
+                option["dbtable"]=db_table
+                
+#                 load_sdf = self.session.read\
+#                     .format("jdbc")\
+#                     .option("url",self.dbConnURL)\
+#                     .option("query",select)\
+#                     .option("numPartitions",self.partitions)\
+#                     .option("user",self.dbUser)\
+#                     .option("password",self.dbPswd)\
+#                     .option("driver",self.dbDriver)\
+#                     .load()
 
-                load_sdf = self.session.read\
-                    .format("jdbc")\
-                    .option("url",self.dbConnURL)\
-                    .option("dbtable",db_table)\
-                    .option("partitionColumn",db_column)\
-                    .option("lowerBound",lower_bound)\
-                    .option("upperBound",upper_bound)\
-                    .option("numPartitions",self.partitions)\
-                    .option("user",self.dbUser)\
-                    .option("password",self.dbPswd)\
-                    .option("driver",self.dbDriver)\
-                    .load()
+#             elif db_table is not None and "".join(db_table.split())!="" \
+#                 and db_column is not None and "".join(db_column.split())!="" \
+#                 and lower_bound is not None and upper_bound is not None:
+
+#                 if db_table.find(self.dbSchema+".") == -1:
+#                     db_table = self.dbSchema+"."+db_table
+
+#                 load_sdf = self.session.read\
+#                     .format("jdbc")\
+#                     .option("url",self.dbConnURL)\
+#                     .option("dbtable",db_table)\
+#                     .option("partitionColumn",db_column)\
+#                     .option("lowerBound",lower_bound)\
+#                     .option("upperBound",upper_bound)\
+#                     .option("numPartitions",self.partitions)\
+#                     .option("user",self.dbUser)\
+#                     .option("password",self.dbPswd)\
+#                     .option("driver",self.dbDriver)\
+#                     .load()
             else:
                 raise AttributeError("Invalid set of input variables necesssary "+\
                                      "to determine the read operation")
+            
+            load_sdf = self.session.read\
+                .format(self.rwFormat)\
+                .options(**options)\
+                .load()
             
             if load_sdf:
                 logger.debug("loaded %d rows into pyspark dataframe" % load_sdf.count())
             else:
                 logger.debug("Something went wrong")
 
-            ''' drop duplicates '''
-            if "DROPDUPLICATES" in kwargs.keys() and kwargs['DROPDUPLICATES']:
-                load_sdf = load_sdf.distinct()
-                logger.debug("Removed duplicates, reduced dataframe with %d rows",load_sdf.count())
+#             ''' drop duplicates 
+#                 TODO - move to a @staticmethod '''
+#             if "DROPDUPLICATES" in kwargs.keys() and kwargs['DROPDUPLICATES']:
+#                 load_sdf = load_sdf.distinct()
+#                 logger.debug("Removed duplicates, reduced dataframe with %d rows",load_sdf.count())
 
-            ''' convert to pandas dataframe '''
-            if 'TOPANDAS' in kwargs.keys() and kwargs['TOPANDAS']:
-                load_sdf = load_sdf.toPandas()
-                logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
-                             % load_sdf.shape[0])
+#             ''' convert to pandas dataframe 
+#                 TODO - move to @staticmethod '''
+#             if 'TOPANDAS' in kwargs.keys() and kwargs['TOPANDAS']:
+#                 load_sdf = load_sdf.toPandas()
+#                 logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
+#                              % load_sdf.shape[0])
 
             self._data = load_sdf
 
@@ -1301,15 +1174,20 @@ class SQLWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    @classmethod
-    def insert_sdf_into_table(self, save_sdf, db_table:str, **kwargs):
+#     @classmethod
+    def insert_sdf_into_table(
+        self,
+        save_sdf,
+        db_table:str,
+        **kwargs):
         
         __s_fn_id__ = "function <insert_sdf_into_table>"
         _num_records_saved = 0
         
         try:
-            if not save_sdf is None:
-                self.data = save_sdf
+#             if not save_sdf is None:
+#                 self.data = save_sdf
+            self.data = save_sdf
             if self.data.count() <= 0:
                 raise ValueError("No data to insert into database table %s"% db_table)
             if len(kwargs) > 0:
@@ -1328,11 +1206,11 @@ class SQLWorkLoads():
             ''' if created audit columns don't exist add them '''
             listColumns=self.data.columns
             if "created_dt" not in listColumns:
-                self.data = self.data.withColumn("created_dt", current_timestamp())
+                self.data = self.data.withColumn("created_dt", F.current_timestamp())
             if "created_by" not in listColumns:
-                self.data = self.data.withColumn("created_by", lit(self.dbUser))
+                self.data = self.data.withColumn("created_by", F.lit(self.dbUser))
             if "created_proc" not in listColumns:
-                self.data = self.data.withColumn("created_proc", lit("Unknown"))
+                self.data = self.data.withColumn("created_proc", F.lit("Unknown"))
             
             ''' TODO: add code to accept options() to manage schema specific
                 authentication and access to tables '''
@@ -1368,311 +1246,245 @@ class SQLWorkLoads():
 
         return _num_records_saved
 
-    ''' Function
-            name: read_csv_to_sdf
-            parameters:
-                    filesPath (str)
-                    @enrich (dict)
-            procedure: 
-            return DataFrame
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-            
-    '''
-    @classmethod
-    def read_csv_to_sdf(self,filesPath: str, **kwargs):
-
-        _csv_to_sdf = self.session.sparkContext.emptyRDD()     # initialize the return var
-#         _tmp_df = self.session.sparkContext.emptyRDD()
-        _start_dt = None
-        _end_dt = None
-        _sdf_cols = []
-        _l_cols = []
-        _traceback = None
-
-        try:
-            ''' check if the folder and files exists '''
-            if not filesPath:
-                raise ValueError("Invalid folder path %s" % filesPath)
-            if "IS_FOLDER" in kwargs.keys() and kwargs['IS_FOLDER']:
-                filelist = os.listdir(filesPath)
-                if not (len(filelist) > 0):
-                    raise ValueError("No data files found in director: %s" % (filesPath))
-
-            ''' set inferschema '''
-            _csv_inferSchema = True
-            if "INFERSCHEMA" in kwargs.keys():
-                _csv_inferSchema = kwargs['INFERSCHEMA']
-            ''' extract data from **kwargs if exists '''
-            if 'schema' in kwargs.keys():
-                _sdf_cols = kwargs['schema']
-            if 'start_datetime' in kwargs.keys():
-                _start_dt = kwargs['start_datetime']
-            if 'end_datetime' in kwargs.keys():
-                _start_dt = kwargs['end_datetime']
-
-            _csv_to_sdf = self.session.read.options( \
-                                                          header='True', \
-                                                          inferSchema=_csv_inferSchema, \
-                                                          delimiter=',') \
-                                            .csv(filesPath)
-
-#            _csv_to_sdf.select(split(_csv_to_sdf.room_rate, '[US$]',2).alias('rate_curr')).show()
-            if 'TO_PANDAS' in kwargs.keys() and kwargs['TO_PANDAS']:
-                _csv_to_sdf = _csv_to_sdf.toPandas()
-                logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
-                             % _csv_to_sdf.shape[0])
-
-        except Exception as err:
-            __s_fn_id__ = "Class <SparkWorkLoads> Function <read_folder_csv_to_sdf>"
-            logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+__s_fn_id__, err)
-            _traceback = traceback.format_exc()
-            print(traceback.format_exc())
-
-        return _csv_to_sdf, _traceback
-        
-    ''' Function
-            name: read_csv_to_sdf
-            parameters:
-                    filesPath (str)
-                    @enrich (dict)
-            procedure: 
-            return DataFrame
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @classmethod
-    def save_sdf_to_csv(self, sdf, filesPath=None, **kwargs):
-        
-        _csv_file_path = None
-
-        __s_fn_id__ = "function <read_folder_csv_to_sdf>"
-        logger.info("Executing %s in %s",__s_fn_id__, __name__)
-
-        try:
-            if isinstance(sdf,pd.DataFrame):
-                sdf = self.session.createDataFrame(sdf) 
-            ''' data exists? '''
-            if sdf.count() <= 0:
-                raise ValueError("No data for input dataframe to save")
-            logger.info("Received % rows to save to file", sdf.count())
-            ''' determine where to save '''
-            if filesPath:
-                _csv_file_path = filesPath
-                logger.info("File ready to save to %s", _csv_file_path)
-            else:
-                fname = __package__+"_"+"save_sdf_to.csv"
-                _csv_file_path = os.path.join(self.tmpDIR, fname)
-                logger.info("No file path defined, saving to default %s", _csv_file_path)
-
-            ''' save sdf to csv '''
-#            sdf.write.option("header",True)\
-#                    .option("delimiter",",")\
-#                    .csv(_csv_file_path)
-            sdf.write.mode("overwrite")\
-                    .option("header",True)\
-                    .format("csv")\
-                    .save(_csv_file_path)
-
-            logger.info("%d rows of data written to %s",sdf.count(), _csv_file_path)
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
-
-        return _csv_file_path
-
-    ''' Function
-            name: impute_data
-            parameters:
-                    filesPath (str)
-                    @enrich (dict)
-            procedure: 
-            return DataFrame
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @classmethod
-    def impute_data(
-        self,
-        data,
-        column_subset:list=[],
-        strategy:str="mean",
-        **kwargs
-    ) -> DataFrame:
-
-        __s_fn_id__ = "function <impute_data>"
-
-        try:
-            ''' set and validate data '''
-            self.data = data
-            ''' validate column_subset, if none imupte all numeric columns '''
-            if len(column_subset) > 0:
-                non_num_cols = len([col_ for col_ in column_subset if
-                                    data.select(col_).dtypes[0][1] !="string"])
-                if non_num_cols < len(column_subset):
-                    raise AttributeError("%d invalid non-numeric columns in input var: column_subset"
-                                         % len(column_subset)-non_num_cols)
-            elif column_subset is None or column_subset==[]:
-                column_subset = [col_ for col_ in data.columns if
-                                 data.select(col_).dtypes[0][1] !="string"]
-            else:
-                raise RuntimeError("Something was wrong validating column_subset")
-
-            ''' validate strategy '''
-            _strategy = strategy
-            if not strategy.lower() in ['mean','median','mode']:
-                _strategy = 'mean'
-                logger.warning("Invalid strategy %s, reverting to default strategy = %s"
-                               ,strategy,_strategy)
-            ''' apply imputation '''
-            imputer = Imputer(inputCols=column_subset,
-                              outputCols=[col_ for col_ in column_subset]
-                             ).setStrategy(_strategy)
-            self._data = imputer.fit(data).transform(data)
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
-
-        return self._data
-
-    ''' Function
-            name: impute_data
-            parameters:
-                    filesPath (str)
-                    @enrich (dict)
-            procedure: 
-            return DataFrame
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @staticmethod
-    def count_column_nulls(
-#         self,
-        data,
-        column_subset:list=[],
-        **kwargs,
-    ) -> DataFrame:
-
-        __s_fn_id__ = "function <count_column_nulls>"
-        _nan_counts_sdf = None
-
-        try:
-            ''' drop any columns not specified in column_subset; else use all '''
-            if len([col_ for col_ in column_subset if col_ not in data.columns]) > 0:
-                column_subset = data.columns
-
-            _nan_counts_sdf = data.select([count(when(col(c).contains('None') | \
-                                        col(c).contains('NULL') | \
-                                        (col(c) == '' ) | \
-                                        col(c).isNull() | \
-                                        isnan(c), c )).alias(c)
-                                for c in column_subset])
-
-            if _nan_counts_sdf.count() > 0:
-                logger.debug("NULL count completed for %d columns",len(_nan_counts_sdf.columns))
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
-
-        return _nan_counts_sdf
 
 #     ''' Function
-#             name: read_s3obj_to_sdf
+#             name: impute_data
 #             parameters:
-#                 bucketName (str) - s3 bucket name
-#                 objPath (str) - s3 key that points to the objecy
+#                     filesPath (str)
+#                     @enrich (dict)
 #             procedure: 
 #             return DataFrame
 
 #             author: <nuwan.waidyanatha@rezgateway.com>
-
 #     '''
-#     def read_s3csv_to_sdf(self,bucketName:str,keyFPath: str, **kwargs):
+#     @staticmethod
+#     def impute_data(
+# #         self,
+#         data,
+#         column_subset:list=[],
+#         strategy:str="mean",
+#         **kwargs
+#     ) -> DataFrame:
+#         """
+#         Description:
+#             The impute function leverages the pyspark Imputer class. Based on the specified
+#             numeric columns or all detected numeric colums, a stretegy set in the function
+#             parameter, or default mean strategy is applied.
+#         Attributes:
+#             data - must be a valid pyspark dataframe
+#             column_subset:list=[],
+#             strategy:str="mean",
+#             **kwargs
+#         """
 
-#         import boto3
-        
-#         _csv_to_sdf = self.session.sparkContext.emptyRDD()     # initialize the return var
-# #         _tmp_df = self.session.sparkContext.emptyRDD()
-#         _start_dt = None
-#         _end_dt = None
-#         _sdf_cols = []
-#         _l_cols = []
-#         _traceback = None
-        
-#         __s_fn_id__ = "function <read_s3csv_to_sdf>"
-#         logger.info("Executing %s in %s",__s_fn_id__, __name__)
+#         __s_fn_id__ = "function <impute_data>"
+#         _data = None
 
 #         try:
+#             ''' set and validate data '''
+#             if not isinstance(data,DataFrame):
+#                 raise AttributeError("Invalid data; must be a valid pyspark dataframe")
+#             ''' validate column_subset, if none imupte all numeric columns '''
+#             if len(column_subset) > 0:
+#                 non_num_cols = len([col_ for col_ in column_subset if
+#                                     data.select(col_).dtypes[0][1] !="string"])
+#                 if non_num_cols < len(column_subset):
+#                     raise AttributeError("%d invalid non-numeric columns in input var: column_subset"
+#                                          % len(column_subset)-non_num_cols)
+#             elif column_subset is None or column_subset==[]:
+#                 column_subset = [col_ for col_ in data.columns if
+#                                  data.select(col_).dtypes[0][1] !="string"]
+#             else:
+#                 raise RuntimeError("Something was wrong validating column_subset")
 
-#             if not 'AWSAUTH' in pkgConf.sections():
-#                 raise ValueError('Unable to find AWSAUTH keys and values to continue')
-            
-#             AWS_ACCESS_KEY_ID = pkgConf.get('AWSAUTH','ACCESSKEY')
-#             AWS_SECRET_ACCESS_KEY = pkgConf.get('AWSAUTH','SECURITYKEY')
-#             AWS_REGION_NAME = pkgConf.get('AWSAUTH','REGION')
-
-#             s3 = boto3.resource(
-#                 's3',
-#                 aws_access_key_id=AWS_ACCESS_KEY_ID,
-#                 aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-#                 region_name=AWS_REGION_NAME,
-#             )
-# #             response = s3.get_object(Bucket=bucketName, Key=str(key))
-# #             print(self.session.__dict__)
-# #             self.session.sparkContext.hadoopConfiguration.set("fs.s3a.access.key", AWS_ACCESS_KEY_ID)
-# #             self.session.sparkContext\
-# #                     .hadoopConfiguration.set("fs.s3a.secret.key", AWS_SECRET_ACCESS_KEY)
-# #             self.session.sparkContext\
-# #                   .hadoopConfiguration.set("fs.s3a.endpoint", "s3.amazonaws.com")
-
-# #             os.environ['PYSPARK_SUBMIT_ARGS'] = '-- packages com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.3 pyspark-shell'
-            
-# #             conf = SparkConf().set('spark.executor.extraJavaOptions', \
-# #                                    '-Dcom.amazonaws.services.s3.enableV4=true')\
-# #                             .set('spark.driver.extraJavaOptions', \
-# #                                  '-Dcom.amazonaws.services.s3.enableV4=true')\
-# #                             .setAppName('pyspark_aws')\
-# #                             .setMaster('local[*]')
-            
-# #             sc=SparkContext(conf=conf)
-# # #             sc=self.session.sparkContext(conf=conf)
-# #             sc.setSystemProperty('com.amazonaws.services.s3.enableV4', 'true')
-            
-# #             hadoopConf = sc._jsc.hadoopConfiguration()
-# #             hadoopConf.set('fs.s3a.access.key', AWS_ACCESS_KEY_ID)
-# #             hadoopConf.set('fs.s3a.secret.key', AWS_SECRET_ACCESS_KEY)
-# #             hadoopConf.set('fs.s3a.endpoint', AWS_REGION_NAME)
-# #             hadoopConf.set('fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
-            
-# #             spark=SparkSession(sc)
-
-# #             Bucket=bucketName,
-# #             Key=keyFPath
-
-# #             s3 = boto3.resource('s3')
-#             bucket = s3.Bucket(str(bucketName))
-#             obj = bucket.objects.filter(Prefix=str(keyFPath))
-# #             response = s3.get_object(Bucket=bucketName, Key=str(keyFPath))
-# #             _s3_obj = "s3a://"+bucketName+"/"+objPath
-# #             _csv_to_sdf=spark.read.csv(
-# #             _csv_to_sdf=self.session.read.csv(
-#             _csv=self.session.read.csv(
-#                 obj,
-# #                 _s3_obj,
-#                 header=True,
-#                 inferSchema=True)
-# #             _csv_to_sdf = self.session.read.csv(_s3_obj)
+#             ''' validate strategy '''
+#             _strategy = strategy
+#             if not strategy.lower() in ['mean','median','mode']:
+#                 _strategy = 'mean'
+#                 logger.warning("Invalid strategy %s, reverting to default strategy = %s"
+#                                ,strategy,_strategy)
+#             ''' apply imputation '''
+#             imputer = Imputer(inputCols=column_subset,
+#                               outputCols=[col_ for col_ in column_subset]
+#                              ).setStrategy(_strategy)
+#             _data = imputer.fit(data).transform(data)
+# #             self._data = imputer.fit(data).transform(data)
 
 #         except Exception as err:
 #             logger.error("%s %s \n",__s_fn_id__, err)
 #             print("[Error]"+__s_fn_id__, err)
 #             print(traceback.format_exc())
 
-#         return _csv_to_sdf
+# #         return self._data
+#         return _data
+
+#     ''' Function
+#             name: impute_data
+#             parameters:
+#                     filesPath (str)
+#                     @enrich (dict)
+#             procedure: 
+#             return DataFrame
+
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @staticmethod
+#     def count_column_nulls(
+# #         self,
+#         data,
+#         column_subset:list=[],
+#         **kwargs,
+#     ) -> DataFrame:
+
+#         __s_fn_id__ = "function <count_column_nulls>"
+#         _nan_counts_sdf = None
+
+#         try:
+#             ''' drop any columns not specified in column_subset; else use all '''
+#             if len([col_ for col_ in column_subset if col_ not in data.columns]) > 0:
+#                 column_subset = data.columns
+
+#             _nan_counts_sdf = data.select([count(F.when(F.col(c).contains('None') | \
+#                                         F.col(c).contains('NULL') | \
+#                                         (F.col(c) == '' ) | \
+#                                         F.col(c).isNull() | \
+#                                         F.isnan(c), c )).alias(c)
+#                                 for c in column_subset])
+
+#             if _nan_counts_sdf.count() > 0:
+#                 logger.debug("NULL count completed for %d columns",len(_nan_counts_sdf.columns))
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             print("[Error]"+__s_fn_id__, err)
+#             print(traceback.format_exc())
+
+#         return _nan_counts_sdf
+
+#     @staticmethod
+#     def pivot_data(
+#         data,   # a valid pyspark DataFrame
+#         group_columns, # uses the columns in the grouby extension
+#         pivot_column,  # column distinct values are used to create the pivot columns
+#         agg_column,    # the column to apply the sum, avg, stdv aggregation
+#         **kwargs,      # defines selected pivot col names, aggregation function, etc
+#     ) -> DataFrame:
+#         """
+#         Description:
+#             Creates a grouped by and pivoted dataframe. The numeric columns will be
+#             aggregated by a sum by default; unless specified as a kwargs
+#         Attributes:
+#             data (DataFrame) a valid pyspark dataframe
+#             **kwargs
+#                 "AGGREGATE" - the aggregation function sum, mean, avg, min, max,...
+#                 "PIVCOLUMNS" - create pivot table columns for specified values
+#                 ""
+#         Returns:
+#             data (DataFrame)
+#         """
+#         __s_fn_id__ = "function <pivot_data>"
+#         _piv_data = None
+
+#         try:
+#             ''' validate input attributes '''
+#             if not isinstance(data,DataFrame):
+#                 raise AttributeError("Attribute data must be a valida pyspark dataframe.")
+#             if group_columns not in data.columns:
+#                 raise AttributeError("Invalid group_columns: %s. Attribute value must be in %s"
+#                                      % (str(group_columns),str(data.columns)))
+#             if pivot_column not in data.columns:
+#                 raise AttributeError("Invalid pivot_column: %s. Attribute value must be in %s"
+#                                      % (pivot_column,str(data.columns)))
+#             if agg_column not in data.columns:
+#                 raise AttributeError("Invalid agg_column: %s. Attribute value must be in %s"
+#                                      % (str(agg_column),str(data.columns)))
+
+#             _piv_col_names = [x[0] for x in
+#                               data.dropDuplicates([pivot_column])
+#                               .select(pivot_column)
+#                               .collect()]
+#             if "PIVCOLUMNS" in  kwargs.keys() and kwargs['COLUMNS'] in _piv_col_names:
+#                 _piv_col_names = kwargs['PIVCOLUMNS']
+#             logger.debug("Pivot columns: %s",_piv_col_names)
+#             _agg = 'sum'
+#             if "AGGREGATE" in kwargs.keys() and kwargs['AGGREGATE'] in self._aggList:
+#                 _agg = kwargs['AGGREGATE'].lower()
+
+#             logger.debug("Transposing %d rows groupby %s to pivot with "+\
+#                          "distinct values in %s and %s aggregation on column(s): %s"
+#                          ,data.count(),str(group_columns).upper()
+#                          ,str(pivot_column).upper(),_agg.upper(),str(agg_column))
+#             if _agg == 'sum':
+#                 _piv_data = data.groupBy(group_columns)\
+#                         .pivot(pivot_column, _piv_col_names)\
+#                         .sum(agg_column)
+#             elif _agg == 'mean':
+#                 _piv_data = data\
+#                         .groupBy(group_columns)\
+#                         .pivot(pivot_column, _piv_col_names)\
+#                         .mean(agg_column)
+#             elif _agg == 'average' or 'avg':
+#                 _piv_data = data\
+#                         .groupBy(group_columns)\
+#                         .pivot(pivot_column, _piv_col_names)\
+#                         .avg(agg_column)
+#             elif _agg == 'standard deviation' or 'stdv' or 'stddev':
+#                 _piv_data = data\
+#                         .groupBy(group_columns)\
+#                         .pivot(pivot_column, _piv_col_names)\
+#                         .stddev(agg_column)
+#             elif _agg == 'median' or 'med':
+#                 _piv_data = data\
+#                         .groupBy(group_columns)\
+#                         .pivot(pivot_column, _piv_col_names)\
+#                         .median(agg_column)
+#             elif _agg == 'mode' or 'mod':
+#                 _piv_data = data\
+#                         .groupBy(group_columns)\
+#                         .pivot(pivot_column, _piv_col_names)\
+#                         .mode(agg_column)
+#             elif _agg == 'maximum' or 'max':
+#                 _data = data\
+#                         .groupBy(group_columns)\
+#                         .pivot(pivot_column, _piv_col_names)\
+#                         .max(agg_column)
+#             elif _agg == 'minimum' or 'min':
+#                 _piv_data = data\
+#                         .groupBy(group_columns)\
+#                         .pivot(pivot_column, _piv_col_names)\
+#                         .min(agg_column)
+#             else:
+#                 raise AttributeError("Aggregation to be included in the future.")
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             print("[Error]"+__s_fn_id__, err)
+#             print(traceback.format_exc())
+
+#         return _piv_data
+
+            
+#     @staticmethod
+#     def drop_duplicates(
+#         data
+#     ) -> DataFrame:
+
+#         try:
+#             ''' drop duplicates 
+#                 TODO - move to a @staticmethod '''
+#             if "DROPDUPLICATES" in kwargs.keys() and kwargs['DROPDUPLICATES']:
+#                 _unique_sdf = data.distinct()
+#                 logger.debug("Removed duplicates, reduced dataframe with %d rows",_unique_sdf.count())
+
+#             ''' convert to pandas dataframe 
+#                 TODO - move to @staticmethod '''
+#             if 'TOPANDAS' in kwargs.keys() and kwargs['TOPANDAS']:
+#                 _unique_sdf = _unique_sdf.toPandas()
+#                 logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
+#                              % _unique_sdf.shape[0])
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             print("[Error]"+__s_fn_id__, err)
+#             print(traceback.format_exc())
+
+#         return _unique_sdf
