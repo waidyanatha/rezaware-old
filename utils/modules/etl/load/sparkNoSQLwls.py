@@ -569,20 +569,29 @@ class NoSQLWorkLoads():
     def connect(self):
 
         try:
-            if self.dbHostIP and \
+            if self._connect is None and \
+                self.dbHostIP and \
                 self.dbAuthSource and \
                 self.dbUser and \
                 self.dbPswd and \
-                self._dbAuthMechanism:
+                self.dbAuthSource and \
+                self.dbAuthMechanism:
                 if self.dbType.lower() == 'mongodb':
+#                     self._connect = MongoClient(
+#                         _db_host_ip,
+#                         username=_db_user,
+#                         password=_db_pswd,
+#                         authSource=_db_auth,
+#                         authMechanism=_db_mech
                     self._connect = MongoClient(
-                        _db_host_ip,
-                        username=_db_user,
-                        password=_db_pswd,
-                        authSource=_db_auth,
-                        authMechanism=_db_mech
+                        self.dbHostIP,
+                        username=self.dbUser,
+                        password=self.dbPswd,
+                        authSource=self.dbAuthSource,
+                        authMechanism=self.dbAuthMechanism
                     )
-                    logger.debug(self._connect)
+                    logger.warning("Non-type connection %s set using existing properties"
+                                   ,self._connect)
                 elif self.dbType.lower() == 'cassandra':
                     raise RuntimError("cassandra is to be included in a future release")
                 else:
@@ -700,11 +709,11 @@ class NoSQLWorkLoads():
             if self._collections is None and self.dbName and self.dbAuthSource:
                 if self.dbType.lower() == 'mongodb':
                     db = self.connect[self.dbName]
-                    _coll_list = db.list_collection_names()
+                    self._collections = db.list_collection_names()
                 elif self.dbType.lower() == 'cassendra':
                     print('TBD')
                 else:
-                    raise AttributeError('Something was wring')
+                    raise AttributeError('Something was wrong')
                     
         except Exception as err:
             logger.error("%s %s \n",___s_fn_id____, err)

@@ -1,0 +1,762 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+''' Initialize with default environment variables '''
+__name__ = "performIndex"
+__package__ = "etp"
+__module__ = "assets"
+__app__ = "mining"
+__ini_fname__ = "app.ini"
+__conf_fname__ = "app.cfg"
+
+''' Load necessary and sufficient python librairies that are used throughout the class'''
+try:
+    ''' essential python packages '''
+    import os
+    import sys
+    import configparser    
+    import logging
+    import traceback
+    import functools
+    ''' function specific python packages '''
+    import pandas as pd
+    import numpy as np
+    from datetime import datetime, date, timedelta
+
+    from pyspark.sql import DataFrame
+    from pyspark.sql import functions as F
+    from pyspark.sql.window import Window
+
+    print("All functional %s-libraries in %s-package of %s-module imported successfully!"
+          % (__name__.upper(),__package__.upper(),__module__.upper()))
+
+except Exception as e:
+    print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
+          .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
+
+
+'''
+    CLASS spefic to preparing the data based on Ration Of Returns (ROR).
+    
+'''
+
+class Portfolio():
+
+    ''' Function
+            name: __init__
+            parameters:
+
+            procedure: Initialize the class
+            return None
+
+            author: <samana.thetha@gmail.com>
+    '''
+    def __init__(self, desc : str="mcap risk, strength, & adjusted price index calculation", **kwargs):
+
+        self.__name__ = __name__
+        self.__package__ = __package__
+        self.__module__ = __module__
+        self.__app__ = __app__
+        self.__ini_fname__ = __ini_fname__
+        self.__conf_fname__ = __conf_fname__
+        self.__desc__ = desc
+
+        self._data = None
+        self._portfolio=None
+        self._idxValue=None
+        self._idxType =None
+        self._idxTypeList =[
+            'RSI',   # Relative Strength Index
+            'ADX',   # Adjusted Directional Index
+            'SORTIONO', # Sortino ratio 
+            'SHARP',    # Sharp ratio of all positive
+        ] 
+        
+        global pkgConf
+        global logger
+        global clsNoSQL
+        global clsSCNR
+        global clsStats
+        global clsMPT
+
+        try:
+            self.cwd=os.path.dirname(__file__)
+            pkgConf = configparser.ConfigParser()
+            pkgConf.read(os.path.join(self.cwd,__ini_fname__))
+
+            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            sys.path.insert(1,self.rezHome)
+
+            ''' innitialize the logger '''
+            from rezaware import Logger as logs
+            logger = logs.get_logger(
+                cwd=self.rezHome,
+                app=self.__app__, 
+                module=self.__module__,
+                package=self.__package__,
+                ini_file=self.__ini_fname__)
+
+            ''' set a new logger section '''
+            logger.info('########################################################')
+            logger.info("%s Class",self.__name__)
+
+#             ''' import spark database work load utils to read and write data '''
+#             from utils.modules.etl.load import sparkDBwls as sparkDB
+#             clsSDB = sparkDB.SQLWorkLoads(desc=self.__desc__)
+#             ''' import spark clean-n-rich work load utils to transform the data '''
+            from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
+            clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
+            ''' import spark mongo work load utils to read and write data '''
+            from utils.modules.etl.load import sparkNoSQLwls as nosql
+            clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
+            ''' import spark time-series work load utils for rolling mean/variance computations '''
+            from utils.modules.ml.timeseries import rollingstats as stats
+            clsStats = stats.RollingStats(desc=self.__desc__)
+            from mining.modules.assets.etp import dailyTopN as topN
+            clsMPT =topN.WeightedPortfolio(desc=self.__desc__)
+
+            logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
+                         %(self.__app__,
+                           self.__module__,
+                           self.__package__,
+                           self.__name__,
+                           self.__desc__))
+
+            print("%s Class initialization complete" % self.__name__)
+
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return None
+
+    ''' Function --- DATA ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+    @property
+    def data(self) -> DataFrame:
+        """
+        Description:
+            data @property and @setter functions. make sure it is a valid spark dataframe
+        Attributes:
+            data in @setter will instantiate self._data    
+        Returns (dataframe) self._data
+        """
+
+        __s_fn_id__ = "function <@property data>"
+
+        try:
+            if self._data is None:
+                raise ValueError("Data is of NoneType; cannot be used in any %s computations"
+                                 %self.__name__)
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+    @data.setter
+    def data(self,data) -> DataFrame:
+
+        __s_fn_id__ = "function <@setter data>"
+
+        try:
+            if data is None:
+                raise AttributeError("Invalid data attribute, must be a valid pyspark dataframe")
+
+            self._data = data
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+    ''' Function --- PORTFOLIO ---
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @property
+    def portfolio(self) -> list:
+        """
+        Description:
+            portfolio @property function. make sure it is a valid spark dataframe
+        Attributes:
+            data in @setter will instantiate self._data    
+        Returns (dataframe) self._data
+        """
+
+        __s_fn_id__ = "function <@property portfolio>"
+
+        try:
+            if self._portfolio is None:
+                self._portfolio = self.get_portfolio(
+                    db_name="tip_daily_mpt",
+                    db_coll="",
+                    mpt_date=date.today(),
+                )
+                logger.warning("Portfolio is Non-type; retrieved portfolio data for %s "+\
+                               "of dtype %s with %d records"
+                               ,str(date.today()),type(self._portfolio),len(self._portfolio))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._portfolio
+
+    @portfolio.setter
+    def portfolio(self,portfolio:list=[]) -> list:
+
+        __s_fn_id__ = "function <@setter portfolio>"
+
+        try:
+            if len(portfolio)<=0:
+                raise AttributeError("Invalid portfolio attribute, must be a non-empy list")
+            self._portfolio = portfolio
+            logger.debug("Portfolio class property set with %s of length %d"
+                         %(type(self._portfolio),len(self._portfolio)))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._portfolio
+
+
+    ''' Function --- index PROPERTY ATTR ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+    @property
+    def idxValue(self) -> float:
+        """
+        Description:
+            index @property functions confirms the index value base on the type
+        Attributes:
+                
+        Returns (float) self._idxValue
+        """
+
+        __s_fn_id__ = "function <@property idxValue>"
+
+        try:
+            if self._idxValue is None:
+                raise ValueError("NoneType index; cannot be used in any %s computations")
+            if self._idxValue<0 or self._idxValue>1.0:
+                raise ValueError("Invalid index value %d; it must be between 0 and 1.0"
+                                 % self._idxValue )
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._idxValue
+
+    @idxValue.setter
+    def idxValue(self,index_value) -> float:
+
+        __s_fn_id__ = "function <@setter idxValue>"
+
+        try:
+            if index_value is None:
+                raise AttributeError("Invalid index_value, must be a valid float")
+            if float(index_value)>=0 and float(index_value)<=1.0:
+                self._idxValue = float(index_value)
+                logger.debug("Valid index value %d set for class property", self._idxValue)
+            else:
+                self._idxValue = index_value
+                logger.warning("Unacceptable index value %d but class property was set"
+                               ,self._idxValue)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._idxValue
+
+    @property
+    def idxType(self) -> str:
+        """
+        Description:
+            idxType @property getter functions to retrieve the string value
+        Attributes:  
+        Returns (str) self._idxType
+        """
+
+        __s_fn_id__ = "function <@property idxType>"
+
+        try:
+            if self._idxType not in self.idxTypeList:
+                raise AttributeError("Invalid index type; must be one of %s"
+                                 %self.idxTypeList)
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._idxType.upper()
+
+    @idxType.setter
+    def idxType(self,index_type) -> DataFrame:
+
+        __s_fn_id__ = "function <@setter idxType>"
+
+        try:
+            if index_type.upper() not in self.idxTypeList:
+                raise AttributeError("Invalid index type %s; must be one of %s"
+                                 %(index_type.upper(),self.idxTypeList))
+
+            self._idxType=index_type.upper()
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._idxType
+
+    ''' Function --- GET PORTFOLIO ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+
+    def get_portfolio(
+        self,
+        db_name:str="",
+        db_coll:list=[],
+        coll_date:date=date.today(),
+        **kwargs,
+    ) -> list:
+        """
+        Description:
+            reads the portfolio from the MongoDB database. If collection is given
+            then read directly from the collection; else read all collections with
+            a specific date postfix.
+        Attributes:
+            db_name (str) specifies the name of the database; else use default value
+            db_coll (str) specifies the collection name; else default to date postfix
+            mpt_date (date) specifies the date of the portfolio
+        Returns (list) self._portfolio is a list of dictionaries
+        """
+
+        __s_fn_id__ = "function <get_portfolio>"
+
+        __def_db_type__ ='MongoDB'
+        __def_db_name__ = "tip-daily-mpt"
+#         __def_coll_pref__ = "mpt"
+        
+        _mpts = []
+        _db_coll_list = []
+
+        try:
+            ''' confirm and set database qualifiers '''
+            if "".join(db_name.strip())=="":
+                _db_name = __def_db_name__
+            else:
+                _db_name = db_name
+            if "DBTYPE" not in kwargs.keys():
+                kwargs['DBTYPE']=__def_db_type__
+            if "DBAUTHSOURCE" not in kwargs.keys():
+                kwargs['DBAUTHSOURCE']=_db_name
+
+            ''' make the connection '''
+            clsNoSQL.connect=kwargs
+            ''' confirm database exists '''
+            if not _db_name in clsNoSQL.connect.list_database_names():
+                raise RuntimeError("%s does not exist in %s",_db_name,clsNoSQL.dbType)
+            clsNoSQL.dbName=_db_name
+            _all_colls = clsNoSQL.collections
+
+            ''' confirm and set collection list '''
+            if len(db_coll)>0:
+                ''' check if listed collections exist '''
+                for _coll in db_coll:
+                    if _coll not in _all_colls:
+                        raise AttributeError("Invalid collection name: %s was not found in %s" 
+                                             % (_coll,_all_colls))
+            elif coll_date <= date.today():
+                clsNoSQL.collections={"HASINNAME":str(coll_date)}
+                db_coll=clsNoSQL.collections
+                ''' get all collections containing date postfix '''
+            else:
+                raise AttributeError("Either a db_coll list or mpt_date must be specified")
+
+            ''' read all collections into a list '''
+            _mpts = clsNoSQL.read_documents(
+                as_type="LIST",
+                db_name="",
+                db_coll=db_coll,
+                doc_find={},
+                **kwargs)
+            if len(_mpts)>0:
+                self._portfolio = _mpts
+                logger.info("Loaded %d portfolios",len(self._portfolio))
+            else:
+                raise ValueError("No portfolios found for collections: %s in %s %s"
+                                 % (db_coll,clsNoSQL.dbType,clsNoSQL.dbName))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._portfolio
+
+
+    ''' Function --- RELATIVE STRENGTH INDEX ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+
+    def index(func):
+
+        @functools.wraps(func)
+        def index_wrapper(self,portfolio,date,index_type,**kwargs):
+            """
+            Description:
+                wrapper function to compute the RSI for the given data
+            Attributes:
+                same as get_rsi
+            Returns:
+                self._idxValue
+            """
+            
+            __s_fn_id__ = "function <index_wrapper>"
+            _pos_sdf=None
+            _neg_sdf=None
+            _weights_sdf=None
+
+            try:
+                _ror_data = func(self,portfolio,date,index_type,**kwargs)
+
+                _rsi=None
+                if self._idxType == 'RSI':
+                    _weights_sdf = pd.DataFrame(self.portfolio)
+                    _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
+                    _rsi=Portfolio.calc_rsi(
+                        ror_data=_ror_data,
+                        value_column=kwargs["LOGCOLNAME"],
+                        weights=_weights_arr,
+                        **kwargs,
+                    )
+                    if _rsi is not None:
+                        self._idxValue = _rsi
+                    else:
+                        raise ValueError("%s Something went wrong computing %s"
+                                         %(__s_fn_id__,self._idxType))
+
+                elif self._idxType == 'ADX':
+                    _weights_sdf = pd.DataFrame(self.portfolio)
+                    _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
+                    _adx=Portfolio.calc_adx(
+                        ror_data=_ror_data,
+                        value_column=kwargs["LOGCOLNAME"],
+                        weights=_weights_arr,
+                        **kwargs,
+                    )
+                    self._data=_adx
+                    self._idxValue = 1.0
+                else:
+                    raise AttributeError("Unrecognized index type %s or something was wrong"
+                                         % self._idxType)
+
+                logger.info("%s computed index value for %s = %d"
+                            % (__s_fn_id__,self._idxType,self._idxValue))
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._idxValue
+        
+        return index_wrapper
+
+    def ror(func):
+        
+        @functools.wraps(func)
+        def ror_wrapper(self,portfolio,date,index_type,**kwargs):
+            """
+            Description:
+                wrapper function to compute the ROR for the given data
+            Attributes:
+                same as get_rsi
+            Returns:
+                self._data (DataFrame) with additional ror columns
+            """
+            
+            __s_fn_id__ = "function <ror_wrapper>"
+#             _pos_trend=None
+#             _neg_trend=None
+
+            try:
+                _mcap_data = func(self,portfolio,date,index_type,**kwargs)
+
+                if "PREVALCOLNAME" not in kwargs.keys(): 
+                    kwargs["PREVALCOLNAME"] = 'mcap_prev_val'
+                if "DIFFCOLNAME" not in kwargs.keys():
+                    kwargs["DIFFCOLNAME"] = 'mcap_diff'
+                if "LOGCOLNAME" not in kwargs.keys():
+                    kwargs["LOGCOLNAME"] = 'log_ror'
+
+                _mcap_log_ror, _log_col = clsMPT.get_log_ror(
+                    data=_mcap_data,
+                    num_col_name='mcap_value',
+                    part_column ='asset_name',
+                    **kwargs,
+                )
+                ''' drop the null values '''
+                _mcap_log_ror.na.drop(subset=[kwargs["LOGCOLNAME"]])
+
+                if _mcap_log_ror.count() > 0:
+                    self._data = _mcap_log_ror
+                    logger.debug("computed ROR for column: mcap_value added %s column with %d rows"
+                                 ,_log_col,self._data.count())
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._data
+        
+        return ror_wrapper
+    
+    @index
+    @ror
+    def get_index(
+#     def get_rsi(
+        self,
+        portfolio:list=[],
+        date:date=date.today(),
+        index_type:str='RSI',
+        **kwargs,
+    ) -> DataFrame:
+        """
+        Description:
+            Calculates the Relative Strength Index (RSI). It is a momentum estimateion,
+            which is the speed and magnitude of the price change. The index will 
+            provide a value between 0 and 1 to decide whether it is overvalued (>= 0.7)
+            or under valued (<0.7). The returned data will provide a time series
+            of the oscilator. It also indicates the trend reversal (uptrend or downtrend).
+            Thereby, indicating when to rebalance; i.e. buy/sell.
+        Attributes:
+            portfolio (list) containing the a dictionary of the 
+                _id (ObjectId)  - unique identifier
+                date (timestamp)- of the asset evaluation date 
+                asset (str)     - defining the name of the asset
+                weight (flaot64)- propotion of the asset to the portfolio
+                ror (float64)   - logarithmic ratio of return, relative to previous date
+                value (float64) - the mcap value of the asset for that date
+            kwargs:
+                DATETIMEATTR (str)- defines the column name to use in SMA
+                WINLENGTH (str)   - defines the window length; typically 14 days
+                WINUNIT (str)     - defines the window length is DAY, WEEK, MINUTE, HOUR
+                RSITYPE (str)     - STEPONE or STEPTWO first or second step calculation
+        returns:
+            self._data (DataFrame) comprising the T-day timeseries that defines the RSI
+        """
+
+        __s_fn_id__ = "function <get_rsi>"
+
+        __def_table_name__ = ''
+        __def_mcap_val_limit__ = 10000
+        __def_dt_attr__ = "mcap_date"
+        __def_win_len__ = 14
+        __def_len_unit__= "DAY"
+
+        try:
+            ''' confirm portfolio data '''
+            if len(portfolio)<=0:
+                raise AttributeError("Cannot use an empty portfolio to compute RSI")
+            _dates_list = [x['date'].split('T')[0] for x in portfolio]
+            if str(date) not in _dates_list:
+                raise AttributeError("Invalid date %s not in any portfolio dates %s"
+                                     % (str(date),str(_dates_list)))
+            if len(portfolio)<=0:
+                raise AttributeError("Invalid portfolio: %s"
+                                     %(str(portfolio)))
+            self.portfolio=portfolio
+            if index_type.upper() not in self._idxTypeList:
+                raise AttributeError("Invalid index_type: %s; must be in %s"
+                                     %(index_type,str(self._idxTypeList)))
+            self._idxType = index_type.upper()
+
+            if "MCAPLIMIT" not in kwargs.keys():
+                kwargs["MCAPLIMIT"]=__def_mcap_val_limit__
+            ''' estanlish the window length and unit '''
+            if "DATETIMEATTR" not in kwargs.keys():
+                kwargs["DATETIMEATTR"]=__def_dt_attr__
+            if "WINLENGTH" not in kwargs.keys():
+                kwargs["WINLENGTH"]=__def_win_len__
+            if "WINUNIT" not in kwargs.keys():
+                kwargs["WINUNIT"]=__def_len_unit__
+            if "RSITYPE" not in kwargs.keys() or \
+                kwargs["RSITYPE"].upper() not in ['STEPONE','STEPTWO']:
+                kwargs["RSITYPE"] = 'STEPTWO'
+
+            ''' retrieve mcap log ror for each asset in portfolio for the window length '''
+            _assets_in = ','.join(["'{}'".format(x['asset']) for x in portfolio])
+            _to_date = str(date)
+            ''' get for window length + 1 day '''
+            _from_date = str(date - timedelta(days=kwargs["WINLENGTH"]))
+            _mcap_upper = kwargs["MCAPLIMIT"]
+            _query = "select * from warehouse.mcap_past "+\
+                    f"where mcap_date >= '{_from_date}' and mcap_date <= '{_to_date}' "+\
+                    f"and asset_name in ({_assets_in}) "+\
+                    f"and mcap_value > {_mcap_upper}"
+
+            mcap_sdf = clsMPT.read_n_clean_mcap(query=_query,**kwargs)
+            if mcap_sdf.count() > 0:
+                self._data = mcap_sdf
+                logger.debug("%s loaded %d rows and %d columns for %s computation"
+                             ,__s_fn_id__,self._data.count()
+                             ,len(self._data.columns),index_type.upper())
+            else:
+                raise ValueError("No data portfolio asset data received for query %s: " % _query)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+
+    ''' Function --- RELATIVE STRENGTH INDEX ---
+
+            TODO: (i) verify weights shape, if not same as dataframe create all 1.0 array
+                 (ii) if asset_name and value (rorO column not specified in kwargs; try
+                    to find the first column with float values
+                (iii) do both step 1 and step 2 RSI caculations
+            author: <samana.thetha@gmail.com>
+    '''
+
+    @staticmethod
+    def calc_rsi(
+        ror_data:DataFrame=None,
+        value_column:str="log_ror",
+        weights:np.ndarray=None,
+        **kwargs,
+    ) -> float:
+
+        __s_fn_id__ = "function <calc_rsi>"
+
+        try:
+            if ror_data.count() <=0:
+                raise AttributeError("Cannot compute RSI with empty dataframe")
+            if "".join(value_column.strip())=="" or \
+                value_column not in ror_data.columns or \
+                ror_data.select(F.col(value_column)).dtypes[0][1]=='string':
+                raise AttributeError("A valid numeric column from %s required" % ror_data.dtypes)
+
+            _pos_sdf = ror_data.groupBy("asset_name")\
+                            .agg(\
+                                 F.sum(F.when(F.col(kwargs["LOGCOLNAME"])>0,\
+                                              F.col(kwargs["LOGCOLNAME"])))\
+                                 .alias('pos_col')).sort('asset_name')
+
+            _neg_sdf = ror_data.groupBy("asset_name")\
+                            .agg(\
+                                 F.sum(F.when(F.col(kwargs["LOGCOLNAME"])<=0,\
+                                              F.col(kwargs["LOGCOLNAME"])))\
+                                 .alias('neg_col')).sort('asset_name')
+
+            _pos_arr=_pos_sdf.toPandas()['pos_col'].to_numpy()
+            _neg_arr=_neg_sdf.toPandas()['neg_col'].to_numpy()
+            _pos = np.matmul(_pos_arr,weights)
+            _neg = np.matmul(_neg_arr,weights)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return 1/(1+(_neg/_pos))
+
+
+    ''' Function --- ADJUSTED DIRECTIONAL INDEX ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+    @staticmethod
+    def calc_adx(
+        ror_data:DataFrame=None,
+        value_column:str="log_ror",
+        weights:np.ndarray=None,
+        **kwargs,
+    ) -> DataFrame:
+        """
+        Description:
+        Attributes:
+        Returns:
+        """
+
+        try:
+            if ror_data.count() <=0:
+                raise AttributeError("Cannot compute RSI with empty dataframe")
+            if "".join(value_column.strip())=="" or \
+                value_column not in ror_data.columns or \
+                ror_data.select(F.col(value_column)).dtypes[0][1]=='string':
+                raise AttributeError("A valid numeric column from %s required" % ror_data.dtypes)
+
+            dm_df=ror_data.toPandas()
+            ''' Positive Directional Movement --> log_ROR <= 1; else set to 0 '''
+            dm_df['+DM']=dm_df[value_column]
+            dm_df['+DM']=np.where(dm_df['+DM'] <= 0, dm_df['+DM'].abs(), 0)
+            ''' Negative Directional Movement --> log_ROR > 1; else set to 0 '''
+            dm_df['-DM']=dm_df[value_column]
+            dm_df['-DM']=np.where(dm_df['-DM'] > 0, dm_df['-DM'].abs(), 0)
+            ''' Smoothed values '''
+
+            _pos_dm_df_smsum = clsStats.simple_moving_stats(
+                column="+DM",
+                stat_op="sum",
+                data=dm_df,
+                **kwargs,
+            )
+#             _pos_dm_df_smavg = clsStats.simple_moving_stats(
+#                 column="+DM",
+#                 stat_op="avg",
+#                 data=dm_df,
+#                 **kwargs,
+#             )
+
+#             _neg_dm_df_smsum = clsStats.simple_moving_stats(
+#                 column="+DM",
+#                 stat_op="sum",
+#                 data=dm_df,
+#                 **kwargs,
+#             )
+#             _neg_dm_df_smavg = clsStats.simple_moving_stats(
+#                 column="+DM",
+#                 stat_op="avg",
+#                 data=dm_df,
+#                 **kwargs,
+#             )
+
+
+#             ''' The Positive Index index and Negative Index index '''
+#             for col in adx_df.filter(items=['+DM','-DM']).columns:
+#                 adx_df['shift_'+col]=adx_df[col].shift(1, axis = 0)
+#             adx_df[adx_df.filter(like='DM').columns]=adx_df[adx_df.filter(like='DM').columns].fillna(value=0)
+#             adx_df['smooth+DM']=(adx_df['simp_move_sum_+DM'].subtract(adx_df['simp_move_avg_+DM'])).add(adx_df['shift_+DM'])
+#             adx_df['smooth-DM']=(adx_df['simp_move_sum_-DM'].subtract(adx_df['simp_move_avg_-DM'])).add(adx_df['shift_-DM'])
+#             ''' ADX index: Final Calculations '''
+#             adx_df['+DI']=adx_df['simp_move_avg_+DM'].div(adx_df['smooth+DM'])
+#             adx_df['-DI']=adx_df['simp_move_avg_-DM'].div(adx_df['smooth-DM'])
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return _pos_dm_df_sms

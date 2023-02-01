@@ -75,7 +75,7 @@ class RollingStats():
         self.__desc__ = desc
         __s_fn_id__ = "__init__"
         
-        self._spark = None   # spark session property
+        self._session = None   # spark session property
         self._data = None    # dataframe property
         self._startDT = None
         self._endDT = None
@@ -113,11 +113,11 @@ class RollingStats():
             logger.info("%s %s",self.__name__,self.__package__)
 
             ''' initialize util class to use common functions '''
-#             from utils.modules.etl.load import sparkwls as spark
-#             clsSparkWL = spark.SparkWorkLoads(desc=self.__desc__)
+            from utils.modules.lib.spark import execSession as session
+            clsSpark = session.Spawn(desc=self.__desc__)
 #             if clsSparkWL.session is None:
 #                 clsSparkWL.session = {}
-#             self.spark = clsSparkWL.session
+#             self.session = clsSparkWL.session
 
             ''' Set the utils root directory '''
             self.pckgDir = config.get("CWDS",self.__package__)
@@ -156,52 +156,59 @@ class RollingStats():
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
     @property
-    def spark(self):
+    def session(self):
         """
         Description:
 
         Atributes:
 
         Returns:
-            self._spark (SparkSession)
+            self._session (SparkSession)
         """
+
+        __s_fn_id__ = "function <@property session>"
+
         try:
-            if self._spark is None:
-                from utils.modules.etl.load import sparkwls as spark
-                clsSparkWL = spark.SparkWorkLoads(desc=self.__desc__)
-                if clsSparkWL.session is None:
-                    clsSparkWL.session = {}
-                self._spark = clsSparkWL.session
+            if self._session is None:
+                clsSpark.session={}
+                
+#                 from utils.modules.etl.load import sparkDBwls as spark
+#                 clsSparkWL = spark.SparkWorkLoads(desc=self.__desc__)
+#                 if clsSparkWL.session is None:
+#                     clsSparkWL.session = {}
+                self._session = clsSpark.session
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
-        return self._spark
+        return self._session
 
-    @spark.setter
-    def spark(self,session):
+    @session.setter
+    def session(self,session):
         """
         Description:
 
         Atributes:
 
         Returns:
-            self._spark (SparkSession)
+            self._session (SparkSession)
         """
+        
+        __s_fn_id__ = "function <@session.setter>"
 
         try:
             ''' TODO validate if active spark session '''
             if not session is None:
-                self._spark = session
+                self._session = session
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
-        return self._spark
+        return self._session
 
     ''' --- DATA --- '''
     @property
@@ -214,6 +221,19 @@ class RollingStats():
         Returns:
             self._data (DataFrame)
         """
+        
+        __s_fn_id__ = "function <@propert data>"
+        
+        try:
+            if self._data is None:
+                raise ValueError("Data is of NoneType; cannot be used in any %s computations"
+                                 %self.__name__)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
         return self._data
 
     @data.setter
@@ -527,7 +547,7 @@ class RollingStats():
                     data,     
                     **kwargs
                 )
-                if stat_op.upper()=='MEAN':
+                if stat_op.upper() in ['MEAN','AVG','AVERAGE']:
                     self._data = self.data. \
                                     withColumn(_roll_col_name, F.mean(column). \
                                                over(self.windowSpec))

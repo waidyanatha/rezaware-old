@@ -1,0 +1,24 @@
+## MongoDB shell scripts for creating databases, users, and collections ##
+##
+## ----- ASSET API CATALOG -----
+##
+## 1) create database
+##
+
+use admin;
+use tip-daily-mpt;
+
+##
+## 2) create a user and grant read/write roles
+##
+
+db.createUser(
+  {
+    user: "farmraider",
+    pwd: "spirittribe",
+    roles: [ { role: "readWrite", db: "tip-daily-mpt" } ]
+  }
+);
+
+# 3) create about db collection
+db.about.insertOne({"name":"tip-daily-mpt","desc":"stores daily weighted asset portfolio"})

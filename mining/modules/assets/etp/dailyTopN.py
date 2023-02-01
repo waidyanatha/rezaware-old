@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 ''' Initialize with default environment variables '''
-__name__ = "logReturns"
+__name__ = "dailyTopN"
 __package__ = "etp"
 __module__ = "assets"
 __app__ = "mining"
@@ -39,7 +39,7 @@ except Exception as e:
     
 '''
 
-class RatioOfReturns():
+class WeightedPortfolio():
 
     ''' Function
             name: __init__
@@ -100,30 +100,15 @@ class RatioOfReturns():
             logger.info('########################################################')
             logger.info("%s Class",self.__name__)
 
-            ''' import file work load utils to read and write data '''
+            ''' import spark database work load utils to read and write data '''
             from utils.modules.etl.load import sparkDBwls as sparkDB
             clsSDB = sparkDB.SQLWorkLoads(desc=self.__desc__)
+            ''' import spark clean-n-rich work load utils to transform the data '''
             from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
             clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
+            ''' import mongo work load utils to read and write data '''
             from utils.modules.etl.load import sparkNoSQLwls as nosql
             clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
-            from utils.modules.ml.timeseries import rollingstats as stats
-            clsStats = stats.RollingStats(desc=self.__desc__)
-#             clsRW.storeMode = pkgConf.get("DATASTORE","MODE")
-#             clsRW.storeRoot = pkgConf.get("DATASTORE","ROOT")
-#             logger.info("Files RW mode %s with root %s set",clsRW.storeMode,clsRW.storeRoot)
-#             ''' set the package specific storage path '''
-#             self.storePath = os.path.join(
-#                 self.__app__,
-#                 "data/",
-#                 self.__module__,
-#                 self.__package__,
-#             )
-#             logger.info("%s package files stored in %s",self.__package__,self.storePath)
-
-#             ''' import mongo work load utils to read and write data '''
-#             from utils.modules.etl.load import noSQLwls as nosql
-#             clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
 
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
@@ -140,7 +125,6 @@ class RatioOfReturns():
             print(traceback.format_exc())
 
         return None
-
 
 
     ''' Function --- DATA ---
@@ -528,7 +512,7 @@ class RatioOfReturns():
                 kwargs['DIFFCOLNAME']=__diff_prefix__+column
             else:
                 _diff_col_name=kwargs['DIFFCOLNAME']
-            self._data, _prev_day_num_col, _diff_col_name=RatioOfReturns.prev_val_diff(
+            self._data, _prev_day_num_col, _diff_col_name=WeightedPortfolio.prev_val_diff(
                 data=data.sort('mcap_date',num_col_name),   # sort by date get previou date value
                 num_column=num_col_name,   #'mcap_value',
                 part_column=part_column, #'asset_name',
@@ -719,14 +703,7 @@ class RatioOfReturns():
         try:
             if data is None or data.count()==0:
                 raise AttributeError("DataFrame cannot be empty")
-#             if date_col not in data.columns or \
-#                 data.select(F.col(date_col)).dtypes[0][1] not in ['date','timestamp']:
-#                 raise AttributeError("%s is invalid, select a numeric column from %s"
-#                                      % (date_col,data.dtypes))
-#             if val_col not in data.columns or \
-#                 data.select(F.col(val_col)).dtypes[0][1] == 'string':
-#                 raise AttributeError("%s is invalid, select a numeric column from %s"
-#                                      % (val_col,data.dtypes))
+
             if "RORCOLUMN" not in cols_dict.keys():
                 cols_dict['RORCOLUMN']=__ror_col_name__
             if data.select(F.col(cols_dict['RORCOLUMN'])).dtypes[0][1] == 'string':
@@ -739,9 +716,7 @@ class RatioOfReturns():
                                      % (data.count(),cols_dict['RORCOLUMN']))
             logger.debug("Retrieved a valid dataframe with %d of %d rows from orignal dataframe"
                          ,_valid_asset_data.count(),data.count())
-#             if name_col not in data.columns:
-#                 raise AttributeError("%s is an invalid asset name column,; must be string colum from %s"
-#                                      % (name_col,data.dtypes))
+
             ''' if not defined then add the column names to dict '''
             if "NAMECOLUMN" not in cols_dict.keys():
                 cols_dict['NAMECOLUMN']=__coin_col_name__
@@ -830,15 +805,15 @@ class RatioOfReturns():
                 _mpt_coll_prefix = __destin_coll_prefix__
                 if "COLLPREFIX" in kwargs.keys():
                     _mpt_coll_prefix = kwargs["COLLPREFIX"]
-    #                 else:
-    #                     _destin_coll = '.'.join(["weigted_assets_",.strftime('%Y-%m-%d'])
+
                 ''' write portfolio to collection '''
                 _colls_list=[]
                 _uniq_dates = set([x['date'] for x in _data])
                 for _date in _uniq_dates:
                     _mpt_for_date = list(filter(lambda d: d['date'] == _date, _data))
-#                     _destin_coll = '.'.join([_mpt_coll_prefix,_date.strftime('%Y-%m-%d')])
-                    _destin_coll = '.'.join([_mpt_coll_prefix,_date.split('T')[0]])
+                    _destin_coll = '.'.join([
+                        _mpt_coll_prefix,"top"+str(len(_mpt_for_date)),_date.split('T')[0]
+                    ])
                     _mpt_coll = clsNoSQL.write_documents(
                         db_name=_destin_db,
                         db_coll=_destin_coll,
