@@ -17,6 +17,7 @@ try:
     import logging
     import traceback
     import functools
+    from itertools import chain
     ''' function specific python packages '''
     import pandas as pd
     import numpy as np
@@ -41,16 +42,18 @@ except Exception as e:
 
 class Portfolio():
 
-    ''' Function
-            name: __init__
-            parameters:
-
-            procedure: Initialize the class
-            return None
+    ''' --- INIT CLASS ---
 
             author: <samana.thetha@gmail.com>
     '''
     def __init__(self, desc : str="mcap risk, strength, & adjusted price index calculation", **kwargs):
+        """
+        Description:
+            Intantiate -
+            * the class and class properties
+            * associated and extended utils and mining etp classes.
+            * logger for module/package
+        """
 
         self.__name__ = __name__
         self.__package__ = __package__
@@ -130,7 +133,7 @@ class Portfolio():
 
         return None
 
-    ''' Function --- DATA ---
+    ''' --- DATA CLASS PROPERTY---
 
             author: <samana.thetha@gmail.com>
     '''
@@ -175,9 +178,9 @@ class Portfolio():
 
         return self._data
 
-    ''' Function --- PORTFOLIO ---
+    ''' Function --- PORTFOLIO CLASS PROPERTIES ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+            author: <samana.thetha@gmail.com>
     '''
     @property
     def portfolio(self) -> list:
@@ -229,7 +232,95 @@ class Portfolio():
         return self._portfolio
 
 
-    ''' Function --- index PROPERTY ATTR ---
+    ''' --- GET PORTFOLIO ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+
+    def get_portfolio(
+        self,
+        db_name:str="",
+        db_coll:list=[],
+        coll_date:date=date.today(),
+        **kwargs,
+    ) -> list:
+        """
+        Description:
+            reads the portfolio from the MongoDB database. If collection is given
+            then read directly from the collection; else read all collections with
+            a specific date postfix.
+        Attributes:
+            db_name (str) specifies the name of the database; else use default value
+            db_coll (str) specifies the collection name; else default to date postfix
+            mpt_date (date) specifies the date of the portfolio
+        Returns (list) self._portfolio is a list of dictionaries
+        """
+
+        __s_fn_id__ = "function <get_portfolio>"
+
+        __def_db_type__ ='MongoDB'
+        __def_db_name__ = "tip-daily-mpt"
+#         __def_coll_pref__ = "mpt"
+        
+        _mpts = []
+        _db_coll_list = []
+
+        try:
+            ''' confirm and set database qualifiers '''
+            if "".join(db_name.strip())=="":
+                _db_name = __def_db_name__
+            else:
+                _db_name = db_name
+            if "DBTYPE" not in kwargs.keys():
+                kwargs['DBTYPE']=__def_db_type__
+            if "DBAUTHSOURCE" not in kwargs.keys():
+                kwargs['DBAUTHSOURCE']=_db_name
+
+            ''' make the connection '''
+            clsNoSQL.connect=kwargs
+            ''' confirm database exists '''
+            if not _db_name in clsNoSQL.connect.list_database_names():
+                raise RuntimeError("%s does not exist in %s",_db_name,clsNoSQL.dbType)
+            clsNoSQL.dbName=_db_name
+            _all_colls = clsNoSQL.collections
+
+            ''' confirm and set collection list '''
+            if len(db_coll)>0:
+                ''' check if listed collections exist '''
+                for _coll in db_coll:
+                    if _coll not in _all_colls:
+                        raise AttributeError("Invalid collection name: %s was not found in %s" 
+                                             % (_coll,_all_colls))
+            elif coll_date <= date.today():
+                clsNoSQL.collections={"HASINNAME":str(coll_date)}
+                db_coll=clsNoSQL.collections
+                ''' get all collections containing date postfix '''
+            else:
+                raise AttributeError("Either a db_coll list or mpt_date must be specified")
+
+            ''' read all collections into a list '''
+            _mpts = clsNoSQL.read_documents(
+                as_type="LIST",
+                db_name="",
+                db_coll=db_coll,
+                doc_find={},
+                **kwargs)
+            if len(_mpts)>0:
+                self._portfolio = _mpts
+                logger.info("Loaded %d portfolios",len(self._portfolio))
+            else:
+                raise ValueError("No portfolios found for collections: %s in %s %s"
+                                 % (db_coll,clsNoSQL.dbType,clsNoSQL.dbName))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._portfolio
+
+
+    ''' --- INDEX CLASS PROPERTIES ---
 
             author: <samana.thetha@gmail.com>
     '''
@@ -323,95 +414,95 @@ class Portfolio():
 
         return self._idxType
 
-    ''' Function --- GET PORTFOLIO ---
+#     ''' --- GET PORTFOLIO ---
 
-            author: <samana.thetha@gmail.com>
-    '''
+#             author: <samana.thetha@gmail.com>
+#     '''
 
-    def get_portfolio(
-        self,
-        db_name:str="",
-        db_coll:list=[],
-        coll_date:date=date.today(),
-        **kwargs,
-    ) -> list:
-        """
-        Description:
-            reads the portfolio from the MongoDB database. If collection is given
-            then read directly from the collection; else read all collections with
-            a specific date postfix.
-        Attributes:
-            db_name (str) specifies the name of the database; else use default value
-            db_coll (str) specifies the collection name; else default to date postfix
-            mpt_date (date) specifies the date of the portfolio
-        Returns (list) self._portfolio is a list of dictionaries
-        """
+#     def get_portfolio(
+#         self,
+#         db_name:str="",
+#         db_coll:list=[],
+#         coll_date:date=date.today(),
+#         **kwargs,
+#     ) -> list:
+#         """
+#         Description:
+#             reads the portfolio from the MongoDB database. If collection is given
+#             then read directly from the collection; else read all collections with
+#             a specific date postfix.
+#         Attributes:
+#             db_name (str) specifies the name of the database; else use default value
+#             db_coll (str) specifies the collection name; else default to date postfix
+#             mpt_date (date) specifies the date of the portfolio
+#         Returns (list) self._portfolio is a list of dictionaries
+#         """
 
-        __s_fn_id__ = "function <get_portfolio>"
+#         __s_fn_id__ = "function <get_portfolio>"
 
-        __def_db_type__ ='MongoDB'
-        __def_db_name__ = "tip-daily-mpt"
-#         __def_coll_pref__ = "mpt"
+#         __def_db_type__ ='MongoDB'
+#         __def_db_name__ = "tip-daily-mpt"
+# #         __def_coll_pref__ = "mpt"
         
-        _mpts = []
-        _db_coll_list = []
+#         _mpts = []
+#         _db_coll_list = []
 
-        try:
-            ''' confirm and set database qualifiers '''
-            if "".join(db_name.strip())=="":
-                _db_name = __def_db_name__
-            else:
-                _db_name = db_name
-            if "DBTYPE" not in kwargs.keys():
-                kwargs['DBTYPE']=__def_db_type__
-            if "DBAUTHSOURCE" not in kwargs.keys():
-                kwargs['DBAUTHSOURCE']=_db_name
+#         try:
+#             ''' confirm and set database qualifiers '''
+#             if "".join(db_name.strip())=="":
+#                 _db_name = __def_db_name__
+#             else:
+#                 _db_name = db_name
+#             if "DBTYPE" not in kwargs.keys():
+#                 kwargs['DBTYPE']=__def_db_type__
+#             if "DBAUTHSOURCE" not in kwargs.keys():
+#                 kwargs['DBAUTHSOURCE']=_db_name
 
-            ''' make the connection '''
-            clsNoSQL.connect=kwargs
-            ''' confirm database exists '''
-            if not _db_name in clsNoSQL.connect.list_database_names():
-                raise RuntimeError("%s does not exist in %s",_db_name,clsNoSQL.dbType)
-            clsNoSQL.dbName=_db_name
-            _all_colls = clsNoSQL.collections
+#             ''' make the connection '''
+#             clsNoSQL.connect=kwargs
+#             ''' confirm database exists '''
+#             if not _db_name in clsNoSQL.connect.list_database_names():
+#                 raise RuntimeError("%s does not exist in %s",_db_name,clsNoSQL.dbType)
+#             clsNoSQL.dbName=_db_name
+#             _all_colls = clsNoSQL.collections
 
-            ''' confirm and set collection list '''
-            if len(db_coll)>0:
-                ''' check if listed collections exist '''
-                for _coll in db_coll:
-                    if _coll not in _all_colls:
-                        raise AttributeError("Invalid collection name: %s was not found in %s" 
-                                             % (_coll,_all_colls))
-            elif coll_date <= date.today():
-                clsNoSQL.collections={"HASINNAME":str(coll_date)}
-                db_coll=clsNoSQL.collections
-                ''' get all collections containing date postfix '''
-            else:
-                raise AttributeError("Either a db_coll list or mpt_date must be specified")
+#             ''' confirm and set collection list '''
+#             if len(db_coll)>0:
+#                 ''' check if listed collections exist '''
+#                 for _coll in db_coll:
+#                     if _coll not in _all_colls:
+#                         raise AttributeError("Invalid collection name: %s was not found in %s" 
+#                                              % (_coll,_all_colls))
+#             elif coll_date <= date.today():
+#                 clsNoSQL.collections={"HASINNAME":str(coll_date)}
+#                 db_coll=clsNoSQL.collections
+#                 ''' get all collections containing date postfix '''
+#             else:
+#                 raise AttributeError("Either a db_coll list or mpt_date must be specified")
 
-            ''' read all collections into a list '''
-            _mpts = clsNoSQL.read_documents(
-                as_type="LIST",
-                db_name="",
-                db_coll=db_coll,
-                doc_find={},
-                **kwargs)
-            if len(_mpts)>0:
-                self._portfolio = _mpts
-                logger.info("Loaded %d portfolios",len(self._portfolio))
-            else:
-                raise ValueError("No portfolios found for collections: %s in %s %s"
-                                 % (db_coll,clsNoSQL.dbType,clsNoSQL.dbName))
+#             ''' read all collections into a list '''
+#             _mpts = clsNoSQL.read_documents(
+#                 as_type="LIST",
+#                 db_name="",
+#                 db_coll=db_coll,
+#                 doc_find={},
+#                 **kwargs)
+#             if len(_mpts)>0:
+#                 self._portfolio = _mpts
+#                 logger.info("Loaded %d portfolios",len(self._portfolio))
+#             else:
+#                 raise ValueError("No portfolios found for collections: %s in %s %s"
+#                                  % (db_coll,clsNoSQL.dbType,clsNoSQL.dbName))
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
 
-        return self._portfolio
+#         return self._portfolio
 
 
-    ''' Function --- RELATIVE STRENGTH INDEX ---
+    ''' --- CAL PERFORMANCE INDECIES ---
 
             author: <samana.thetha@gmail.com>
     '''
@@ -437,17 +528,19 @@ class Portfolio():
             try:
                 _ror_data = func(self,portfolio,date,index_type,**kwargs)
 
-                _rsi=None
                 if self._idxType == 'RSI':
                     _weights_sdf = pd.DataFrame(self.portfolio)
                     _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
+                    _rsi=-1000.0
                     _rsi=Portfolio.calc_rsi(
                         ror_data=_ror_data,
-                        value_column=kwargs["LOGCOLNAME"],
-                        weights=_weights_arr,
+                        val_col=kwargs["LOGCOLNAME"],
+                        part_col=kwargs["PARTCOLNAME"],
+                        weights_sdf=_weights_sdf,
+#                         weights=_weights_arr,
                         **kwargs,
                     )
-                    if _rsi is not None:
+                    if _rsi <= 1.0 and _rsi >= 0:
                         self._idxValue = _rsi
                     else:
                         raise ValueError("%s Something went wrong computing %s"
@@ -455,20 +548,22 @@ class Portfolio():
 
                 elif self._idxType == 'ADX':
                     _weights_sdf = pd.DataFrame(self.portfolio)
-                    _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
-                    _adx=Portfolio.calc_adx(
+#                     _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
+                    _adx=None
+                    _adx, _adx_sdf = Portfolio.calc_adx(
                         ror_data=_ror_data,
-                        value_column=kwargs["LOGCOLNAME"],
-                        weights=_weights_arr,
+                        val_col=kwargs["LOGCOLNAME"],
+                        part_col=kwargs["PARTCOLNAME"],
+                        weights_list=self.portfolio,
                         **kwargs,
                     )
-                    self._data=_adx
-                    self._idxValue = 1.0
+                    self._data=_adx_sdf
+                    self._idxValue = _adx
                 else:
                     raise AttributeError("Unrecognized index type %s or something was wrong"
                                          % self._idxType)
 
-                logger.info("%s computed index value for %s = %d"
+                logger.info("%s computed index value for %s = %0.4f"
                             % (__s_fn_id__,self._idxType,self._idxValue))
 
             except Exception as err:
@@ -500,6 +595,10 @@ class Portfolio():
             try:
                 _mcap_data = func(self,portfolio,date,index_type,**kwargs)
 
+                if "VALCOLNAME" not in kwargs.keys():
+                    kwargs["VALCOLNAME"] = 'mcap_value'
+                if "PARTCOLNAME" not in kwargs.keys():
+                    kwargs["PARTCOLNAME"] = 'asset_name'
                 if "PREVALCOLNAME" not in kwargs.keys(): 
                     kwargs["PREVALCOLNAME"] = 'mcap_prev_val'
                 if "DIFFCOLNAME" not in kwargs.keys():
@@ -509,8 +608,8 @@ class Portfolio():
 
                 _mcap_log_ror, _log_col = clsMPT.get_log_ror(
                     data=_mcap_data,
-                    num_col_name='mcap_value',
-                    part_column ='asset_name',
+                    num_col_name=kwargs["VALCOLNAME"],
+                    part_column =kwargs["PARTCOLNAME"],
                     **kwargs,
                 )
                 ''' drop the null values '''
@@ -565,7 +664,7 @@ class Portfolio():
             self._data (DataFrame) comprising the T-day timeseries that defines the RSI
         """
 
-        __s_fn_id__ = "function <get_rsi>"
+        __s_fn_id__ = "function <get_index>"
 
         __def_table_name__ = ''
         __def_mcap_val_limit__ = 10000
@@ -631,132 +730,219 @@ class Portfolio():
         return self._data
 
 
-    ''' Function --- RELATIVE STRENGTH INDEX ---
+    ''' --- RELATIVE STRENGTH INDEX ---
 
             TODO: (i) verify weights shape, if not same as dataframe create all 1.0 array
                  (ii) if asset_name and value (rorO column not specified in kwargs; try
                     to find the first column with float values
                 (iii) do both step 1 and step 2 RSI caculations
+
             author: <samana.thetha@gmail.com>
     '''
 
     @staticmethod
     def calc_rsi(
         ror_data:DataFrame=None,
-        value_column:str="log_ror",
-        weights:np.ndarray=None,
+        val_col:str="log_ror",
+        part_col:str="asset_name",
+#         weights:np.ndarray=None,
+        weights_sdf:pd.DataFrame=None,
         **kwargs,
     ) -> float:
 
-        __s_fn_id__ = "function <calc_rsi>"
+        __s_fn_id__ = "@staticmethod <calc_rsi>"
 
         try:
             if ror_data.count() <=0:
                 raise AttributeError("Cannot compute RSI with empty dataframe")
-            if "".join(value_column.strip())=="" or \
-                value_column not in ror_data.columns or \
-                ror_data.select(F.col(value_column)).dtypes[0][1]=='string':
+            if "".join(val_col.strip())=="" or \
+                val_col not in ror_data.columns or \
+                ror_data.select(F.col(val_col)).dtypes[0][1]=='string':
                 raise AttributeError("A valid numeric column from %s required" % ror_data.dtypes)
 
-            _pos_sdf = ror_data.groupBy("asset_name")\
+            _pos_sdf = ror_data.groupBy(kwargs['PARTCOLNAME'])\
                             .agg(\
                                  F.sum(F.when(F.col(kwargs["LOGCOLNAME"])>0,\
                                               F.col(kwargs["LOGCOLNAME"])))\
-                                 .alias('pos_col')).sort('asset_name')
+                                 .alias('pos_col')).sort(kwargs['PARTCOLNAME'])
 
-            _neg_sdf = ror_data.groupBy("asset_name")\
+            _neg_sdf = ror_data.groupBy(kwargs['PARTCOLNAME'])\
                             .agg(\
                                  F.sum(F.when(F.col(kwargs["LOGCOLNAME"])<=0,\
                                               F.col(kwargs["LOGCOLNAME"])))\
-                                 .alias('neg_col')).sort('asset_name')
+                                 .alias('neg_col')).sort(kwargs['PARTCOLNAME'])
 
             _pos_arr=_pos_sdf.toPandas()['pos_col'].to_numpy()
             _neg_arr=_neg_sdf.toPandas()['neg_col'].to_numpy()
-            _pos = np.matmul(_pos_arr,weights)
-            _neg = np.matmul(_neg_arr,weights)
+
+#             _pos_arr=ror_data.toPandas()['pos_col'].to_numpy()
+#             _neg_arr=ror_data.toPandas()['neg_col'].to_numpy()
+            _weights_arr = weights_sdf['mcap.weight'].to_numpy()
+            print(_pos_arr)
+            print(_neg_arr)
+            print(_weights_arr)
+            _pos = np.matmul(_pos_arr,_weights_arr)
+            _neg = np.matmul(_neg_arr,_weights_arr)
+            print(type(_pos),type(_neg),_pos,_neg)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return 1/(1+(_neg/_pos))
+        return float(1/(1+abs(_neg/_pos)))
+#         return 1/(1+(F.abs(_neg/_pos)))
 
 
-    ''' Function --- ADJUSTED DIRECTIONAL INDEX ---
+    ''' --- ADJUSTED DIRECTIONAL INDEX ---
+    
+            TODO: replace pandas with pyspark
 
             author: <samana.thetha@gmail.com>
     '''
     @staticmethod
     def calc_adx(
         ror_data:DataFrame=None,
-        value_column:str="log_ror",
-        weights:np.ndarray=None,
+        val_col:str="log_ror",
+        part_col:str="asset_name",
+        weights_list:list=[],
         **kwargs,
-    ) -> DataFrame:
+    ) -> float:
         """
         Description:
+            Therefore, the ADX commonly includes three separate lines. These are used
+            to help assess whether a trade should be taken long or short, or if a trade
+            should be taken at all.
         Attributes:
         Returns:
         """
 
+        __s_fn_id__ = "@staticmethod <calc_adx>"
+
         try:
             if ror_data.count() <=0:
                 raise AttributeError("Cannot compute RSI with empty dataframe")
-            if "".join(value_column.strip())=="" or \
-                value_column not in ror_data.columns or \
-                ror_data.select(F.col(value_column)).dtypes[0][1]=='string':
+            if "".join(val_col.strip())=="" or \
+                val_col not in ror_data.columns or \
+                ror_data.select(F.col(val_col)).dtypes[0][1]=='string':
                 raise AttributeError("A valid numeric column from %s required" % ror_data.dtypes)
+            if "".join(part_col.strip())=="":
+                raise AttributeError("Invalid partition column, specify one from %s" % ror_data.dtypes)
+            _asset_count = ror_data.select(F.col(part_col)).distinct().count()
+            if len(weights_list) != _asset_count:
+                raise AttributeError("Dimension mismatching weights %d "+ \
+                                     "to that of distinct asset count %d"
+                                     % (len(weights_list),r_asset_count))
 
-            dm_df=ror_data.toPandas()
-            ''' Positive Directional Movement --> log_ROR <= 1; else set to 0 '''
-            dm_df['+DM']=dm_df[value_column]
-            dm_df['+DM']=np.where(dm_df['+DM'] <= 0, dm_df['+DM'].abs(), 0)
-            ''' Negative Directional Movement --> log_ROR > 1; else set to 0 '''
-            dm_df['-DM']=dm_df[value_column]
-            dm_df['-DM']=np.where(dm_df['-DM'] > 0, dm_df['-DM'].abs(), 0)
+#             if weights_sdf is None or weights_sdf.shape[0] != \
+#                                                 ror_data.select(F.col(part_col)).distinct().count():
+#                 raise AttributeError("Cannot use Non-type or dimension mismatching weights "+ \
+#                                      "%d dim array to that of %d"
+#                                      % (weights_sdf.shape[0],
+#                                         ror_data.select(F.col(part_col)).distinct().count()))
+                
+#             dm_df=ror_data.toPandas()
+#             ''' Positive Directional Movement --> log_ROR <= 1; else set to 0 '''
+#             dm_df['+DM']=dm_df[val_col]
+#             dm_df['+DM']=np.where(dm_df['+DM'] <= 0, dm_df['+DM'].abs(), 0)
+#             ''' Negative Directional Movement --> log_ROR > 1; else set to 0 '''
+#             dm_df['-DM']=dm_df[val_col]
+#             dm_df['-DM']=np.where(dm_df['-DM'] > 0, dm_df['-DM'].abs(), 0)
+#             logger.debug("Computed +DM with %d and -DM with %d rows"
+#                          ,(dm_df['+DM']!=0).sum()
+#                          ,(dm_df['-DM']).sum())
+
+            _dm_stat_sdf=None
+            _dm_stat_sdf = ror_data.withColumn("+DM",
+                                               F.when(F.col(val_col) > 0,
+                                                      F.abs(F.col(val_col)))
+                                               .otherwise(0))
+            _dm_stat_sdf = _dm_stat_sdf.withColumn("-DM",
+                                                   F.when(F.col(val_col) <= 0,
+                                                          F.abs(F.col(val_col)))
+                                                   .otherwise(0))
             ''' Smoothed values '''
-
-            _pos_dm_df_smsum = clsStats.simple_moving_stats(
-                column="+DM",
+            kwargs['RESULTCOL']='sm_sum_+DM'
+            _dm_stat_sdf = clsStats.simple_moving_stats(
+                num_col="+DM",
+                date_col="mcap_date",
+                part_col=part_col,
                 stat_op="sum",
-                data=dm_df,
+                data=_dm_stat_sdf,
                 **kwargs,
             )
-#             _pos_dm_df_smavg = clsStats.simple_moving_stats(
-#                 column="+DM",
-#                 stat_op="avg",
-#                 data=dm_df,
-#                 **kwargs,
-#             )
+            kwargs['RESULTCOL']='sm_avg_+DM'
+            _dm_stat_sdf = clsStats.simple_moving_stats(
+                num_col="+DM",
+                date_col="mcap_date",
+                part_col=part_col,
+                stat_op="avg",
+                data=_dm_stat_sdf,
+                **kwargs,
+            )
+            kwargs['RESULTCOL']='sm_sum_-DM'
+            _dm_stat_sdf = clsStats.simple_moving_stats(
+                num_col="-DM",
+                date_col="mcap_date",
+                part_col=part_col,
+                stat_op="sum",
+                data=_dm_stat_sdf,
+                **kwargs,
+            )
+            kwargs['RESULTCOL']='sm_avg_-DM'
+            _dm_stat_sdf = clsStats.simple_moving_stats(
+                num_col="-DM",
+                date_col="mcap_date",
+                part_col=part_col,
+                stat_op="avg",
+                data=_dm_stat_sdf,
+                **kwargs,
+            )
 
-#             _neg_dm_df_smsum = clsStats.simple_moving_stats(
-#                 column="+DM",
-#                 stat_op="sum",
-#                 data=dm_df,
-#                 **kwargs,
-#             )
-#             _neg_dm_df_smavg = clsStats.simple_moving_stats(
-#                 column="+DM",
-#                 stat_op="avg",
-#                 data=dm_df,
-#                 **kwargs,
-#             )
+            ''' shift +DM & -DM column by period=1 '''
+            _win = Window.partitionBy(F.col(part_col)).orderBy(F.col("mcap_date").cast('long'))
+            _dm_stat_sdf = _dm_stat_sdf.withColumn('shift_+DM', 
+                                                   F.lag(F.col('+DM'),offset=1,default=0)
+                                                   .over(_win))
+            _dm_stat_sdf = _dm_stat_sdf.withColumn('shift_-DM',
+                                                   F.lag(F.col('-DM'),offset=1,default=0)
+                                                   .over(_win))
+            ''' smoothen the data '''
+            _dm_stat_sdf = _dm_stat_sdf.withColumn('smooth_+DM',
+                                                   (F.col('sm_sum_+DM')
+                                                    -F.col('sm_avg_+DM')
+                                                    +F.col('shift_+DM')))
+            _dm_stat_sdf = _dm_stat_sdf.withColumn('smooth_-DM',
+                                                   (F.col('sm_sum_-DM')
+                                                    -F.col('sm_avg_-DM')
+                                                    +F.col('shift_-DM')))
+            ''' ADX index: Final Calculations '''
+            _dm_stat_sdf = _dm_stat_sdf.withColumn('+DI',(F.col('sm_avg_+DM')/F.col('smooth_+DM')))
+            _dm_stat_sdf = _dm_stat_sdf.withColumn('-DI',(F.col('sm_avg_-DM')/F.col('smooth_-DM')))
 
-
-#             ''' The Positive Index index and Negative Index index '''
-#             for col in adx_df.filter(items=['+DM','-DM']).columns:
-#                 adx_df['shift_'+col]=adx_df[col].shift(1, axis = 0)
-#             adx_df[adx_df.filter(like='DM').columns]=adx_df[adx_df.filter(like='DM').columns].fillna(value=0)
-#             adx_df['smooth+DM']=(adx_df['simp_move_sum_+DM'].subtract(adx_df['simp_move_avg_+DM'])).add(adx_df['shift_+DM'])
-#             adx_df['smooth-DM']=(adx_df['simp_move_sum_-DM'].subtract(adx_df['simp_move_avg_-DM'])).add(adx_df['shift_-DM'])
-#             ''' ADX index: Final Calculations '''
-#             adx_df['+DI']=adx_df['simp_move_avg_+DM'].div(adx_df['smooth+DM'])
-#             adx_df['-DI']=adx_df['simp_move_avg_-DM'].div(adx_df['smooth-DM'])
+            ''' augment asset specific weights to the dataframe '''
+            obj_map = {}
+            for _doc in weights_list:
+                obj_map[_doc['asset']]=_doc['mcap.weight']
+            mapping_expr = F.create_map([F.lit(x) for x in chain(*obj_map.items())])
+            df1 = _dm_stat_sdf.filter(F.col(part_col).isNull())\
+                                .withColumn('weight', F.lit(None))
+            df2 = _dm_stat_sdf.filter(F.col(part_col).isNotNull())\
+                                .withColumn('weight',\
+                                            F.when(F.col(part_col).isNotNull(),\
+                                                 mapping_expr[F.col(part_col)]
+                                                ))
+            adx_sdf_ = df1.unionAll(df2)
+            adx_sdf_ = adx_sdf_.withColumn('weighted_+DI',(F.col('+DI')*F.col('weight')))
+            adx_sdf_ = adx_sdf_.withColumn('weighted_-DI',(F.col('-DI')*F.col('weight')))
+            adx_sdf_ = adx_sdf_.withColumn('ADX',(F.col('weighted_-DI')-F.col('weighted_+DI'))/
+                                        (F.col('weighted_-DI')+F.col('weighted_+DI')))
+            adx_ = adx_sdf_.select(F.sum(F.col('ADX'))).alias("adx_val")
+            print(type(adx_),adx_.collect()[0][0])
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return _pos_dm_df_sms
+        return adx_.collect()[0][0],adx_sdf_  #_dm_stat_sdf

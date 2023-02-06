@@ -77,7 +77,7 @@ class Spawn():
         self._appName = None   # spark appName property with a valid string
         self._master = None    # spark local[*], meso, or yarn property 
 #         self._rwFormat = None  # spark read/write formats (jdbc, csv,json, text) property
-        self._session = None   # spark session is set based on the storeMode property
+        self._session = None   # spark session is set based on the property
         self._context = None   # spark context is set to support Hadoop & authentication
 #         self._saveMode = None  # spark write append/overwrite save mode property
 
@@ -469,8 +469,7 @@ class Spawn():
 #                 raise RuntimeError("Unrecognized storeMode %s to start a spark session" 
 #                                    % self.storeMode)
 
-            logger.info("Starting a Spark Session: %s for %s"
-                        ,self._session, self.storeMode)
+            logger.info("Starting a Spark Session: %s", self._session)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)

@@ -80,6 +80,7 @@ class RollingStats():
         self._startDT = None
         self._endDT = None
         self._dtAttr = None  # timestamp property
+        self._partAttr=None  # partitionBy column name
         self._winSpecUnits = ['MINUTE','HOUR','DAY']
         self._winSpec = {
             'LENGTH':7,   # set default value to 7 days
@@ -88,7 +89,7 @@ class RollingStats():
 
         global config
         global logger
-#         global clsSparkWL
+        global clsSpark
 
         try:
             self.cwd=os.path.dirname(__file__)
@@ -169,7 +170,7 @@ class RollingStats():
         __s_fn_id__ = "function <@property session>"
 
         try:
-            if self._session is None:
+            if self._session is None or self._session=={}:
                 clsSpark.session={}
                 
 #                 from utils.modules.etl.load import sparkDBwls as spark
@@ -251,14 +252,17 @@ class RollingStats():
         __s_fn_id__ = "function <@data.setter>"
 #         clsSparkWL.data=data
 #         self._data = clsSparkWL.data
+
         try:
             if data is None:
                 raise AttributeError("Dataset cannot be empty")
 
             if not isinstance(data,DataFrame):
                 self._data = self.session.createDataFrame(data)
+                logger.debug("Data of dtype %s converted to pyspark DataFrame", type(data))
             else:
                 self._data = data
+                logger.debug("Class property data is a pyspark DataFrame")
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -410,16 +414,16 @@ class RollingStats():
         __s_fn_id__ = "function <@datetimeAttr.setter>"
 
         try:
-            if self.data is None:
+            if self.data is None or self.data.count()<=0:
                 raise ValueError("The dataset property must be defined before setting the datetimeAttr")
-            if "".join(date_time_attr.split())!="":
+            if "".join(date_time_attr.split())!="" or \
+                    self.data.filter(F.col(date_time_attr).cast("Timestamp").isNotNull()).count()>0:
                 self._dtAttr = date_time_attr
-                self.data = self.data.withColumn(
-                    self._dtAttr,
-                    self.data[self._dtAttr] \
-                        .cast('timestamp'))
             else:
                 raise AttributeError("The datetimeAttribute cannot be an empty string")
+            ''' cast the datetime attr to a timestamp '''
+            self.data = self.data.withColumn(self._dtAttr,F.to_timestamp(self._dtAttr))
+            logger.debug("Cast column %s to timestamp",self._dtAttr)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -427,6 +431,53 @@ class RollingStats():
             print(traceback.format_exc())
 
         return self._dtAttr
+
+    @property
+    def partitionAttr(self) -> str:
+        """
+        Description:
+            Gets and returns the partition column name
+        Attribute:
+
+        Returns:
+            self._partAttr
+        """
+        try:
+            if self.__partAttr is None:
+                logger.warning("No partition column set")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._partAttr
+
+    
+    def partitionAttr(self,partition_attr) -> str:
+        """
+        Description:
+            Gets and returns the partition column name
+        Attribute:
+
+        Returns:
+            self._partAttr
+        """
+
+        __s_fn_id__ = "function <@property windowSpec>"
+
+        try:
+            if partition_attr is not None or "".join(partition_attr.split())!="":
+                self._partAttr=partition_attr
+                logger.debug("Set partition column attribute name as %s",self._partAttr)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return self._partAttr
+
 
     ''' --- WINDOW SPECIFICATION --- '''
     @property
@@ -492,22 +543,25 @@ class RollingStats():
             
             ''' function to calculate number of seconds from number of days '''
             if window_spec['UNIT'] == "DAY":
-                days = lambda i: i * 86400
-                self._winSpec = Window \
-                    .orderBy(F.col(self.datetimeAttr).cast('long')) \
-                    .rangeBetween(-days(window_spec['LENGTH']),0)
+                _time_attr = lambda i: i * 86400
             elif window_spec['UNIT'] == "HOUR":
-                hours = lambda i: i * 3600
-                self._winSpec = Window \
-                    .orderBy(F.col(self.datetimeAttr).cast('long')) \
-                    .rangeBetween(-hours(window_spec['LENGTH']),0)
+                _time_attr = lambda i: i * 3600
             elif window_spec['UNIT'] == "MINUTE":
-                minutes = lambda i: i * 60
-                self._winSpec = Window \
-                    .orderBy(F.col(self.datetimeAttr).cast('long')) \
-                    .rangeBetween(-minutes(window_spec['LENGTH']),0)
+                _time_attr = lambda i: i * 60
             else:
                 raise RuntimeError("Something was wrong")
+
+            if self.partitionAttr:
+                self._winSpec = Window \
+                    .partitionBy(self.partitionAttr) \
+                    .orderBy(F.col(self.datetimeAttr).cast('long')) \
+                    .rangeBetween(-_time_attr(window_spec['LENGTH']),0)
+            else:
+                self._winSpec = Window \
+                    .orderBy(F.col(self.datetimeAttr).cast('long')) \
+                    .rangeBetween(-_time_attr(window_spec['LENGTH']),0)
+
+            logger.debug("WindowSpec set to %s ", str(self._winSpec))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -529,7 +583,7 @@ class RollingStats():
         Returns:
         """
         @functools.wraps(func)
-        def calc_roll_stat(self,column,stat_op,data,**kwargs):
+        def calc_roll_stat(self,num_col,date_col,part_col,stat_op,data,**kwargs):
             """
             Description:
 
@@ -540,24 +594,19 @@ class RollingStats():
             __s_fn_id__ = "function <roll_stat_wrapper>"
 
             try:
-                _roll_col_name = func(
-                    self,
-                    column,
-                    stat_op,
-                    data,     
-                    **kwargs
-                )
+                _roll_col_name = func(self,num_col,date_col,part_col,stat_op,data,**kwargs)
+
                 if stat_op.upper() in ['MEAN','AVG','AVERAGE']:
                     self._data = self.data. \
-                                    withColumn(_roll_col_name, F.mean(column). \
+                                    withColumn(_roll_col_name, F.mean(num_col). \
                                                over(self.windowSpec))
-                elif stat_op.upper()=='STDV':
+                elif stat_op.upper() in ['STDDEV','STDV','SD','SDV','STANDARD DEVIATION']:
                     self._data = self.data. \
-                                    withColumn(_roll_col_name, F.stddev(column). \
+                                    withColumn(_roll_col_name, F.stddev(num_col). \
                                                over(self.windowSpec))
                 elif stat_op.upper()=='SUM':
                     self._data = self.data. \
-                                    withColumn(_roll_col_name, F.sum(column). \
+                                    withColumn(_roll_col_name, F.sum(num_col). \
                                                over(self.windowSpec))
                 else:
                     raise AttributeError("Invalid stat operation %s" % stat_op)
@@ -573,7 +622,9 @@ class RollingStats():
     @rollingstat
     def simple_moving_stats(
         self,
-        column:str='',   # column name to apply the rolling computation
+        num_col:str='',   # numeric column name to apply the rolling computation
+        date_col:str='',  # datetime column name to use as the time stamp
+        part_col:str='',  # partition column name to apply rolling stats to windows
         stat_op:str="mean", # stat operation sum, mean or standard deviation
         data=None,   # data set
         **kwargs,    # 
@@ -592,51 +643,43 @@ class RollingStats():
         _winspec['UNIT']='DAY'
 
         try:
-            if not data is None:
-                self.data = data
+#             if not data is None:
 
-            if self.data is None:
-                raise AttributeError("There is no data to perform a rolling computation")
+#             if self.data is None:
+#                 raise AttributeError("There is no data to perform a rolling computation")
 
-            ''' datetime column name '''
-            if "DATETIMEATTR" in kwargs.keys() and not kwargs['DATETIMEATTR'] is None:
-                self.datetimeAttr = kwargs['DATETIMEATTR']
-            if self.datetimeAttr is None:
-                raise AttributeError("Specify the datetime property to use")
-            ''' Rolling window length '''
+            self.data = data
+
+            ''' column name to apply rolling computation '''
+            if "".join(num_col.split())=="" or \
+                    self.data.filter(F.col(num_col).cast("Long").isNotNull()).count()==0:
+                raise ValueError("A num_col name from %s with dtype = int,long,double, "+ \
+                                 "or decimal must be specified." % self.data.dtypes)
+            self.data = self.data.withColumn(num_col,F.col(num_col).cast('decimal(38,18)'))
+            ''' setting the datetimeAttr property will validate and cast column to timestamp '''
+            self.datetimeAttr=date_col
+            ''' set the partition column name '''
+            self.partitionAttr=part_col
+            ''' set the rolling window specs '''
             if "WINLENGTH" in kwargs.keys() and not kwargs['WINLENGTH'] is None \
                 and "WINUNIT" in kwargs.keys() and not kwargs['WINUNIT'] is None:
                 _winspec['LENGTH']=kwargs['WINLENGTH']
                 _winspec['UNIT']=kwargs['WINUNIT']
                 self.windowSpec = _winspec
-            elif self.windowSpec is None:
+            else:
+#                 self.windowSpec is None:
                 ''' set default values '''
                 self.windowSpec = _winspec
+#             else:
+#                 pass
+            logger.debug("Class property windowSpec set with %s", str(_winspec))
+
+            if "RESULTCOL" in kwargs.keys() and kwargs['RESULTCOL'] != '':
+                _roll_col_name = kwargs['RESULTCOL']
             else:
-                pass
-            ''' column name to apply rolling computation '''
-            if column == '' and self.data.filter(F.col(column).cast("Long").isNotNull()):
-                raise ValueError("A column name with int, long, double, or decimal"+ \
-                                 "must be specified.")
-            if "RESCOLUMN" in kwargs.keys() and kwargs['RESCOLUMN'] != '':
-                _roll_col_name = kwargs['RESCOLUMN']
-            else:
-                _roll_col_name = "rolling_"+stat_op+"_"+column
+                _roll_col_name = "rolling_"+stat_op+"_"+num_col
 
-#             #function to calculate number of seconds from number of days
-#             days = lambda i: i * 86400
-
-#             df = self.data.withColumn(self.datetimeAttr, self.data[self.datetimeAttr].cast('timestamp'))
-#             df = self.data
-#             windowSpec = Window.orderBy(F.col(self.datetimeAttr).cast('long')).rangeBetween(-days(7), 0)
-            # Note the OVER clause added to AVG(), to define a windowing column.
-            # 3. Create an over() function directly on the avg() function:
-#             df2 = df.withColumn('rolling_seven_day_average', F.stddev("dollars").over(windowSpec))
-
-#             self._data = self.data. \
-#                     withColumn(_roll_col_name, F.stddev(column). \
-#                                over(self.windowSpec)) 
-#             self._data.show()
+            logger.debug("Simple Moving Stats results will be written to column %s",_roll_col_name)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
