@@ -907,3 +907,33 @@ class PropertyScraper():
             print(traceback.format_exc())
 
         return count, data_df
+
+    '''Function
+    name:_clean_columns
+     procedure: clean and replace unwanted characters in room_data_df columns'''
+
+    def _clean_columns(self, room_data_df, col_name, **kwargs):
+
+    __s_fn_id__ = "function <_clean_columns>"
+    logger.info("Executing %s %s", self.__package__, __s_fn_id__)
+
+    emb_kwargs = {
+        "LOWER": True,
+        "NO_STOP_WORDS": False,
+        "METRIC": 'COSIN',
+        "MAX_SCORES": 2,
+    }
+    try:
+        room_data_df['room_desc'] = room_data_df['room_desc'].str.replace("•", "|")
+        room_data_df['cancellations'] = room_data_df['cancellations'].str.replace("•", "|")
+        room_data_df['breakfast'] = room_data_df['breakfast'].replace("Breakfast included",
+                                                                                          "yes").replace("None", "no")
+        booking_com_details_df['Star Rating(out of 5)'] = booking_com_details_df['Star Rating(out of 5)'].str.replace(
+            " out of 5", "")
+
+    except Exception as err:
+        logger.error("%s %s \n", __s_fn_id__, err)
+        print("[Error]" + __s_fn_id__, err)
+        print(traceback.format_exc())
+
+    return _clean_columns
