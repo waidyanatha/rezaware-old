@@ -1,5 +1,10 @@
 ## MongoDB shell scripts for creating databases, users, and collections ##
 ##
+## ----- CONNECT TO MONGODB -----
+##
+## 
+##
+##
 ## ----- ASSET API CATALOG -----
 ##
 ## 1) create database

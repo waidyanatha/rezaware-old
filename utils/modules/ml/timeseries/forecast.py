@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "RollingStats"
+__name__ = "ForecastModels"
 __module__ = "ml"
 __package__ = "timeseries"
 __app__ = "utils"
@@ -32,19 +32,18 @@ try:
 except Exception as e:
     print("Some software packages in {0} didn't load\n{1}".format(__package__,e))
 
-class RollingStats():
+class ForecastModels():
     """ ***************************************************************************************
-    CLASS spefic to calculation moving average, standard deviation workloads
+    CLASS executes several time series prediction models and computes the errors and accuracies
     
-    The overall function here is to provide any timeseries dataset, in the form of a
-    pandas dataframe, dictionary or an array, to perform a moving average and/or 
-    standard deviation of any time minute, hour, or day time window.
+    The overall function here is to provide any timeseries dataset, in the form of a pyspark/pandas
+    dataframe, dictionary list, or an array, to perform a timeseries seasonal predictions.
     
-    We implement pyspark to perform the rolling average and standard devition. When the
-    class is instantiated, it will inherit properties and methods from packages 
-    (1) utils/etl/load/sparkwls - to read/write data from SQL/NoSQL DBs and CVS/JSON files
-    (2) utils/etl/load/filesrw - to read/write files stored in local, remote, or cloud storage
-    (3) rezaware - application specific configuration and logging functions
+    When the class is instantiated, it will inherit properties and methods from packages 
+    (1) rezaware - application specific configuration and logging functions
+    
+    Resources:
+    https://towardsdatascience.com/3-unique-python-packages-for-time-series-forecasting-2926a09aaf5b
     
     contributors:
         * nuwan.waidyanatha@rezgateway.com
@@ -104,13 +103,6 @@ class RollingStats():
             ''' initialize util class to use common functions '''
             from utils.modules.lib.spark import execSession as session
             clsSpark = session.Spawn(desc=self.__desc__)
-#             if clsSparkWL.session is None:
-#                 clsSparkWL.session = {}
-#             self.session = clsSparkWL.session
-
-            ''' Set the utils root directory '''
-            self.pckgDir = config.get("CWDS",self.__package__)
-            self.appDir = config.get("CWDS",self.__app__)
 
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
@@ -126,24 +118,11 @@ class RollingStats():
 
         return None
 
-    ''' Function
-            name: data @property and @setter functions
-            parameters:
-
-            procedure: uses the clsSparkWL data@setter method to convert the data
-                        to a pyspark DataFrame
-    The properties implement
-    * data [rdd] - in the form of a pyspark dataframe and any other dataframe will be converted
-            into a resilient distributed dataset (rdd). However, the processed data is returned
-            in the original dtype
-    * datetimeAttr [str/int] - tells the class which of the columns is to be considered as the
-            datetime of the timeseries. If unspecified, then the first detected datetime column
-            is considered
-
-            return self._data
-
-            author: <nuwan.waidyanatha@rezgateway.com>
+    ''' --- CLASS PROPERTIES GET & SET ---
+    
+    author(s): samana.thetha@gmail.com
     '''
+
     @property
     def session(self):
         """
@@ -160,11 +139,7 @@ class RollingStats():
         try:
             if self._session is None or self._session=={}:
                 clsSpark.session={}
-                
-#                 from utils.modules.etl.load import sparkDBwls as spark
-#                 clsSparkWL = spark.SparkWorkLoads(desc=self.__desc__)
-#                 if clsSparkWL.session is None:
-#                     clsSparkWL.session = {}
+
                 self._session = clsSpark.session
 
         except Exception as err:
@@ -215,8 +190,8 @@ class RollingStats():
         
         try:
             if self._data is None:
-                raise ValueError("Data is of NoneType; cannot be used in any %s computations"
-                                 %self.__name__)
+                raise ValueError("Data is of NoneType; cannot be used in any %s %s computations"
+                                 % (self.__package__,self.__name__))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -226,7 +201,6 @@ class RollingStats():
         return self._data
 
     @data.setter
-#     def data(self,data:DataFrame=clsSparkWL.spark_session.sparkContext.emptyRDD()):
     def data(self,data) -> DataFrame:
         """
         Description:
@@ -238,8 +212,6 @@ class RollingStats():
         """
 
         __s_fn_id__ = "function <@data.setter>"
-#         clsSparkWL.data=data
-#         self._data = clsSparkWL.data
 
         try:
             if data is None:
@@ -270,7 +242,7 @@ class RollingStats():
         Returns:
             self._startDateTime (timestamp)
         """
-        if self._startDT is None and not self.data.isEmpty():
+        if self._startDT is None and isinstance(self.data,DataFrame):
             self._startDT = self.data.select(F.min(self.datetimeAttr)).collect()
 
         return self._startDT
@@ -313,7 +285,7 @@ class RollingStats():
         Returns:
             self._endDateTime (timestamp)
         """
-        if self._endDT is None and not self.data.isEmpty():
+        if self._endDT is None and isinstance(self.data,DataFrame):
             self._endDT = self.data.select(F.max(self.datetimeAttr)).collect()
         return self._endDT
 
@@ -360,15 +332,11 @@ class RollingStats():
             if self._dtAttr is None: # or \
                 ''' TODO validate attribute; if invalid attempt 
                 to find a datetime column in dataframe'''
-#                 self.data.schema[self._dtAttr].dataType !=DateType or \
-#                 self.data.schema[self._dtAttr].dataType !=TimestampType:# or \
-#                 self.data.schema[self._dtAttr].dataType !=date or \
-#                 self.data.schema[self._dtAttr].dataType !=datetime:
 
                 logger.debug("The datetimeAttr was not explicitly set as a valid "+ \
                             "DateType or TimestampType and will try to set the first"+ \
                             "found valid column %s",self.data.dtypes)
-#                 print(self.data.dtypes)
+
                 _dt_attr_list = next(
                     (x for x, y in self.data.dtypes 
                      if y==DateType or y==TimestampType),# or y==date or y==datetime),
@@ -431,7 +399,7 @@ class RollingStats():
             self._partAttr
         """
         try:
-            if self.__partAttr is None:
+            if self._partAttr is None:
                 logger.warning("No partition column set")
 
         except Exception as err:
@@ -558,121 +526,36 @@ class RollingStats():
 
         return self._winSpec
 
-    ''' Function --- SIMPLE MOVING STATS ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+    ''' --- RUN FORECAST --- 
+    
+    author(s): samana.thetha@gmail.com
     '''
-    def rollingstat(func):
-        """
-        Description:
-        
-        Attributes:
-        
-        Returns:
-        """
-        @functools.wraps(func)
-        def calc_roll_stat(self,num_col,date_col,part_col,stat_op,data,**kwargs):
-            """
-            Description:
-
-            Attributes:
-
-            Returns:
-            """
-            __s_fn_id__ = "function <roll_stat_wrapper>"
-
-            try:
-                _roll_col_name = func(self,num_col,date_col,part_col,stat_op,data,**kwargs)
-
-                if stat_op.upper() in ['MEAN','AVG','AVERAGE']:
-                    self._data = self.data. \
-                                    withColumn(_roll_col_name, F.mean(num_col). \
-                                               over(self.windowSpec))
-                elif stat_op.upper() in ['STDDEV','STDV','SD','SDV','STANDARD DEVIATION']:
-                    self._data = self.data. \
-                                    withColumn(_roll_col_name, F.stddev(num_col). \
-                                               over(self.windowSpec))
-                elif stat_op.upper()=='SUM':
-                    self._data = self.data. \
-                                    withColumn(_roll_col_name, F.sum(num_col). \
-                                               over(self.windowSpec))
-                else:
-                    raise AttributeError("Invalid stat operation %s" % stat_op)
-
-            except Exception as err:
-                logger.error("%s %s \n",__s_fn_id__, err)
-                print("[Error]"+__s_fn_id__, err)
-                print(traceback.format_exc())
-
-            return self._data
-        return calc_roll_stat
-
-    @rollingstat
-    def simple_moving_stats(
+    def get_forecast(
         self,
-        num_col:str='',   # numeric column name to apply the rolling computation
-        date_col:str='',  # datetime column name to use as the time stamp
-        part_col:str='',  # partition column name to apply rolling stats to windows
-        stat_op:str="mean", # stat operation sum, mean or standard deviation
-        data=None,   # data set
-        **kwargs,    # 
-    ):
+        ts_data:DataFrame=None,
+        date_attr:str="",
+        from_datetime:datetime=datetime.now(),
+        to_datetime: datetime=datetime.now()+timedelta(days=7),
+    )->DataFrame:
         """
         Description:
-        
         Attributes:
-        
         Returns:
         """
 
-        __s_fn_id__ = "function <simple_moving_stats>"
-        _winspec = {}
-        _winspec['LENGTH']=7
-        _winspec['UNIT']='DAY'
+        __s_fn_id__ = "function <get_forecast>"
 
         try:
-#             if not data is None:
-
-#             if self.data is None:
-#                 raise AttributeError("There is no data to perform a rolling computation")
-
-            self.data = data
-
-            ''' column name to apply rolling computation '''
-            if "".join(num_col.split())=="" or \
-                    self.data.filter(F.col(num_col).cast("Long").isNotNull()).count()==0:
-                raise ValueError("A num_col name from %s with dtype = int,long,double, "+ \
-                                 "or decimal must be specified." % self.data.dtypes)
-            self.data = self.data.withColumn(num_col,F.col(num_col).cast('decimal(38,18)'))
-            ''' setting the datetimeAttr property will validate and cast column to timestamp '''
-            self.datetimeAttr=date_col
-            ''' set the partition column name '''
-            self.partitionAttr=part_col
-            ''' set the rolling window specs '''
-            if "WINLENGTH" in kwargs.keys() and not kwargs['WINLENGTH'] is None \
-                and "WINUNIT" in kwargs.keys() and not kwargs['WINUNIT'] is None:
-                _winspec['LENGTH']=kwargs['WINLENGTH']
-                _winspec['UNIT']=kwargs['WINUNIT']
-                self.windowSpec = _winspec
-            else:
-#                 self.windowSpec is None:
-                ''' set default values '''
-                self.windowSpec = _winspec
-#             else:
-#                 pass
-            logger.debug("Class property windowSpec set with %s", str(_winspec))
-
-            if "RESULTCOL" in kwargs.keys() and kwargs['RESULTCOL'] != '':
-                _roll_col_name = kwargs['RESULTCOL']
-            else:
-                _roll_col_name = "rolling_"+stat_op+"_"+num_col
-
-            logger.debug("Simple Moving Stats results will be written to column %s",_roll_col_name)
+            self.data = ts_data
+            datetimeAttr=date_attr
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
-        return _roll_col_name
+        return self._data
 
+
+    

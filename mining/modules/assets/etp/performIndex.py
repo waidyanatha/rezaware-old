@@ -69,6 +69,7 @@ class Portfolio():
         self._idxType =None
         self._idxTypeList =[
             'RSI',   # Relative Strength Index
+            'DMI',   # Directional Movement Indicator
             'ADX',   # Adjusted Directional Index
             'SORTIONO', # Sortino ratio 
             'SHARP',    # Sharp ratio of all positive
@@ -529,14 +530,14 @@ class Portfolio():
                 _ror_data = func(self,portfolio,date,index_type,**kwargs)
 
                 if self._idxType == 'RSI':
-                    _weights_sdf = pd.DataFrame(self.portfolio)
-                    _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
+                    _weights_df = pd.DataFrame(self.portfolio)
+#                     _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
                     _rsi=-1000.0
                     _rsi=Portfolio.calc_rsi(
                         ror_data=_ror_data,
                         val_col=kwargs["LOGCOLNAME"],
                         part_col=kwargs["PARTCOLNAME"],
-                        weights_sdf=_weights_sdf,
+                        weights_sdf=_weights_df,
 #                         weights=_weights_arr,
                         **kwargs,
                     )
@@ -546,18 +547,32 @@ class Portfolio():
                         raise ValueError("%s Something went wrong computing %s"
                                          %(__s_fn_id__,self._idxType))
 
+                elif self._idxType == 'DMI':
+#                     _weights_sdf = pd.DataFrame(self.portfolio)
+#                     _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
+                    _dmi_sdf=None
+                    _dmi_sdf = Portfolio.calc_dmi(
+                        ror_data=_ror_data,
+                        val_col=kwargs["LOGCOLNAME"],
+                        part_col=kwargs["PARTCOLNAME"],
+#                         weights_list=self.portfolio,
+                        **kwargs,
+                    )
+                    self._data=_dmi_sdf
+                    self._idxValue = None
+
                 elif self._idxType == 'ADX':
                     _weights_sdf = pd.DataFrame(self.portfolio)
 #                     _weights_arr = _weights_sdf['mcap.weight'].to_numpy()
                     _adx=None
-                    _adx, _adx_sdf = Portfolio.calc_adx(
+                    _adx = Portfolio.calc_adx(
                         ror_data=_ror_data,
                         val_col=kwargs["LOGCOLNAME"],
                         part_col=kwargs["PARTCOLNAME"],
                         weights_list=self.portfolio,
                         **kwargs,
                     )
-                    self._data=_adx_sdf
+#                     self._data=_adx_sdf
                     self._idxValue = _adx
                 else:
                     raise AttributeError("Unrecognized index type %s or something was wrong"
@@ -794,14 +809,242 @@ class Portfolio():
 #         return 1/(1+(F.abs(_neg/_pos)))
 
 
-    ''' --- ADJUSTED DIRECTIONAL INDEX ---
+    ''' --- DIRECTIONAL MOVEMENT INDICATOR ---
+    
+            author: <samana.thetha@gmail.com>
+    '''
+#     @staticmethod
+    def get_dmi_data(
+        self,
+        dmi_sdf_:DataFrame=None,
+        val_col:str="log_ror",
+        part_col:str="asset_name",
+#         weights_list:list=[],
+        **kwargs,
+    ) -> DataFrame:
+        """
+        Description:
+            Directional Movement Indicator (DMI) helps assess whether a trade should be
+            taken long or short, or if a trade should be taken at all. It is derived from
+            the Directional Index (DI).
+            The @staticmethod computes all the +/- Direction Index (DI) 14-day rolling sum, 
+            average, and smooth values. Then partitions by the asset_name to multiply the DI 
+            by the asset weight to compute a weighted ADX for the entire portfolio.
+        Attributes:
+            ror_data (DataFrame) the rate of returns dataframe
+            val_col (str) defines the numeric column to use; default value = log_ror
+            part_col (str) defines the partition column; i.e categories; default value = asset_name
+            weights_list (list) contains dictionaries of asset_name and associated weight,
+            **kwargs not used
+        Returns:
+            adx (float) with the single adx number between [0,1]
+            adx_sdf (DataFrame) augments the all the DI avg, sum, smooth, adx columns to the
+                original DataFrame
+        """
+
+        __s_fn_id__ = "@staticmethod <calc_adx>"
+
+        try:
+            ''' validate the attribues '''
+            if dmi_sdf_.count() <=0:
+                raise AttributeError("Cannot compute RSI with empty dataframe")
+#             dmi_sdf_=ror_data
+            if "".join(val_col.strip())=="" or \
+                val_col not in dmi_sdf_.columns or \
+                dmi_sdf_.select(F.col(val_col)).dtypes[0][1]=='string':
+                raise AttributeError("A valid numeric column from %s required" % dmi_sdf_.dtypes)
+            if "".join(part_col.strip())=="":
+                raise AttributeError("Invalid partition column, specify one from %s" % dmi_sdf_.dtypes)
+#             _asset_count = dmi_sdf_.select(F.col(part_col)).distinct().count()
+#             if len(weights_list) != _asset_count:
+#                 raise AttributeError("Dimension mismatching weights %d "+ \
+#                                      "to that of distinct asset count %d"
+#                                      % (len(weights_list),r_asset_count))
+
+            ''' compute the DMI sum, avg, smooth, and DI column values '''
+            dmi_sdf_ = dmi_sdf_.withColumn("+DM",
+                                           F.when(F.col(val_col) > 0,
+                                                  F.abs(F.col(val_col)))
+                                           .otherwise(0))
+            dmi_sdf_ = dmi_sdf_.withColumn("-DM",
+                                           F.when(F.col(val_col) <= 0,
+                                                  F.abs(F.col(val_col)))
+                                           .otherwise(0))
+            ''' Smoothed values '''
+            kwargs['RESULTCOL']='sm_sum_+DM'
+            dmi_sdf_ = clsStats.simple_moving_stats(
+                num_col="+DM",
+                date_col="mcap_date",
+                part_col=part_col,
+                stat_op="sum",
+                data=dmi_sdf_,
+                **kwargs,
+            )
+            kwargs['RESULTCOL']='sm_avg_+DM'
+            dmi_sdf_ = clsStats.simple_moving_stats(
+                num_col="+DM",
+                date_col="mcap_date",
+                part_col=part_col,
+                stat_op="avg",
+                data=dmi_sdf_,
+                **kwargs,
+            )
+            kwargs['RESULTCOL']='sm_sum_-DM'
+            dmi_sdf_ = clsStats.simple_moving_stats(
+                num_col="-DM",
+                date_col="mcap_date",
+                part_col=part_col,
+                stat_op="sum",
+                data=dmi_sdf_,
+                **kwargs,
+            )
+            kwargs['RESULTCOL']='sm_avg_-DM'
+            dmi_sdf_ = clsStats.simple_moving_stats(
+                num_col="-DM",
+                date_col="mcap_date",
+                part_col=part_col,
+                stat_op="avg",
+                data=dmi_sdf_,
+                **kwargs,
+            )
+
+            ''' shift +DM & -DM column by period=1 '''
+            _win = Window.partitionBy(F.col(part_col)).orderBy(F.col("mcap_date").cast('long'))
+            dmi_sdf_ = dmi_sdf_.withColumn('shift_+DM',
+                                           F.lag(F.col('+DM'),offset=1,default=0)
+                                           .over(_win))
+            dmi_sdf_ = dmi_sdf_.withColumn('shift_-DM',
+                                           F.lag(F.col('-DM'),offset=1,default=0)
+                                           .over(_win))
+            ''' smoothen the data '''
+            dmi_sdf_ = dmi_sdf_.withColumn('smooth_+DM',
+                                           (F.col('sm_sum_+DM')
+                                            -F.col('sm_avg_+DM')
+                                            +F.col('shift_+DM')))
+            dmi_sdf_ = dmi_sdf_.withColumn('smooth_-DM',
+                                           (F.col('sm_sum_-DM')
+                                            -F.col('sm_avg_-DM')
+                                            +F.col('shift_-DM')))
+            ''' Final Calculations of DI+ & DI- '''
+            dmi_sdf_ = dmi_sdf_.withColumn('+DI',(F.col('sm_avg_+DM')/F.col('smooth_+DM')))
+            dmi_sdf_ = dmi_sdf_.withColumn('-DI',(F.col('sm_avg_-DM')/F.col('smooth_-DM')))
+
+#             ''' augment asset specific weights to the dataframe '''
+#             obj_map = {}
+#             for _doc in weights_list:
+#                 obj_map[_doc['asset']]=_doc['mcap.weight']
+#             mapping_expr = F.create_map([F.lit(x) for x in chain(*obj_map.items())])
+#             df1 = _dm_stat_sdf.filter(F.col(part_col).isNull())\
+#                                 .withColumn('weight', F.lit(None))
+#             df2 = _dm_stat_sdf.filter(F.col(part_col).isNotNull())\
+#                                 .withColumn('weight',\
+#                                             F.when(F.col(part_col).isNotNull(),\
+#                                                  mapping_expr[F.col(part_col)]
+#                                                 ))
+#             adx_sdf_ = df1.unionAll(df2)
+#             adx_sdf_ = adx_sdf_.withColumn('weighted_+DI',(F.col('+DI')*F.col('weight')))
+#             adx_sdf_ = adx_sdf_.withColumn('weighted_-DI',(F.col('-DI')*F.col('weight')))
+#             adx_sdf_ = adx_sdf_.withColumn('ADX',(F.col('weighted_-DI')-F.col('weighted_+DI'))/
+#                                         (F.col('weighted_-DI')+F.col('weighted_+DI')))
+#             adx_ = adx_sdf_.select(F.sum(F.col('ADX'))).alias("adx_val")
+
+            if dmi_sdf_.count()>0:
+                self._data = dmi_sdf_
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data  #adx_.collect()[0][0],adx_sdf_
+
+
+    ''' --- AVERAGE DIRECTIONAL INDEX ---
+    
+            author: <samana.thetha@gmail.com>
+    '''
+    @staticmethod
+    def calc_adx(
+        dmi_data:DataFrame=None,
+        val_col:str="log_ror",
+        part_col:str="asset_name",
+        weights_list:list=[],
+        **kwargs,
+    ) -> float:
+        """
+        Description:
+            The Average Diractional Index (ADX) commonly includes three separate lines.
+            These are used to help assess whether a trade should be taken long or short,
+            or if a trade should be taken at all. The method is also refered to as the 
+            Directional Movement Indicator (DMI) derived from the Directional Index (DI)
+            The @staticmethod computes all the +/- Direction Index (DI) 14-day rolling sum, 
+            average, and smooth values. Then partitions by the asset_name to multiply the DI 
+            by the asset weight to compute a weighted ADX for the entire portfolio.
+        Attributes:
+            dmi_data (DataFrame) the directional movement indicator dataframe
+            val_col (str) defines the numeric column to use; default value = log_ror
+            part_col (str) defines the partition column; i.e categories; default value = asset_name
+            weights_list (list) contains dictionaries of asset_name and associated weight,
+            **kwargs not used
+        Returns:
+            adx (float) with the single adx number between [0,1]
+        """
+
+        __s_fn_id__ = "@staticmethod <calc_adx>"
+        adx_ = None
+        adx_sdf_=None
+        obj_map = {}
+
+        try:
+            if dmi_data.count() <=0:
+                raise AttributeError("Cannot compute RSI with empty dataframe")
+            if "".join(val_col.strip())=="" or \
+                val_col not in ror_data.columns or \
+                dmi_data.select(F.col(val_col)).dtypes[0][1]=='string':
+                raise AttributeError("A valid numeric column from %s required" % dmi_data.dtypes)
+            if "".join(part_col.strip())=="":
+                raise AttributeError("Invalid partition column, specify one from %s" % dmi_data.dtypes)
+            _asset_count = dmi_data.select(F.col(part_col)).distinct().count()
+            if len(weights_list) != _asset_count:
+                raise AttributeError("Dimension mismatching weights %d "+ \
+                                     "to that of distinct asset count %d"
+                                     % (len(weights_list),r_asset_count))
+
+
+            ''' augment asset specific weights to the dataframe '''
+            for _doc in weights_list:
+                obj_map[_doc['asset']]=_doc['mcap.weight']
+            mapping_expr = F.create_map([F.lit(x) for x in chain(*obj_map.items())])
+            df1 = dmi_data.filter(F.col(part_col).isNull())\
+                            .withColumn('weight', F.lit(None))
+            df2 = dmi_data.filter(F.col(part_col).isNotNull())\
+                            .withColumn('weight',\
+                                        F.when(F.col(part_col).isNotNull(),\
+                                               mapping_expr[F.col(part_col)]
+                                              ))
+            adx_sdf_ = df1.unionAll(df2)
+            adx_sdf_ = adx_sdf_.withColumn('weighted_+DI',(F.col('+DI')*F.col('weight')))
+            adx_sdf_ = adx_sdf_.withColumn('weighted_-DI',(F.col('-DI')*F.col('weight')))
+            adx_sdf_ = adx_sdf_.withColumn('ADX',(F.col('weighted_-DI')-F.col('weighted_+DI'))/
+                                        (F.col('weighted_-DI')+F.col('weighted_+DI')))
+            adx_ = adx_sdf_.select(F.sum(F.col('ADX'))).alias("adx_val")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return adx_.collect()[0][0]
+
+
+    ''' --- DIVERGENCE ---
     
             TODO: replace pandas with pyspark
 
             author: <samana.thetha@gmail.com>
     '''
     @staticmethod
-    def calc_adx(
+    def calc_divergence(
         ror_data:DataFrame=None,
         val_col:str="log_ror",
         part_col:str="asset_name",
@@ -810,139 +1053,31 @@ class Portfolio():
     ) -> float:
         """
         Description:
-            Therefore, the ADX commonly includes three separate lines. These are used
-            to help assess whether a trade should be taken long or short, or if a trade
-            should be taken at all.
+            Divergence is when the DMI and price disagree, or do not confirm one another.
+            An example is when price makes a new high, but the +DMI does not. Divergence
+            is generally a warning to manage risk because it signals a change of swing 
+            strength and commonly precedes a retracement or reversal.
         Attributes:
+            ror_data (DataFrame) the rate of returns dataframe
+            val_col (str) defines the numeric column to use; default value = log_ror
+            part_col (str) defines the partition column; i.e categories; default value = asset_name
+            weights_list (list) contains dictionaries of asset_name and associated weight,
+            **kwargs not used
         Returns:
+            adx (float) with the single adx number between [0,1]
+            adx_sdf (DataFrame) augments the all the DI avg, sum, smooth, adx columns to the
+                original DataFrame
         """
 
-        __s_fn_id__ = "@staticmethod <calc_adx>"
+        __s_fn_id__ = "@staticmethod <calc_divergence>"
 
         try:
             if ror_data.count() <=0:
                 raise AttributeError("Cannot compute RSI with empty dataframe")
-            if "".join(val_col.strip())=="" or \
-                val_col not in ror_data.columns or \
-                ror_data.select(F.col(val_col)).dtypes[0][1]=='string':
-                raise AttributeError("A valid numeric column from %s required" % ror_data.dtypes)
-            if "".join(part_col.strip())=="":
-                raise AttributeError("Invalid partition column, specify one from %s" % ror_data.dtypes)
-            _asset_count = ror_data.select(F.col(part_col)).distinct().count()
-            if len(weights_list) != _asset_count:
-                raise AttributeError("Dimension mismatching weights %d "+ \
-                                     "to that of distinct asset count %d"
-                                     % (len(weights_list),r_asset_count))
-
-#             if weights_sdf is None or weights_sdf.shape[0] != \
-#                                                 ror_data.select(F.col(part_col)).distinct().count():
-#                 raise AttributeError("Cannot use Non-type or dimension mismatching weights "+ \
-#                                      "%d dim array to that of %d"
-#                                      % (weights_sdf.shape[0],
-#                                         ror_data.select(F.col(part_col)).distinct().count()))
-                
-#             dm_df=ror_data.toPandas()
-#             ''' Positive Directional Movement --> log_ROR <= 1; else set to 0 '''
-#             dm_df['+DM']=dm_df[val_col]
-#             dm_df['+DM']=np.where(dm_df['+DM'] <= 0, dm_df['+DM'].abs(), 0)
-#             ''' Negative Directional Movement --> log_ROR > 1; else set to 0 '''
-#             dm_df['-DM']=dm_df[val_col]
-#             dm_df['-DM']=np.where(dm_df['-DM'] > 0, dm_df['-DM'].abs(), 0)
-#             logger.debug("Computed +DM with %d and -DM with %d rows"
-#                          ,(dm_df['+DM']!=0).sum()
-#                          ,(dm_df['-DM']).sum())
-
-            _dm_stat_sdf=None
-            _dm_stat_sdf = ror_data.withColumn("+DM",
-                                               F.when(F.col(val_col) > 0,
-                                                      F.abs(F.col(val_col)))
-                                               .otherwise(0))
-            _dm_stat_sdf = _dm_stat_sdf.withColumn("-DM",
-                                                   F.when(F.col(val_col) <= 0,
-                                                          F.abs(F.col(val_col)))
-                                                   .otherwise(0))
-            ''' Smoothed values '''
-            kwargs['RESULTCOL']='sm_sum_+DM'
-            _dm_stat_sdf = clsStats.simple_moving_stats(
-                num_col="+DM",
-                date_col="mcap_date",
-                part_col=part_col,
-                stat_op="sum",
-                data=_dm_stat_sdf,
-                **kwargs,
-            )
-            kwargs['RESULTCOL']='sm_avg_+DM'
-            _dm_stat_sdf = clsStats.simple_moving_stats(
-                num_col="+DM",
-                date_col="mcap_date",
-                part_col=part_col,
-                stat_op="avg",
-                data=_dm_stat_sdf,
-                **kwargs,
-            )
-            kwargs['RESULTCOL']='sm_sum_-DM'
-            _dm_stat_sdf = clsStats.simple_moving_stats(
-                num_col="-DM",
-                date_col="mcap_date",
-                part_col=part_col,
-                stat_op="sum",
-                data=_dm_stat_sdf,
-                **kwargs,
-            )
-            kwargs['RESULTCOL']='sm_avg_-DM'
-            _dm_stat_sdf = clsStats.simple_moving_stats(
-                num_col="-DM",
-                date_col="mcap_date",
-                part_col=part_col,
-                stat_op="avg",
-                data=_dm_stat_sdf,
-                **kwargs,
-            )
-
-            ''' shift +DM & -DM column by period=1 '''
-            _win = Window.partitionBy(F.col(part_col)).orderBy(F.col("mcap_date").cast('long'))
-            _dm_stat_sdf = _dm_stat_sdf.withColumn('shift_+DM', 
-                                                   F.lag(F.col('+DM'),offset=1,default=0)
-                                                   .over(_win))
-            _dm_stat_sdf = _dm_stat_sdf.withColumn('shift_-DM',
-                                                   F.lag(F.col('-DM'),offset=1,default=0)
-                                                   .over(_win))
-            ''' smoothen the data '''
-            _dm_stat_sdf = _dm_stat_sdf.withColumn('smooth_+DM',
-                                                   (F.col('sm_sum_+DM')
-                                                    -F.col('sm_avg_+DM')
-                                                    +F.col('shift_+DM')))
-            _dm_stat_sdf = _dm_stat_sdf.withColumn('smooth_-DM',
-                                                   (F.col('sm_sum_-DM')
-                                                    -F.col('sm_avg_-DM')
-                                                    +F.col('shift_-DM')))
-            ''' ADX index: Final Calculations '''
-            _dm_stat_sdf = _dm_stat_sdf.withColumn('+DI',(F.col('sm_avg_+DM')/F.col('smooth_+DM')))
-            _dm_stat_sdf = _dm_stat_sdf.withColumn('-DI',(F.col('sm_avg_-DM')/F.col('smooth_-DM')))
-
-            ''' augment asset specific weights to the dataframe '''
-            obj_map = {}
-            for _doc in weights_list:
-                obj_map[_doc['asset']]=_doc['mcap.weight']
-            mapping_expr = F.create_map([F.lit(x) for x in chain(*obj_map.items())])
-            df1 = _dm_stat_sdf.filter(F.col(part_col).isNull())\
-                                .withColumn('weight', F.lit(None))
-            df2 = _dm_stat_sdf.filter(F.col(part_col).isNotNull())\
-                                .withColumn('weight',\
-                                            F.when(F.col(part_col).isNotNull(),\
-                                                 mapping_expr[F.col(part_col)]
-                                                ))
-            adx_sdf_ = df1.unionAll(df2)
-            adx_sdf_ = adx_sdf_.withColumn('weighted_+DI',(F.col('+DI')*F.col('weight')))
-            adx_sdf_ = adx_sdf_.withColumn('weighted_-DI',(F.col('-DI')*F.col('weight')))
-            adx_sdf_ = adx_sdf_.withColumn('ADX',(F.col('weighted_-DI')-F.col('weighted_+DI'))/
-                                        (F.col('weighted_-DI')+F.col('weighted_+DI')))
-            adx_ = adx_sdf_.select(F.sum(F.col('ADX'))).alias("adx_val")
-            print(type(adx_),adx_.collect()[0][0])
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return adx_.collect()[0][0],adx_sdf_  #_dm_stat_sdf
+        return None
