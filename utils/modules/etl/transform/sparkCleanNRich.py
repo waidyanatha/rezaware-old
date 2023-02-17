@@ -154,7 +154,6 @@ class Transformer():
     '''
     @staticmethod
     def impute_data(
-#         self,
         data,
         column_subset:list=[],
         strategy:str="mean",
@@ -184,16 +183,20 @@ class Transformer():
                 non_num_cols = len([col_ for col_ in column_subset if
                                     data.select(col_).dtypes[0][1] !="string"])
                 if non_num_cols < len(column_subset):
-                    raise AttributeError("%d invalid non-numeric columns in input var: column_subset"
+                    raise AttributeError("%d invalid non-numeric columns in input attr: column_subset"
                                          % len(column_subset)-non_num_cols)
+                logger.debug("%s validated %d numeric columns listed in attr: column_subset",
+                             __s_fn_id__,len(column_subset))
             elif column_subset is None or column_subset==[]:
                 column_subset = [col_ for col_ in data.columns if
-                                 data.select(col_).dtypes[0][1] !="string"]
+                                 data.select(col_).dtypes[0][1] not in ['string','timestamp','boolean']]
+                logger.debug("%s extracted %d numeric columns for imputing",
+                             __s_fn_id__,len(column_subset))
             else:
                 raise RuntimeError("Something was wrong validating column_subset")
 
             ''' validate strategy '''
-            _strategy = strategy
+            _strategy = strategy.lower()
             if not strategy.lower() in ['mean','median','mode']:
                 _strategy = 'mean'
                 logger.warning("Invalid strategy %s, reverting to default strategy = %s"
@@ -203,14 +206,15 @@ class Transformer():
                               outputCols=[col_ for col_ in column_subset]
                              ).setStrategy(_strategy)
             _data = imputer.fit(data).transform(data)
-#             self._data = imputer.fit(data).transform(data)
+            if not _data or _data.count() <= 0:
+                raise RuntimeError("Imputer returned an empty dataset")
+            logger.debug("IMputer succeded with returning %d rows", _data.count())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
-#         return self._data
         return _data
 
     ''' Function --- COUNT COLUMN NULLS ---
@@ -297,9 +301,14 @@ class Transformer():
                               data.dropDuplicates([pivot_column])
                               .select(pivot_column)
                               .collect()]
-            if "PIVCOLUMNS" in  kwargs.keys() and kwargs['PIVCOLUMNS'] in _piv_col_names:
-                _piv_col_names = kwargs['PIVCOLUMNS']
-            logger.debug("Pivot columns: %s",_piv_col_names)
+
+            if "PIVCOLUMNS" in kwargs.keys():
+                _piv_col_names=list(
+                                set(kwargs['PIVCOLUMNS'])
+                                -(set(kwargs['PIVCOLUMNS'])-set(_piv_col_names)))
+            if len(_piv_col_names)<=0:
+                raise AttributeError("No matching pivot column names in kwargs['PIVCOLUMNS'] list")
+            logger.debug("Pivoting %d valid columns",len(_piv_col_names))
             _agg = 'sum'
             if "AGGREGATE" in kwargs.keys() and kwargs['AGGREGATE'] in aggList_:
                 _agg = kwargs['AGGREGATE'].lower()

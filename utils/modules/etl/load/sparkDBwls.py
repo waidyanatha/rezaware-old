@@ -15,6 +15,7 @@ try:
     import sys
     import configparser    
     import logging
+    import functools
     import traceback
 
     import findspark
@@ -35,31 +36,33 @@ except Exception as e:
           .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
-    CLASS create, update, and migrate databases using sql scripts
-        1) 
-
-    Contributors:
-        * nuwan.waidyanatha@rezgateway.com
+    Class reads and writes data from and to RDBMS using apache spark sql functions
+        Currently working with postgresql databases.
 
     Resources:
-        https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
+        * Notebooks
+            * Upsert function evaluation use utils/notebooks/etl/load/sparkDBwls.ipynb
+        * Installation guide
+            * https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
+        * Acknowledgement
+            * Many thanks to Santhanu's medium article and code snipets for generating the
+                upsert_sdf_to_db function https://tinyurl.com/pyspark-batch-upsert
 '''
 class SQLWorkLoads():
-    ''' Function
-            name: __init__
-            parameters:
-                    @name (str)
-                    @enrich (dict)
-            procedure: 
-            return None
-            
-            author: <nuwan.waidyanatha@rezgateway.com>
 
-    '''
     def __init__(self, desc : str="spark workloads",   # identifier for the instances
                  sparkPath:str=None,        # directory path to spark insallation
                  **kwargs:dict,   # can contain hostIP and database connection settings
                 ):
+        """
+        Description:
+            Initializes the SQLWorkLoads: class property attributes, app configurations, 
+                logger function, data store directory paths, and global classes
+        Attributes:
+            desc (str) to change the instance description for identification
+        Returns:
+            None
+        """
 
         self.__name__ = __name__
         self.__package__ = __package__
@@ -69,31 +72,18 @@ class SQLWorkLoads():
         self.__conf_fname__ = __conf_fname__
         self.__desc__ = desc
 
-#         self._dType = None
-#         self._dTypeList = [
-#             'RDD',     # spark resilient distributed dataset
-#             'SDF',     # spark DataFrame
-#             'PANDAS',  # pandas dataframe
-#             'ARRAY',   # numpy array
-#             'DICT',    # data dictionary
-#         ]
-
         ''' Initialize the DB parameters '''
+        self._dbTypeList=['postgresql','mysql']
         self._dbType = None
         self._dbDriver = None
         self._dbHostIP = None
         self._dbPort = None
-#         self._dbDriver = None
         self._dbName = None
         self._dbSchema = None
         self._partitions = None
         self._dbUser = None
         self._dbPswd = None
         self._dbConnURL = None
-
-        ''' Initialize DB connection parameters '''
-#         self._sparkDIR = None
-#         self._sparkJAR = None
 
         ''' Initialize spark session parameters '''
         self._homeDir = None
@@ -150,15 +140,6 @@ class SQLWorkLoads():
             ''' set a new logger section '''
             logger.info('########################################################')
             logger.info("%s %s",self.__name__,self.__package__)
-        
-#         ''' get tmp storage location '''
-#         self.tmpDIR = None
-#         if "WRITE_TO_FILE" in kwargs.keys():
-#             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
-#             if not os.path.exists(self.tmpDIR):
-#                 os.makedirs(self.tmpDIR)
-
-#         try:
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
                            self.__module__,
@@ -208,11 +189,11 @@ class SQLWorkLoads():
         __s_fn_id__ = "function <@dbType.setter>"
 
         try:
-            if db_type is None or "".join(db_type.strip()) == "":
+            if db_type not in self._dbTypeList:
                 raise ConnectionError("Invalid database TYPE %s" % db_type)
 
             self._dbType = db_type
-            logger.debug("@setter Database dbType set to: %s",self._dbType)
+            logger.debug("%s dbType is: %s",__s_fn_id__,self._dbType)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -861,12 +842,7 @@ class SQLWorkLoads():
 
 
     ''' Function --- SPARK SESSION ---
-            name: session @property and @setter functions
-            parameters:
-
-            procedure: 
-            return self._session
-
+    
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
     @property
@@ -949,12 +925,7 @@ class SQLWorkLoads():
         return self._session
 
 
-    ''' Function
-            name: data @property and @setter functions
-            parameters:
-
-            procedure: 
-            return self._data
+    ''' Function --- DATA SETTER & GETTER ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
@@ -1045,7 +1016,6 @@ class SQLWorkLoads():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-#     @classmethod
     def read_data_from_table(
         self,
         select:str="",
@@ -1054,7 +1024,6 @@ class SQLWorkLoads():
         lower_bound=None,
         upper_bound=None,
         **options) -> DataFrame:
-#         **kwargs) -> DataFrame:
         """
         Description:
             There is the option of speficing a valid SQL select statement with clauses to
@@ -1112,19 +1081,6 @@ class SQLWorkLoads():
             else:
                 logger.debug("Something went wrong")
 
-#             ''' drop duplicates 
-#                 TODO - move to a @staticmethod '''
-#             if "DROPDUPLICATES" in kwargs.keys() and kwargs['DROPDUPLICATES']:
-#                 load_sdf = load_sdf.distinct()
-#                 logger.debug("Removed duplicates, reduced dataframe with %d rows",load_sdf.count())
-
-#             ''' convert to pandas dataframe 
-#                 TODO - move to @staticmethod '''
-#             if 'TOPANDAS' in kwargs.keys() and kwargs['TOPANDAS']:
-#                 load_sdf = load_sdf.toPandas()
-#                 logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
-#                              % load_sdf.shape[0])
-
             self._data = load_sdf
 
         except Exception as err:
@@ -1178,7 +1134,6 @@ class SQLWorkLoads():
             logger.info("Wait a moment while we insert data int %s", db_table)
             ''' jdbc:postgresql://<host>:<port>/<database> '''
             
-            # driver='org.postgresql.Driver').\
             self.data.select(self.data.columns).\
                     write.format(self.rwFormat).\
                     mode(self.saveMode).\
@@ -1188,12 +1143,10 @@ class SQLWorkLoads():
                     user=self.dbUser,     # 'postgres',
                     password=self.dbPswd, # 'postgres',
                     driver=self.dbDriver).save(self.saveMode.lower())
-#                     driver=self.dbDriver).save("append")
-#            load_sdf.printSchema()
 
-            logger.info("Saved %d  rows into table %s in database %s complete!"
-                        ,self.data.count(), self.dbSchema+"."+db_table, self.dbName)
             _num_records_saved = self.data.count()
+            logger.info("Saved %d  rows into table %s in database %s complete!"
+                        ,_num_records_saved, ".".join([self.dbSchema,db_table]), self.dbName)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1202,18 +1155,88 @@ class SQLWorkLoads():
 
         return _num_records_saved
 
-    ''' WORK IN PROGRESS - Function --- UPDATE TABLE ---
+    ''' - Function --- UPDATE TABLE ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
-    '''
 
-    def update_sdf_in_table(
+    '''
+    def upsert_with_dbtype(func):
+        """
+        Description:
+            wrapper function to upsert dataframe based on self.dbType
+        Attribute
+            func inherits upsert_sdf_to_table
+        returns upsert_dbtype_wrapper
+        """
+        
+        @functools.wraps(func)
+        def upsert_wrapper(self,save_sdf,db_table,unique_keys,**options):
+            """
+            Description:
+                Applies the database type specific @static functions to upsert dataframe
+            Attributes:
+                same as upsert_sdf_to_table input attributes
+            Returns:
+                processed record count
+            """
+                
+            __s_fn_id__ = "function <upsert_wrapper>"
+            _num_records_saved = 0
+            total_recs_loaded = None   # initiatlize return attr
+
+            try:
+                _data, _omitted_cols, _batch_size = func(
+                    self,save_sdf,db_table,unique_keys,**options
+                )
+
+                if self.dbType == 'postgresql':
+                    upsert_query = SQLWorkLoads.build_pgsql_query(
+                        cols=_data.schema.names,
+                        table_name=db_table,
+                        unique_key=unique_keys,
+                        cols_not_for_update=_omitted_cols,
+                    )
+                    _db_cred = {
+                        "host": self.dbHostIP,
+                        "database": self.dbName,
+                        "user": self.dbUser,
+                        "password": self.dbPswd,
+                        "port": self.dbPort,
+                    }
+                    upsert_stats = _data.coalesce(self.partitions).rdd.mapPartitions(
+                        lambda dataframe_partition: SQLWorkLoads.batch_and_upsert(
+                            dataframe_partition=dataframe_partition,
+                            sql=upsert_query,
+                            database_credentials=_db_cred,
+                            batch_size=_batch_size,
+                        )
+                    )
+                    total_recs_loaded = 0
+                    for counter in upsert_stats.collect():
+                        total_recs_loaded += counter
+
+                else:
+                    raise RuntimeError("TBD %s dbType upsert; only works for postgresql", self.dbType)
+
+                logger.info("Saved %d  rows into table %s in database %s complete!"
+                            ,self.data.count(), self.dbSchema+"."+db_table, self.dbName)
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return total_recs_loaded
+
+        return upsert_wrapper
+
+    @upsert_with_dbtype
+    def upsert_sdf_to_table(
         self,
-        save_sdf,   # any dtype data set (will be converted to Dataframe)
-        db_table:str="",  # name of table to be updated
-        table_pk:list=[], # list of columns to use in the where statement 
-        uspert_sql:str="",  # sql update statement
-        **options):
+        save_sdf,       # any dtype data set (will be converted to Dataframe)
+        db_table :str,  # name of table to be updated
+        unique_keys:List[str], # list of columns to use in the where statement 
+#         uspert_sql:str="",  # sql update statement
+        **options) -> int:
         """
         Description:
             First option is to use the function to generate an update statement, for you,
@@ -1227,13 +1250,17 @@ class SQLWorkLoads():
             db_table (str) table name to update rows
             uspert_sql (str) sql update statement to apply directly
         Returns"
-            _num_records_saved (int) number of rows updated in the table
+            self._data (DataFrame) 
+            cols_not_for_update_ (List) of column names to omit from update
+            batch_size_ (int) number of rows to process in each batch
         """
         
-        __s_fn_id__ = "function <update_sdf_in_table>"
-        _num_records_saved = 0
-        
+        __s_fn_id__ = "function <upsert_sdf_to_table>"
+        cols_not_for_update_=None
+        batch_size_ = 1000
+
         try:
+            print("Validating upsert attributes and parameters ...")
             self.data = save_sdf
             if self.data.count() <= 0:
                 raise ValueError("No data to update in table")
@@ -1247,76 +1274,84 @@ class SQLWorkLoads():
             ''' if created audit columns don't exist add them '''
             listColumns=self.data.columns
             if "modified_dt" not in listColumns:
-                self.data = self.data.withColumn("modified_dt", F.current_timestamp())
+                self._data = self.data.withColumn("modified_dt", F.current_timestamp())
+            else:
+                self._data = self._data.withColumn('modified_dt',
+                                                   F.when(F.col('modified_dt').isNull(),
+                                                          F.current_timestamp()))
             if "modified_by" not in listColumns:
-                self.data = self.data.withColumn("modified_by", F.lit(self.dbUser))
+                self._data = self._data.withColumn("modified_by", F.lit(self.dbUser))
+            else:
+                self._data = self._data.withColumn('modified_by',
+                                                   F.when(F.col('modified_by').isNull(),
+                                                          F.lit(self.dbUser)))
+            _s_mod_proc = "_".join([self.__app__,self.__module__,self.__package__,
+                                    self.__name__,__s_fn_id__])
             if "modified_proc" not in listColumns:
-                self.data = self.data.withColumn("modified_proc", F.lit("Unknown"))
-            
+                self._data = self._data.withColumn("modified_proc", F.lit(_s_mod_proc))
+            else:
+                self._data = self._data.withColumn('modified_proc',
+                                                   F.when(F.col('modified_proc').isNull(),
+                                                          F.lit(_s_mod_proc)))
+
             ''' TODO: add code to accept options() to manage schema specific
                 authentication and access to tables '''
 
-            ''' set the partitions '''
+            ''' set all option parameters '''
+            if "DBTYPE" in options.keys():
+                self.dbType = options['DBTYPE']
             if "PARTITIONS" in options.keys():
                 self.partitions = options['PARTITIONS']
-            if "FORMAT" in options.keys():
-                self.rwFormat = options['FORMAT']
-            if "url" not in options.keys():
-                options['url'] = self.dbConnURL
+            if "OMITCOLS" in options.keys():
+                cols_not_for_update_ = options['OMITCOLS']
+            if "BATCHSIZE" in options.keys():
+                batch_size_ = options['BATCHSIZE']
             if "numPartitions" not in options.keys():
                 options['numPartitions'] = self.partitions
             if "user" not in options.keys():
                 options['user'] = self.dbUser
             if "password" not in options.keys():
                 options['password'] = self.dbPswd
-            if "driver" not in options.keys():
-                options['driver'] = self.dbDriver
+#             if "driver" not in options.keys():
+#                 options['driver'] = self.dbDriver
 
-            print("Wait a moment, writing data ...")
+            logger.debug("Validation complete with %d rows to process, "+\
+                         "%d columns to omit in update, and "+\
+                         "applying %d batch size", 
+                         self._data.count(), len(cols_not_for_update_), batch_size_)
+            print("Wait a moment, writing data to %s %s database ..." 
+                  %(self.dbType, self.dbName))
             ''' use query else use partition column'''
-            if uspert_sql is not None and "".join(uspert_sql.split())!="":
-                options['query'] = uspert_sql
-            elif db_table is not None and "".join(db_table.split())!="":
-                ''' add schema if not in table name '''
-                if db_table.find(self.dbSchema+".") == -1:
-                    db_table = self.dbSchema+"."+db_table
-                option["dbtable"]=db_table
-
-            update_sdf = self.session.read\
-                .format(self.rwFormat)\
-                .options(**options)\
-                .load()
             
-            if load_sdf:
-                logger.debug("loaded %d rows into pyspark dataframe" % load_sdf.count())
-            else:
-                logger.debug("Something went wrong")
-            logger.info("Saved %d  rows into table %s in database %s complete!"
-                        ,self.data.count(), self.dbSchema+"."+db_table, self.dbName)
-            _num_records_saved = self.data.count()
-
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return _num_records_saved
+        return self._data, cols_not_for_update_, batch_size_
 
 
+    ''' - Functions --- SPARK POSTGRES BATCH UPSERT ---
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
     @staticmethod
-    def get_postgres_connection(host: str,
-                                database: str,
-                                user: str,
-                                password: str,
-                                port: str):
+    def get_pgsql_conn(
+        host: str,     # host name of database instance
+        database: str, # name of the database to connect to.
+        user: str,     # user name with permissions to access schema and tables.
+        password: str, # password for authenticating the user name.
+        port: str):    # postgres port to connect; e.g. 5432.
         """
-        Connect to postgres database and get the connection.
-        :param host: host name of database instance.
-        :param database: name of the database to connect to.
-        :param user: user name.
-        :param password: password for the user name.
-        :param port: port to connect.
-        :return: Database connection.
+        Description:
+            makes us of psycopg2 connection to a postgres database.
+        Attributes:
+            host (str) host name of database instance.
+            database (str) name of the database to connect to.
+            user (str) user name with permissions to access schema and tables.
+            password (str) password for authenticating the user name.
+            port (str) postgres port to connect; e.g. 5432.
+        Return (connect) database connection.
         """
         try:
             conn = connect(
@@ -1338,11 +1373,13 @@ class SQLWorkLoads():
                          database_credentials: dict,
                          batch_size: int = 1000):
         """
-        Batch the input dataframe_partition as per batch_size and upsert
-        to postgres using psycopg2 execute values.
-        :param dataframe_partition: Pyspark DataFrame partition or any iterable.
-        :param sql: query to insert/upsert the spark dataframe partition to postgres.
-        :param database_credentials: postgres database credentials.
+        Description:
+            Batch the input dataframe_partition as per batch_size and upsert to postgres
+            using psycopg2 execute values.
+        Attributes:
+            dataframe_partition (DataFrame/Iterable) Pyspark DataFrame partition or any iterable.
+            sql (str): query to insert/upsert the spark dataframe partition to postgres.
+            database_credentials (Dict) postgres database credentials.
             Example: database_credentials = {
                     host: <host>,
                     database: <database>,
@@ -1350,9 +1387,10 @@ class SQLWorkLoads():
                     password: <password>,
                     port: <port>
                 }
-        :param batch_size: size of batch per round trip to database.
-        :return: total records processed.
+            batch_size (int) size of batch per round trip to database.
+        Return (int) with total records processed.
         """
+
         conn, cur = None, None
         counter = 0
         batch = []
@@ -1363,11 +1401,9 @@ class SQLWorkLoads():
             batch.append(list(record))
 
             if not conn:
-                conn = SQLWorkLoads.get_postgres_connection(**database_credentials)
+                conn = SQLWorkLoads.get_pgsql_conn(**database_credentials)
                 cur = conn.cursor()
-            print("\n",record)
-            print("\n",sql)
-            print("\n",batch)
+
             if counter % batch_size == 0:
                 execute_values(
                     cur=cur, sql=sql,
@@ -1393,7 +1429,7 @@ class SQLWorkLoads():
         yield counter
 
     @staticmethod
-    def build_upsert_query(
+    def build_pgsql_query(
         cols: List[str],
         table_name: str,
         unique_key: List[str],
@@ -1402,7 +1438,7 @@ class SQLWorkLoads():
         """
         Description:
             Builds postgres upsert query using input arguments.
-            Example : build_upsert_query(
+            Example : build_pgsql_query(
                 ['col1', 'col2', 'col3', 'col4'],
                 "my_table",
                 ['col1'],
@@ -1412,7 +1448,7 @@ class SQLWorkLoads():
             ON CONFLICT (col1) DO UPDATE SET (col3, col4) = (EXCLUDED.col3, EXCLUDED.col4) ;
         Attributes:
             cols (List) the postgres table columns required in the insert part of the query.
-            table_name (str) the postgres table name.
+            table_name (str) the postgres table name; must contain the schema name as a prefix.
             unique_key (List) unique_key of the postgres table for checking unique constraint
                 violations.
             cols_not_for_update (List) columns in cols which are not required in the update
@@ -1420,7 +1456,7 @@ class SQLWorkLoads():
         Returns (str) Upsert query as per input arguments.
         """
 
-        __s_fn_id__ = "function <build_upsert_query>"
+        __s_fn_id__ = "function <build_pgsql_query>"
         insert_query=""
         on_conflict_clause=""
 
@@ -1438,12 +1474,13 @@ class SQLWorkLoads():
 
             unique_key_str = ', '.join(unique_key)
 
+            ''' construct update columns removing the ommited columns '''
             update_cols = [col for col in cols if col not in cols_not_for_update]
             update_cols_str = ', '.join(update_cols)
-
+            ''' add prefix EXCLUDED to the cols to be updated '''
             update_cols_with_excluded_markers = [f'EXCLUDED.{col}' for col in update_cols]
             update_cols_with_excluded_markers_str = ', '.join(update_cols_with_excluded_markers)
-
+            ''' constrict the on conflict insertging the keys, cols, and excludes '''
             on_conflict_clause = """ ON CONFLICT (%s) DO UPDATE SET (%s) = (%s) ;""" % (
                 unique_key_str,
                 update_cols_str,
@@ -1457,45 +1494,63 @@ class SQLWorkLoads():
 
         return insert_query + on_conflict_clause
 
-    @staticmethod
-    def upsert_spark_df_to_postgres(dataframe_to_upsert: DataFrame,
-                                    table_name: str,
-                                    table_unique_key: List[str],
-                                    database_credentials: Dict[str, str],
-                                    batch_size: int = 1000,
-                                    parallelism: int = 1) -> None:
-        """
-        Upsert a spark DataFrame into a postgres table.
-        Note: If the target table lacks any unique index, data will be appended through
-        INSERTS as UPSERTS in postgres require a unique constraint to be present in the table.
-        :param dataframe_to_upsert: spark DataFrame to upsert to postgres.
-        :param table_name: postgres table name to upsert.
-        :param table_unique_key: postgres table primary key.
-        :param database_credentials: database credentials.
-        :param batch_size: desired batch size for upsert.
-        :param parallelism: No. of parallel connections to postgres database.
-        :return:None
-        """
-        upsert_query = SQLWorkLoads.build_upsert_query(
-            cols=dataframe_to_upsert.schema.names,
-            table_name=table_name, unique_key=table_unique_key
-        )
-        upsert_stats = dataframe_to_upsert.coalesce(parallelism).rdd.mapPartitions(
-            lambda dataframe_partition: SQLWorkLoads.batch_and_upsert(
-                dataframe_partition=dataframe_partition,
-                sql=upsert_query,
-                database_credentials=database_credentials,
-                batch_size=batch_size
-            )
-        )
+#     @staticmethod
+#     def upsert_sdf_to_pgsql(
+#         dataframe_to_upsert: DataFrame, #spark DataFrame to upsert to postgres
+#         table_name: str,                # postgres table name to upsert
+#         table_unique_key: List[str],    # postgres table primary key list
+#         database_credentials: Dict[str, str], # database connection credentials
+#         batch_size: int = 1000, # desired batch size for upsert
+#         parallelism: int = 1,   # No. of parallel connections to postgres database
+#         **kwargs,
+#     ) -> int:
+#         """
+#         Description:
+#             Upsert a spark DataFrame into a postgres table.
+#             Note: If the target table lacks any unique index, data will be appended through
+#             INSERTS as UPSERTS in postgres require a unique constraint to be present in the table.
+#         Attributes:
+#             dataframe_to_upsert (DataFrame) spark DataFrame to upsert to postgres.
+#             table_name (str) postgres table name to upsert.
+#             table_unique_key (List) postgres table primary key list.
+#             database_credentials (Dict) database connection credentials.
+#                 {
+#                 'host': SQLWorkLoads.dbHostIP,
+#                 'database': SQLWorkLoads.dbName,
+#                 'user': SQLWorkLoads.dbUser,
+#                 'password': SQLWorkLoads.dbPswd,
+#                 'port': SQLWorkLoads.dbPort,
+#                 }
+#             batch_size (int) desired batch size for upsert; e.g. 1000.
+#             parallelism (int) No. of parallel connections to postgres database.
+#         Returns (int) total_recs_loaded
+#         """
 
-        total_recs_loaded = 0
+#         __s_fn_id__ = "function <upsert_sdf_to_pgsql>"
 
-        for counter in upsert_stats.collect():
-            total_recs_loaded += counter
+#         try:
+#             upsert_query = SQLWorkLoads.build_pgsql_query(
+#                 cols=dataframe_to_upsert.schema.names,
+#                 table_name=table_name, unique_key=table_unique_key,
+#                 cols_not_for_update=None,
+#             )
+#             upsert_stats = dataframe_to_upsert.coalesce(parallelism).rdd.mapPartitions(
+#                 lambda dataframe_partition: SQLWorkLoads.batch_and_upsert(
+#                     dataframe_partition=dataframe_partition,
+#                     sql=upsert_query,
+#                     database_credentials=database_credentials,
+#                     batch_size=batch_size
+#                 )
+#             )
 
-        print("")
-        print("#################################################")
-        print(f" Total records loaded - {total_recs_loaded}")
-        print("#################################################")
-        print("")
+#             total_recs_loaded = 0
+
+#             for counter in upsert_stats.collect():
+#                 total_recs_loaded += counter
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
+
+#         return total_recs_loaded
