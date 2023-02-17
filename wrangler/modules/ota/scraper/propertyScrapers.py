@@ -9,7 +9,7 @@ __app__ = "wrangler"
 __ini_fname__ = "app.ini"
 __bookings_data__ = "hospitality/bookings/"
 
-''' Load necessary and sufficient python librairies that are used throughout the class'''
+''' Load necessary and sufficient python libraries that are used throughout the class'''
 try:
     ''' standard python packages '''
     import os
@@ -125,7 +125,7 @@ class PropertyScraper():
 #         logger.info('########################################################')
 #         logger.info(self.__name__,self.__package__)
 
-        ''' select the storate method '''
+        ''' select the storage method '''
         self.storeMethod = "local"
         
         ''' set the tmp dir to store large data to share with other functions
@@ -225,7 +225,7 @@ class PropertyScraper():
                 file_name - JSON file containing those parameters
 
             procedure: use the get_scrape_input_params function to load the the JSON file. 
-                        Thenloop through all the OTAs to extract the input parameters
+                        Then loop through all the OTAs to extract the input parameters
                         For each OTA template url use the insert_params_in_url function to
                         construct the list of parameterized URLs
             return: list with the set of urls (scrape_url_list)
@@ -315,7 +315,7 @@ class PropertyScraper():
 
                         if len(_l_dest) > 0:
                             self.destination_id = _l_dest
-                            logger.info("Loaded %d destnation ids", len(_l_dest))
+                            logger.info("Loaded %d destination ids", len(_l_dest))
 
                     ''' build the dictionary to replace the values in the url place holder '''
                     for destID in self.destination_id:
@@ -504,18 +504,54 @@ class PropertyScraper():
                     logger.warning('review_score - %s',text_err)
                     pass
                 try:
-                    _data_dict['location_desc'] = _list.find('div', class_='a1fbd102d9').text
+                    _data_dict['location_desc'] = _list.find('span', class_='f4bd0794db b4273d69aa').text
                 except Exception as text_err:
                     _data_dict['location_desc'] = None
                     _data_err = True
                     logger.warning('location_desc - %s',text_err)
                     pass
                 try:
-                    _data_dict['other_info'] = _list.find('div', class_='d22a7c133b').text
+                    _data_dict['distance_desc'] = _list.find('span', class_='f4bd0794db').text
                 except Exception as text_err:
-                    _data_dict['other_info'] = None
+                    _data_dict['distance_desc'] = None
                     _data_err = True
-                    logger.warning('other_info',text_err)
+                    logger.warning('distance_desc',text_err)
+                try:
+                    _data_dict['room_desc'] = _list.find('div', class_='cb5b4b68a4').text
+                except Exception as text_err:
+                    _data_dict['room_desc'] = None
+                    _data_err = True
+                    logger.warning('room_desc',text_err)
+                try:
+                    _data_dict['breakfast'] = _list.find('span', class_='e05969d63d').text
+                except Exception as text_err:
+                    _data_dict['breakfast'] = None
+                    _data_err = True
+                    logger.warning('breakfast', text_err)
+                try:
+                    _data_dict['cancellations'] = _list.find('div', class_='d506630cf3').text
+                except Exception as text_err:
+                    _data_dict['cancellations'] = None
+                    _data_err = True
+                    logger.warning('cancellations', text_err)
+                try:
+                    _data_dict['availability'] = _list.find('div', class_='cb1f9edcd4').text
+                except Exception as text_err:
+                    _data_dict['availability'] = None
+                    _data_err = True
+                    logger.warning('availability', text_err)
+                try:
+                    _data_dict['_star_rating_info'] = _list.find('div', class_='e4755bbd60').text
+                except Exception as text_err:
+                    _data_dict['_star_rating_info'] = None
+                    _data_err = True
+                    logger.warning('_star_rating_info', text_err)
+                try:
+                    _data_dict['star_rating'] = _star_rating_info.get('aria-label')
+                except Exception as text_err:
+                    _data_dict['star_rating' = None
+                    _data_err = True
+                    logger.warning('star_rating', text_err)
 
                 if bool(_data_dict):
                     _save_df = pd.concat([_save_df,pd.DataFrame(_data_dict)])
@@ -871,3 +907,33 @@ class PropertyScraper():
             print(traceback.format_exc())
 
         return count, data_df
+
+    '''Function
+    name:_clean_columns
+     procedure: clean and replace unwanted characters in room_data_df columns'''
+
+    def _clean_columns(self, room_data_df, col_name, **kwargs):
+
+    __s_fn_id__ = "function <_clean_columns>"
+    logger.info("Executing %s %s", self.__package__, __s_fn_id__)
+
+    emb_kwargs = {
+        "LOWER": True,
+        "NO_STOP_WORDS": False,
+        "METRIC": 'COSIN',
+        "MAX_SCORES": 2,
+    }
+    try:
+        room_data_df['room_desc'] = room_data_df['room_desc'].str.replace("•", "|")
+        room_data_df['cancellations'] = room_data_df['cancellations'].str.replace("•", "|")
+        room_data_df['breakfast'] = room_data_df['breakfast'].replace("Breakfast included",
+                                                                                          "yes").replace("None", "no")
+        booking_com_details_df['Star Rating(out of 5)'] = booking_com_details_df['Star Rating(out of 5)'].str.replace(
+            " out of 5", "")
+
+    except Exception as err:
+        logger.error("%s %s \n", __s_fn_id__, err)
+        print("[Error]" + __s_fn_id__, err)
+        print(traceback.format_exc())
+
+    return _clean_columns

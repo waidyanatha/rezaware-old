@@ -945,15 +945,13 @@ class CryptoMarkets():
         __as_type__ = "pandas"
         _find = None
         _colls_list = []
-#         _data_df = pd.DataFrame() 
+        unique_row_filters = ['MAX','MIN','AVG','MODE','SUM']
 
         try:
+            print("Validating input parameters ...")
             if "".join(source_db.split())=="":
                 raise AttributeError("Invalid SOURCE DB NAME")
-#             clsNoSQL.dbName = kwargs['DBNAME']
             clsNoSQL.dbName = source_db
-#             if "".join(destin_db.split())!="":
-#                 clsSpark.dbName = destin_db
 
             if "DBAUTHSOURCE" in kwargs.keys():
                 clsNoSQL.dbAuthSource = kwargs['DBAUTHSOURCE']
@@ -965,77 +963,105 @@ class CryptoMarkets():
                 clsNoSQL.collections = {"HASINNAME":kwargs['HASINNAME']}
             else:
                 pass
+            
             ''' valiate collection list '''
             if len(clsNoSQL.collections)<=0:
                 raise ValueError("Unable to locate any collection in %s database"
                                 %(clsNoSQL.dbName))
-#             _coll_list = clsNoSQL.collections
+            print("retrieving collections ...")
             _colls_list = clsNoSQL.collections
             logger.info("Found %d collection in %s %s",
                         len(_colls_list),clsNoSQL.dbName,clsNoSQL.dbType)
 #             ''' loop through collections to read into dataframe and write to DB '''
-#             _colls_list = clsNoSQL.collections
             ''' assign the find filter '''
             if "FIND" in kwargs.keys() and isinstance(kwargs['FIND'],dict):
                 _find = kwargs['FIND']
-            ''' set data to empty dataframe '''
-            self._data = pd.DataFrame()
+
+            ''' set the singel asset pick flag '''
+            if "UNIQUEROWBY" not in kwargs.keys() or \
+                kwargs['UNIQUEROWBY'].upper() not in unique_row_filters:
+                kwargs['UNIQUEROWBY']='MAX'
             
+            self._data = pd.DataFrame()   # initialize return dataframe
+            
+            print("wait a moment while we transfer data from %s %s to %s %s"
+                  % (clsNoSQL.dbType,source_db,clsSpark.dbType,destin_db))
             try:
                 ''' loop through collection to get the read data '''
                 for _coll in _colls_list:
-                    _data_df = pd.DataFrame()   # initialize the data frame
+                    _coll_df = pd.DataFrame()   # initialize the data frame
                     ''' read data from nosql collection as pandas dataframe '''
-                    _data_df = clsNoSQL.read_documents(
+                    _coll_df = clsNoSQL.read_documents(
                         as_type=__as_type__,
-                        db_name=None,   #clsNoSQL.dbName is already set above,
+                        db_name=None,      #clsNoSQL.dbName is already set above,
                         db_coll=[_coll],   #one collection at a time to reduce the load
                         doc_find=_find
                     )
                     ''' write to sql db if data exists '''
-                    if _data_df.shape[0] > 0:
-                        logger.debug("read %d records from collection %s"
-                                     ,_data_df.shape[0],_coll)
-#                     if self.data.shape[0] > 0:
+                    if _coll_df.shape[0] > 0:
+                        logger.debug("read %d documents from collection %s"
+                                     ,_coll_df.shape[0],_coll)
+
                         ''' rename columns to match the db table '''
                         if "COLUMNSMAP" in kwargs.keys() and isinstance(kwargs['COLUMNSMAP'],dict):
-                            _data_df.rename(columns=kwargs['COLUMNSMAP'],inplace=True)
+                            _coll_df.rename(columns=kwargs['COLUMNSMAP'],inplace=True)
 #                             logger.debug("Column renamed in dataframe %s", str(kwargs['COLUMNSMAP']))
+                        ''' remove duplicates '''
+                        _coll_df.drop_duplicates(inplace=True)
+                        logger.debug("After applying drop_duplicates there are %d rows in dataframe",
+                                    _coll_df.shape[0])
+                        ''' format date hh:mm:ss to 00:00:00; support grouping by date '''
+                        _coll_df['mcap_date']=_coll_df['mcap_date']\
+                                                .dt.strftime('%Y-%m-%d 00:00:00')
+                        _coll_df['mcap_date']=pd.to_datetime(_coll_df['mcap_date'])
+                        ''' Set a single mcap value for each asset '''
+                        if kwargs['UNIQUEROWBY']=='MAX':
+                            _coll_df = _coll_df.loc[_coll_df\
+                                                .reset_index()\
+                                                .groupby(['asset_symbol','mcap_date'])\
+                                                ['mcap_value'].idxmax()]
+                        else:
+                            raise AttributeError("Something went wrong with processing %s"
+                                                 % kwargs['UNIQUEROWBY'])
+                        logger.debug("Retrieved %d rows with %s mcap_value in dataframe",
+                                _coll_df.shape[0],kwargs['UNIQUEROWBY'])
+
+                        ''' augment dataframe with missing table columns '''
+                        _coll_df["asset_name"]=_coll_df["asset_symbol"]
+                        _coll_df["created_proc"]="_".join([self.__app__,
+                                                           self.__module__,
+                                                           self.__package__,
+                                                           self.__name__,
+                                                           __s_fn_id__])
+
                         ''' write dataframe to table with sparksqlwls'''
                         _saved_rec_count=clsSpark.insert_sdf_into_table(
-                            save_sdf=_data_df,
+                            save_sdf=_coll_df,
                             db_table=table_name,
                             session_args = kwargs
                         )
                         logger.info("%d records inserted into table %s in database %s"
                             ,_saved_rec_count,table_name,destin_db)
-                        self._data = pd.concat([self._data,_data_df])
+                        if _saved_rec_count > 0:
+                            self._data = pd.concat([self._data,_coll_df])
+                        else:
+                            raise RuntimeError("None of %s collection %d rows were inserted %s table"
+                                               %(_coll,_coll_df.shape[0],table_name))
                     else:
                         logger.debug("No records found in %s collection",_coll)
 
             except Exception as coll_err:
                 logger.error("Collection %s hadd errors: %s \n",_coll,coll_err)
-#                 print("[Error]"+__s_fn_id__, coll_err)
                 logger.debug("%s",traceback.format_exc())
 
-#             if self.data.shape[0] > 0:
-#                 if "COLUMNSMAP" in kwargs.keys() and isinstance(kwargs['COLUMNSMAP'],dict):
-#                     self._data.rename(columns=kwargs['COLUMNSMAP'],inplace=True)
-#                     logger.debug("Column renamed in dataframe %s", str(kwargs['COLUMNSMAP']))
-#                 _saved_rec_count=clsSpark.insert_sdf_into_table(
-#                     save_sdf=self.data,
-#                     db_table=table_name,
-#                     session_args = kwargs
-#                 )
-#             logger.info("%d records inserted into table %s in database %s"
-#                         ,_saved_rec_count,table_name,destin_db)
-
             if self._data.shape[0] > 0:
-                logger.info("Transfer of %d %s collection from %s database into "+\
-                           "%s %s database table %s with %d rows completed!", \
+                logger.info("Done transfering %d %s collection from %s database into "+\
+                           "%s %s database table %s with %d rows", \
                            len(_colls_list),clsNoSQL.dbType,source_db, \
                            clsSpark.dbType,destin_db,table_name, self._data.shape[0]
                           )
+                print('Done processing with %d rows' % self._data.shape[0])
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+__s_fn_id__, err)

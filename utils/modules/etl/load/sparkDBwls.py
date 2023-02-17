@@ -23,9 +23,9 @@ try:
 #     from pyspark.sql.functions import lit, current_timestamp,col,isnan, when, count, countDistinct
     from pyspark.ml.feature import Imputer
     from pyspark.sql import DataFrame
-#     from pyspark import SparkContext, SparkConf
-#     import pandas as pd
-#     import numpy as np
+    from typing import List, Iterable, Dict, Tuple
+    from psycopg2 import connect, DatabaseError
+    from psycopg2.extras import execute_values
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -939,7 +939,7 @@ class SQLWorkLoads():
                                 .getOrCreate()
                 
             logger.info("Starting a Spark Session: %s for %s"
-                        ,self._session, self.storeMode)
+                        ,self._session, self.dbType)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1087,7 +1087,7 @@ class SQLWorkLoads():
                 options['user'] = self.dbUser
             if "password" not in options.keys():
                 options['password'] = self.dbPswd
-            if "numPartitions" not in options.keys():
+            if "driver" not in options.keys():
                 options['driver'] = self.dbDriver
 
             print("Wait a moment, retrieving data ...")
@@ -1098,36 +1098,6 @@ class SQLWorkLoads():
                 if db_table.find(self.dbSchema+".") == -1:
                     db_table = self.dbSchema+"."+db_table
                 option["dbtable"]=db_table
-                
-#                 load_sdf = self.session.read\
-#                     .format("jdbc")\
-#                     .option("url",self.dbConnURL)\
-#                     .option("query",select)\
-#                     .option("numPartitions",self.partitions)\
-#                     .option("user",self.dbUser)\
-#                     .option("password",self.dbPswd)\
-#                     .option("driver",self.dbDriver)\
-#                     .load()
-
-#             elif db_table is not None and "".join(db_table.split())!="" \
-#                 and db_column is not None and "".join(db_column.split())!="" \
-#                 and lower_bound is not None and upper_bound is not None:
-
-#                 if db_table.find(self.dbSchema+".") == -1:
-#                     db_table = self.dbSchema+"."+db_table
-
-#                 load_sdf = self.session.read\
-#                     .format("jdbc")\
-#                     .option("url",self.dbConnURL)\
-#                     .option("dbtable",db_table)\
-#                     .option("partitionColumn",db_column)\
-#                     .option("lowerBound",lower_bound)\
-#                     .option("upperBound",upper_bound)\
-#                     .option("numPartitions",self.partitions)\
-#                     .option("user",self.dbUser)\
-#                     .option("password",self.dbPswd)\
-#                     .option("driver",self.dbDriver)\
-#                     .load()
             else:
                 raise AttributeError("Invalid set of input variables necesssary "+\
                                      "to determine the read operation")
@@ -1164,17 +1134,11 @@ class SQLWorkLoads():
 
         return self._data
 
-    ''' Function
-            name: insert_sdf_into_table
-            parameters:
-                    @name (str)
-                    @enrich (dict)
-            procedure: 
-            return DataFrame
+    ''' Function --- INSERT INTO TABLE ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    @classmethod
+
     def insert_sdf_into_table(
         self,
         save_sdf,
@@ -1185,8 +1149,6 @@ class SQLWorkLoads():
         _num_records_saved = 0
         
         try:
-#             if not save_sdf is None:
-#                 self.data = save_sdf
             self.data = save_sdf
             if self.data.count() <= 0:
                 raise ValueError("No data to insert into database table %s"% db_table)
@@ -1194,13 +1156,7 @@ class SQLWorkLoads():
                 self.session = kwargs
             else:
                 self.session = {}
-#             ''' convert pandas to spark dataframe '''
-#             if isinstance(save_sdf,pd.DataFrame):
-# #                 save_sdf = self.session.createDataFrame(save_sdf) 
-#                 save_sdf = self.session.createDataFrame(save_sdf) 
-#             ''' validate sdf have data '''
-#             if save_sdf.count() <= 0:
-#                 raise ValueError("Invalid spark dataframe with %d records" % (save_sdf.count())) 
+
             ''' TODO validate table exists '''
             
             ''' if created audit columns don't exist add them '''
@@ -1246,245 +1202,300 @@ class SQLWorkLoads():
 
         return _num_records_saved
 
+    ''' WORK IN PROGRESS - Function --- UPDATE TABLE ---
 
-#     ''' Function
-#             name: impute_data
-#             parameters:
-#                     filesPath (str)
-#                     @enrich (dict)
-#             procedure: 
-#             return DataFrame
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
 
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     @staticmethod
-#     def impute_data(
-# #         self,
-#         data,
-#         column_subset:list=[],
-#         strategy:str="mean",
-#         **kwargs
-#     ) -> DataFrame:
-#         """
-#         Description:
-#             The impute function leverages the pyspark Imputer class. Based on the specified
-#             numeric columns or all detected numeric colums, a stretegy set in the function
-#             parameter, or default mean strategy is applied.
-#         Attributes:
-#             data - must be a valid pyspark dataframe
-#             column_subset:list=[],
-#             strategy:str="mean",
-#             **kwargs
-#         """
+    def update_sdf_in_table(
+        self,
+        save_sdf,   # any dtype data set (will be converted to Dataframe)
+        db_table:str="",  # name of table to be updated
+        table_pk:list=[], # list of columns to use in the where statement 
+        uspert_sql:str="",  # sql update statement
+        **options):
+        """
+        Description:
+            First option is to use the function to generate an update statement, for you,
+            using the data columns and the table given; then apply the dynamically generated
+            statement string to update the columns.
+            Other option is to provid and an update sql statement that can be directly applied;
+            e.g., UPDATE <tablename> SET 
+            The options and and drivers will be set accordingly.
+        Attributes:
+            save_sdf (any) dtype that can be converted to a pyspark dataframe
+            db_table (str) table name to update rows
+            uspert_sql (str) sql update statement to apply directly
+        Returns"
+            _num_records_saved (int) number of rows updated in the table
+        """
+        
+        __s_fn_id__ = "function <update_sdf_in_table>"
+        _num_records_saved = 0
+        
+        try:
+            self.data = save_sdf
+            if self.data.count() <= 0:
+                raise ValueError("No data to update in table")
+            if len(options) > 0:
+                self.session = options
+            else:
+                self.session = {}
 
-#         __s_fn_id__ = "function <impute_data>"
-#         _data = None
-
-#         try:
-#             ''' set and validate data '''
-#             if not isinstance(data,DataFrame):
-#                 raise AttributeError("Invalid data; must be a valid pyspark dataframe")
-#             ''' validate column_subset, if none imupte all numeric columns '''
-#             if len(column_subset) > 0:
-#                 non_num_cols = len([col_ for col_ in column_subset if
-#                                     data.select(col_).dtypes[0][1] !="string"])
-#                 if non_num_cols < len(column_subset):
-#                     raise AttributeError("%d invalid non-numeric columns in input var: column_subset"
-#                                          % len(column_subset)-non_num_cols)
-#             elif column_subset is None or column_subset==[]:
-#                 column_subset = [col_ for col_ in data.columns if
-#                                  data.select(col_).dtypes[0][1] !="string"]
-#             else:
-#                 raise RuntimeError("Something was wrong validating column_subset")
-
-#             ''' validate strategy '''
-#             _strategy = strategy
-#             if not strategy.lower() in ['mean','median','mode']:
-#                 _strategy = 'mean'
-#                 logger.warning("Invalid strategy %s, reverting to default strategy = %s"
-#                                ,strategy,_strategy)
-#             ''' apply imputation '''
-#             imputer = Imputer(inputCols=column_subset,
-#                               outputCols=[col_ for col_ in column_subset]
-#                              ).setStrategy(_strategy)
-#             _data = imputer.fit(data).transform(data)
-# #             self._data = imputer.fit(data).transform(data)
-
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             print("[Error]"+__s_fn_id__, err)
-#             print(traceback.format_exc())
-
-# #         return self._data
-#         return _data
-
-#     ''' Function
-#             name: impute_data
-#             parameters:
-#                     filesPath (str)
-#                     @enrich (dict)
-#             procedure: 
-#             return DataFrame
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     @staticmethod
-#     def count_column_nulls(
-# #         self,
-#         data,
-#         column_subset:list=[],
-#         **kwargs,
-#     ) -> DataFrame:
-
-#         __s_fn_id__ = "function <count_column_nulls>"
-#         _nan_counts_sdf = None
-
-#         try:
-#             ''' drop any columns not specified in column_subset; else use all '''
-#             if len([col_ for col_ in column_subset if col_ not in data.columns]) > 0:
-#                 column_subset = data.columns
-
-#             _nan_counts_sdf = data.select([count(F.when(F.col(c).contains('None') | \
-#                                         F.col(c).contains('NULL') | \
-#                                         (F.col(c) == '' ) | \
-#                                         F.col(c).isNull() | \
-#                                         F.isnan(c), c )).alias(c)
-#                                 for c in column_subset])
-
-#             if _nan_counts_sdf.count() > 0:
-#                 logger.debug("NULL count completed for %d columns",len(_nan_counts_sdf.columns))
-
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             print("[Error]"+__s_fn_id__, err)
-#             print(traceback.format_exc())
-
-#         return _nan_counts_sdf
-
-#     @staticmethod
-#     def pivot_data(
-#         data,   # a valid pyspark DataFrame
-#         group_columns, # uses the columns in the grouby extension
-#         pivot_column,  # column distinct values are used to create the pivot columns
-#         agg_column,    # the column to apply the sum, avg, stdv aggregation
-#         **kwargs,      # defines selected pivot col names, aggregation function, etc
-#     ) -> DataFrame:
-#         """
-#         Description:
-#             Creates a grouped by and pivoted dataframe. The numeric columns will be
-#             aggregated by a sum by default; unless specified as a kwargs
-#         Attributes:
-#             data (DataFrame) a valid pyspark dataframe
-#             **kwargs
-#                 "AGGREGATE" - the aggregation function sum, mean, avg, min, max,...
-#                 "PIVCOLUMNS" - create pivot table columns for specified values
-#                 ""
-#         Returns:
-#             data (DataFrame)
-#         """
-#         __s_fn_id__ = "function <pivot_data>"
-#         _piv_data = None
-
-#         try:
-#             ''' validate input attributes '''
-#             if not isinstance(data,DataFrame):
-#                 raise AttributeError("Attribute data must be a valida pyspark dataframe.")
-#             if group_columns not in data.columns:
-#                 raise AttributeError("Invalid group_columns: %s. Attribute value must be in %s"
-#                                      % (str(group_columns),str(data.columns)))
-#             if pivot_column not in data.columns:
-#                 raise AttributeError("Invalid pivot_column: %s. Attribute value must be in %s"
-#                                      % (pivot_column,str(data.columns)))
-#             if agg_column not in data.columns:
-#                 raise AttributeError("Invalid agg_column: %s. Attribute value must be in %s"
-#                                      % (str(agg_column),str(data.columns)))
-
-#             _piv_col_names = [x[0] for x in
-#                               data.dropDuplicates([pivot_column])
-#                               .select(pivot_column)
-#                               .collect()]
-#             if "PIVCOLUMNS" in  kwargs.keys() and kwargs['COLUMNS'] in _piv_col_names:
-#                 _piv_col_names = kwargs['PIVCOLUMNS']
-#             logger.debug("Pivot columns: %s",_piv_col_names)
-#             _agg = 'sum'
-#             if "AGGREGATE" in kwargs.keys() and kwargs['AGGREGATE'] in self._aggList:
-#                 _agg = kwargs['AGGREGATE'].lower()
-
-#             logger.debug("Transposing %d rows groupby %s to pivot with "+\
-#                          "distinct values in %s and %s aggregation on column(s): %s"
-#                          ,data.count(),str(group_columns).upper()
-#                          ,str(pivot_column).upper(),_agg.upper(),str(agg_column))
-#             if _agg == 'sum':
-#                 _piv_data = data.groupBy(group_columns)\
-#                         .pivot(pivot_column, _piv_col_names)\
-#                         .sum(agg_column)
-#             elif _agg == 'mean':
-#                 _piv_data = data\
-#                         .groupBy(group_columns)\
-#                         .pivot(pivot_column, _piv_col_names)\
-#                         .mean(agg_column)
-#             elif _agg == 'average' or 'avg':
-#                 _piv_data = data\
-#                         .groupBy(group_columns)\
-#                         .pivot(pivot_column, _piv_col_names)\
-#                         .avg(agg_column)
-#             elif _agg == 'standard deviation' or 'stdv' or 'stddev':
-#                 _piv_data = data\
-#                         .groupBy(group_columns)\
-#                         .pivot(pivot_column, _piv_col_names)\
-#                         .stddev(agg_column)
-#             elif _agg == 'median' or 'med':
-#                 _piv_data = data\
-#                         .groupBy(group_columns)\
-#                         .pivot(pivot_column, _piv_col_names)\
-#                         .median(agg_column)
-#             elif _agg == 'mode' or 'mod':
-#                 _piv_data = data\
-#                         .groupBy(group_columns)\
-#                         .pivot(pivot_column, _piv_col_names)\
-#                         .mode(agg_column)
-#             elif _agg == 'maximum' or 'max':
-#                 _data = data\
-#                         .groupBy(group_columns)\
-#                         .pivot(pivot_column, _piv_col_names)\
-#                         .max(agg_column)
-#             elif _agg == 'minimum' or 'min':
-#                 _piv_data = data\
-#                         .groupBy(group_columns)\
-#                         .pivot(pivot_column, _piv_col_names)\
-#                         .min(agg_column)
-#             else:
-#                 raise AttributeError("Aggregation to be included in the future.")
-
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             print("[Error]"+__s_fn_id__, err)
-#             print(traceback.format_exc())
-
-#         return _piv_data
-
+            ''' TODO validate table exists '''
             
-#     @staticmethod
-#     def drop_duplicates(
-#         data
-#     ) -> DataFrame:
+            ''' if created audit columns don't exist add them '''
+            listColumns=self.data.columns
+            if "modified_dt" not in listColumns:
+                self.data = self.data.withColumn("modified_dt", F.current_timestamp())
+            if "modified_by" not in listColumns:
+                self.data = self.data.withColumn("modified_by", F.lit(self.dbUser))
+            if "modified_proc" not in listColumns:
+                self.data = self.data.withColumn("modified_proc", F.lit("Unknown"))
+            
+            ''' TODO: add code to accept options() to manage schema specific
+                authentication and access to tables '''
 
-#         try:
-#             ''' drop duplicates 
-#                 TODO - move to a @staticmethod '''
-#             if "DROPDUPLICATES" in kwargs.keys() and kwargs['DROPDUPLICATES']:
-#                 _unique_sdf = data.distinct()
-#                 logger.debug("Removed duplicates, reduced dataframe with %d rows",_unique_sdf.count())
+            ''' set the partitions '''
+            if "PARTITIONS" in options.keys():
+                self.partitions = options['PARTITIONS']
+            if "FORMAT" in options.keys():
+                self.rwFormat = options['FORMAT']
+            if "url" not in options.keys():
+                options['url'] = self.dbConnURL
+            if "numPartitions" not in options.keys():
+                options['numPartitions'] = self.partitions
+            if "user" not in options.keys():
+                options['user'] = self.dbUser
+            if "password" not in options.keys():
+                options['password'] = self.dbPswd
+            if "driver" not in options.keys():
+                options['driver'] = self.dbDriver
 
-#             ''' convert to pandas dataframe 
-#                 TODO - move to @staticmethod '''
-#             if 'TOPANDAS' in kwargs.keys() and kwargs['TOPANDAS']:
-#                 _unique_sdf = _unique_sdf.toPandas()
-#                 logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
-#                              % _unique_sdf.shape[0])
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             print("[Error]"+__s_fn_id__, err)
-#             print(traceback.format_exc())
+            print("Wait a moment, writing data ...")
+            ''' use query else use partition column'''
+            if uspert_sql is not None and "".join(uspert_sql.split())!="":
+                options['query'] = uspert_sql
+            elif db_table is not None and "".join(db_table.split())!="":
+                ''' add schema if not in table name '''
+                if db_table.find(self.dbSchema+".") == -1:
+                    db_table = self.dbSchema+"."+db_table
+                option["dbtable"]=db_table
 
-#         return _unique_sdf
+            update_sdf = self.session.read\
+                .format(self.rwFormat)\
+                .options(**options)\
+                .load()
+            
+            if load_sdf:
+                logger.debug("loaded %d rows into pyspark dataframe" % load_sdf.count())
+            else:
+                logger.debug("Something went wrong")
+            logger.info("Saved %d  rows into table %s in database %s complete!"
+                        ,self.data.count(), self.dbSchema+"."+db_table, self.dbName)
+            _num_records_saved = self.data.count()
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return _num_records_saved
+
+
+    @staticmethod
+    def get_postgres_connection(host: str,
+                                database: str,
+                                user: str,
+                                password: str,
+                                port: str):
+        """
+        Connect to postgres database and get the connection.
+        :param host: host name of database instance.
+        :param database: name of the database to connect to.
+        :param user: user name.
+        :param password: password for the user name.
+        :param port: port to connect.
+        :return: Database connection.
+        """
+        try:
+            conn = connect(
+                host=host, database=database,
+                user=user, password=password,
+                port=port
+            )
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return conn
+
+    @staticmethod
+    def batch_and_upsert(dataframe_partition: Iterable,
+                         sql: str,
+                         database_credentials: dict,
+                         batch_size: int = 1000):
+        """
+        Batch the input dataframe_partition as per batch_size and upsert
+        to postgres using psycopg2 execute values.
+        :param dataframe_partition: Pyspark DataFrame partition or any iterable.
+        :param sql: query to insert/upsert the spark dataframe partition to postgres.
+        :param database_credentials: postgres database credentials.
+            Example: database_credentials = {
+                    host: <host>,
+                    database: <database>,
+                    user: <user>,
+                    password: <password>,
+                    port: <port>
+                }
+        :param batch_size: size of batch per round trip to database.
+        :return: total records processed.
+        """
+        conn, cur = None, None
+        counter = 0
+        batch = []
+
+        for record in dataframe_partition:
+
+            counter += 1
+            batch.append(list(record))
+
+            if not conn:
+                conn = SQLWorkLoads.get_postgres_connection(**database_credentials)
+                cur = conn.cursor()
+            print("\n",record)
+            print("\n",sql)
+            print("\n",batch)
+            if counter % batch_size == 0:
+                execute_values(
+                    cur=cur, sql=sql,
+                    argslist=batch,
+                    page_size=batch_size
+                )
+                conn.commit()
+                batch = []
+
+        if batch:
+            execute_values(
+                cur=cur, sql=sql,
+                argslist=batch,
+                page_size=batch_size
+            )
+            conn.commit()
+
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+        yield counter
+
+    @staticmethod
+    def build_upsert_query(
+        cols: List[str],
+        table_name: str,
+        unique_key: List[str],
+        cols_not_for_update: List[str] = None
+    ) -> str:
+        """
+        Description:
+            Builds postgres upsert query using input arguments.
+            Example : build_upsert_query(
+                ['col1', 'col2', 'col3', 'col4'],
+                "my_table",
+                ['col1'],
+                ['col2']
+            ) ->
+            INSERT INTO my_table (col1, col2, col3, col4) VALUES %s  
+            ON CONFLICT (col1) DO UPDATE SET (col3, col4) = (EXCLUDED.col3, EXCLUDED.col4) ;
+        Attributes:
+            cols (List) the postgres table columns required in the insert part of the query.
+            table_name (str) the postgres table name.
+            unique_key (List) unique_key of the postgres table for checking unique constraint
+                violations.
+            cols_not_for_update (List) columns in cols which are not required in the update
+                part of upsert query.
+        Returns (str) Upsert query as per input arguments.
+        """
+
+        __s_fn_id__ = "function <build_upsert_query>"
+        insert_query=""
+        on_conflict_clause=""
+
+        try:
+            cols_str = ', '.join(cols)
+
+            insert_query = """ INSERT INTO %s (%s) VALUES %%s """ % (
+                table_name, cols_str
+            )
+
+            if cols_not_for_update is not None:
+                cols_not_for_update.extend(unique_key)
+            else:
+                cols_not_for_update = [col for col in unique_key]
+
+            unique_key_str = ', '.join(unique_key)
+
+            update_cols = [col for col in cols if col not in cols_not_for_update]
+            update_cols_str = ', '.join(update_cols)
+
+            update_cols_with_excluded_markers = [f'EXCLUDED.{col}' for col in update_cols]
+            update_cols_with_excluded_markers_str = ', '.join(update_cols_with_excluded_markers)
+
+            on_conflict_clause = """ ON CONFLICT (%s) DO UPDATE SET (%s) = (%s) ;""" % (
+                unique_key_str,
+                update_cols_str,
+                update_cols_with_excluded_markers_str
+            )
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return insert_query + on_conflict_clause
+
+    @staticmethod
+    def upsert_spark_df_to_postgres(dataframe_to_upsert: DataFrame,
+                                    table_name: str,
+                                    table_unique_key: List[str],
+                                    database_credentials: Dict[str, str],
+                                    batch_size: int = 1000,
+                                    parallelism: int = 1) -> None:
+        """
+        Upsert a spark DataFrame into a postgres table.
+        Note: If the target table lacks any unique index, data will be appended through
+        INSERTS as UPSERTS in postgres require a unique constraint to be present in the table.
+        :param dataframe_to_upsert: spark DataFrame to upsert to postgres.
+        :param table_name: postgres table name to upsert.
+        :param table_unique_key: postgres table primary key.
+        :param database_credentials: database credentials.
+        :param batch_size: desired batch size for upsert.
+        :param parallelism: No. of parallel connections to postgres database.
+        :return:None
+        """
+        upsert_query = SQLWorkLoads.build_upsert_query(
+            cols=dataframe_to_upsert.schema.names,
+            table_name=table_name, unique_key=table_unique_key
+        )
+        upsert_stats = dataframe_to_upsert.coalesce(parallelism).rdd.mapPartitions(
+            lambda dataframe_partition: SQLWorkLoads.batch_and_upsert(
+                dataframe_partition=dataframe_partition,
+                sql=upsert_query,
+                database_credentials=database_credentials,
+                batch_size=batch_size
+            )
+        )
+
+        total_recs_loaded = 0
+
+        for counter in upsert_stats.collect():
+            total_recs_loaded += counter
+
+        print("")
+        print("#################################################")
+        print(f" Total records loaded - {total_recs_loaded}")
+        print("#################################################")
+        print("")
