@@ -470,3 +470,83 @@ class ClusterWorkLoads():
 
         return self._category
 
+
+
+
+try:
+    ''' standard python packages '''
+    import os
+    import sys
+    from sentence_transformers import SentenceTransformer
+    embedder = SentenceTransformer('distilbert-base-nli-mean-tokens')
+
+#     sys.path.insert(1,__module_dir__)
+#     import otaUtils as otau
+
+    print("All %s-module %s-packages in function-%s imported successfully!"
+          % (__module__,__package__,__name__))
+
+except Exception as e:
+    print("Some packages in {0} module {1} package for {2} function didn't load\n{3}"\
+          .format(__module__,__package__,__name__,e))
+
+
+'''
+    CLASS spefic to room type clustering
+    
+    contributor(s):
+            <ushan.jayasooriya@colombo.rezgateway.com>
+'''
+
+
+class RoomType:
+    def __init__(self):
+        #self.types = ['single', 'double', 'twin', 'triple', 'quad']
+        self.room_list =  ['King suite studio Smoking- city view',
+                'King suite standard studio- 1 Double Delux bed - No smoking',
+                'Queen suite - 2 standard beds-Guest Sofa',
+                'Queen superior suite studio with 2 beds',
+                'Queen suit Delux -2 Double beds - Non Smoking',
+                'King standard superior',
+                'Delux King suite Double bed-city View',
+                'Double Standard delux room 2 Beds - city view',
+                'King - Access Disability ',
+                'King suite with Sofa Dormitory - 1 Bed']
+
+
+    def get_types(self):
+        return self.room_list
+        
+
+    def get_week_no( self, df, col_name1, col_name2 ,**kwargs ):
+    
+        self.df= df.dropna()
+        df[col_name1] = pd.to_datetime(df[col_name1]).dt.date
+        df[col_name1] = pd.to_datetime(df[col_name1])
+        
+        df[col_name2] = pd.to_datetime(df[col_name2]).dt.date
+        df[col_name2] = pd.to_datetime(df[col_name2])
+        
+        df['Date_gap'] = df[col_name2] - df[col_name1]
+        # remove 'days' in 'Date_gap' column
+        df['Date_gap'] = df['Date_gap'].astype(str)
+        df["Date_gap"]= df["Date_gap"].replace( r"days","", regex=True)
+        
+        return df 
+
+
+
+    def embedding(self, df, col_name1, col_name2 ,**kwargs):
+        _data=_data[_data.room_rate != 0]
+        _data = _data.reset_index()
+        corpus = list(_data['room_type'])
+
+        corpus_embeddings = embedder.encode(corpus)
+
+
+        
+    def remove_type(self, type_to_remove):
+        if type_to_remove in self.types:
+            self.types.remove(type_to_remove)
+        else:
+            print("Error: Room type not found.")
