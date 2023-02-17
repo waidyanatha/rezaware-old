@@ -909,27 +909,11 @@ class CryptoMarkets():
 
         return write_data
 
-    ''' Function
-            name: nosql_to_sql_db
-            parameters:
-                data_owner (str) - the name of the data source; e.g. coinmarketcap,
-                from_date (date) - start date to filter the data by
-                to_date (date) - end date to filter the data by
-                **kwargs (doct) - for non-existent key/val pairs; will use default values
-                                from the app.cfg file 
-                    "DBNAME" (str) - database name to retrieve data from
-                    "DBAUTHSOURCE" (str) - autherization database; else try with database name
-                    "HASINNAME" (str, optional) - matching text to filter collections
-                    "COLLLIST" (list, optional) - list of collections to consider
-                            collection list preceeds over has-in-name 
-
-            procedure: with spark read all the mcap data from the mongodb colelctions
-                       for a given data_owner. Filter the data by date range. Construct
-                       a spark dataframe
-            return self._data (spark dataframe)
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-
+    ''' Function --- NOSQL-TO-DB ---
+    
+        TODO: replace pyspark dataframe and sql unfriendly characters
+                chars: $ . &# ; ф
+        author: <nuwan.waidyanatha@rezgateway.com>
     '''
 
     def nosql_to_sql(
@@ -940,6 +924,25 @@ class CryptoMarkets():
         table_name:str="",
         **kwargs
     ):
+        """
+        Description:
+            with spark read all the mcap data from the mongodb colelctions for a given data_owner.
+            Filter the data by date range. Construct a spark dataframe
+            clean and replace the strings; e.g. $, ., &# etc
+        Attributes:
+            data_owner (str) - the name of the data source; e.g. coinmarketcap,
+            from_date (date) - start date to filter the data by
+            to_date (date) - end date to filter the data by
+            **kwargs (doct) - for non-existent key/val pairs; will use default values
+                            from the app.cfg file 
+                "DBNAME" (str) - database name to retrieve data from
+                "DBAUTHSOURCE" (str) - autherization database; else try with database name
+                "HASINNAME" (str, optional) - matching text to filter collections
+                "COLLLIST" (list, optional) - list of collections to consider
+                        collection list preceeds over has-in-name 
+        Returns:
+                self._data (spark dataframe)
+        """
 
         __s_fn_id__ = "function <nosql_to_sql>"
         __as_type__ = "pandas"

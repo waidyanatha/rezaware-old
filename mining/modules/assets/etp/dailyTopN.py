@@ -331,6 +331,7 @@ class WeightedPortfolio():
             try:
 #                 _asset_data = func(self, query:str="", **kwargs)
                 self._data = func(self, query, **kwargs)
+
                 ''' transpose to get assets in the columns '''
                 self._data=clsSCNR.pivot_data(
                     data=self._data,
@@ -339,22 +340,34 @@ class WeightedPortfolio():
                     agg_column='mcap_value',
                     **kwargs,
                 )
+                if not self._data or self._data.count()<=0:
+                    raise RuntimeError("Pivot process in %s returned an empty DataFrame"
+                                       %(" ".join([clsSCNR.__app__,clsSCNR.__module__,
+                                                  clsSCNR.__package__,clsSCNR.__name__])))
+                logger.debug("%s Pivot process returned %d columns and %d rows",
+                             " ".join([clsSCNR.__app__,clsSCNR.__module__,
+                                        clsSCNR.__package__,clsSCNR.__name__]),
+                             len(self._data.columns),self._data.count())
 
                 ''' impute to fill the gaps '''
                 _agg_strategy = __strategy__
                 if "AGGREGATE" in kwargs.keys():
                     _agg_strategy = kwargs['AGGREGATE']
-#                 _col_subset = pivot_mcap.columns
+
                 _col_subset = self._data.columns
                 _col_subset.remove('mcap_date')
-#                 _piv_ticker_sdf = clsSCNR.impute_data(
+
                 self._data = clsSCNR.impute_data(
                     data=self._data,
                     column_subset=_col_subset,
                     strategy=_agg_strategy,
                 )
-                logger.debug("%s ran an impute on all %d asset tickers"
-                             ,__s_fn_id__,len(_col_subset))
+                if not self._data or self._data.count() <= 0:
+                    raise RuntimeError("Impute process in %s returned an empty DataFrame"
+                                       %(" ".join([clsSCNR.__app__,clsSCNR.__module__,
+                                                  clsSCNR.__package__,clsSCNR.__name__])))
+                logger.debug("%s retuned impute data on %d asset tickers and %d market cap row"
+                             ,__s_fn_id__,len(_col_subset),self._data.count())
 
                 ''' ensure there are no non-numeric values '''
     #             _col_subset = mcap_sdf.columns
@@ -363,8 +376,13 @@ class WeightedPortfolio():
                     data=self._data,
                     column_subset=_col_subset
                 )
+                if not _nan_counts_sdf or _nan_counts_sdf.count() <= 0:
+                    raise RuntimeError("Check of NaN, Null, and Empty cells "+\
+                                       "did not return a valid dataframe")
                 ''' check for assets with nulls '''
                 ''' CAUSING MEMORY ISSUES '''
+                logger.debug("Check for NaN, Null, and Empty cells returned %d columns and %d rows",
+                             len(_nan_counts_sdf.columns),_nan_counts_sdf.count())
 #                 try:
 #                     ''' TODO remove tickers with Null counts > 0 '''
 #                     logger.debug("%s Checking for asset tickers with non-numerics",__s_fn_id__)
@@ -377,10 +395,9 @@ class WeightedPortfolio():
 #                     logger.warning("%s",ticker_err)
 
                 ''' unpivot dataframe '''
-#                 _piv_col_subset = _piv_ticker_sdf.columns
                 _piv_col_subset = self._data.columns
                 _piv_col_subset.remove('mcap_date')
-#                 _unpivot_sdf = clsSCNR.unpivot_table(
+
                 self._data = clsSCNR.unpivot_table(
                     table = self._data,
                     unpivot_columns=_piv_col_subset,
@@ -389,12 +406,11 @@ class WeightedPortfolio():
                     where_cols = 'mcap_value',
                     **kwargs
                 )
-#                 if _unpivot_sdf.count() > 0:
+
                 if self._data.count() > 0:
-#                     self._data = _unpivot_sdf
                     logger.debug("After unpivot, dataframe with rows %d columns %d"
                                  ,self._data.count(),len(self._data.columns))
-#                                  ,_unpivot_sdf.count(),len(_unpivot_sdf.columns))
+
                 else:
                     raise ValueError("Irregular unpivot ticker dataset; something went wrong")
 
