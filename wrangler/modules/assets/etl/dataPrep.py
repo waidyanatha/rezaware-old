@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 ''' Initialize with default environment variables '''
 __name__ = "dataPrep"
-__package__ = "etp"
+__package__ = "etl"
 __module__ = "assets"
-__app__ = "mining"
+__app__ = "wrangler"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -39,18 +39,23 @@ except Exception as e:
     
 '''
 
-class Warehouse():
+# class Warehouse():
+class RateOfReturns():
 
-    ''' Function
-            name: __init__
-            parameters:
-
-            procedure: Initialize the class
-            return None
+    ''' Function --- INIT ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def __init__(self, desc : str="market cap data prep", **kwargs):
+        """
+        Decription:
+            Initializes the SQLWorkLoads: class property attributes, app configurations, 
+                logger function, data store directory paths, and global classes 
+        Attributes:
+            desc (str) identify the specific instantiation and purpose
+        Returns:
+            None
+        """
 
         self.__name__ = __name__
         self.__package__ = __package__
@@ -250,7 +255,7 @@ class Warehouse():
         __s_fn_id__ = "function <unpivot_table>"
         _diff_data = None
         _diff_col = "diff"
-        __prev_val_pofix__ = "_prev_val"
+        __prev_val_pofix__ = "lag"
         _prev_val=None
 
         try:
@@ -265,9 +270,9 @@ class Warehouse():
                                      % (num_column,data.columns))
             if "DIFFCOLNAME" in kwargs.keys():
                 _diff_col = kwargs['DIFFCOLNAME']
+            _prev_val = "_".join([num_column,__prev_val_pofix__])
             if "PREVALCOLNAME" in kwargs.keys():
                 _prev_val = kwargs['PREVALCOLNAME']
-            _prev_val = num_column+__prev_val_pofix__
 
             _win = Window.partitionBy(part_column).orderBy(part_column)
             _diff_data = data.withColumn(_prev_val, F.lag(data[num_column]).over(_win))
@@ -370,14 +375,10 @@ class Warehouse():
 #                     logger.warning("%s",ticker_err)
 
                 ''' unpivot dataframe '''
-#                 _piv_col_subset = _piv_ticker_sdf.columns
-#                 _piv_col_subset = self._data.columns
                 _piv_col_subset = _pivot_sdf.columns
                 _piv_col_subset.remove('mcap_date')
-#                 _unpivot_sdf = clsSCNR.unpivot_table(
-#                 self._data = clsSCNR.unpivot_table(
+
                 _unpivot_sdf = clsSCNR.unpivot_table(
-#                     table = self._data,
                     table = _pivot_sdf,
                     unpivot_columns=_piv_col_subset,
                     index_column='mcap_date',
@@ -385,14 +386,11 @@ class Warehouse():
                     where_cols = 'mcap_value',
                     **kwargs
                 )
-#                 if _unpivot_sdf.count() > 0:
-#                 if self._data.count() > 0:
+
                 if _unpivot_sdf.count() > 0:
-#                     self._data = _unpivot_sdf
                     self._data = self._data.unionByName(_unpivot_sdf,allowMissingColumns=True)
                     logger.debug("After unpivot, dataframe with rows %d columns %d"
                                  ,self._data.count(),len(self._data.columns))
-#                                  ,_unpivot_sdf.count(),len(_unpivot_sdf.columns))
                 else:
                     raise ValueError("Irregular unpivot ticker dataset; something went wrong")
 
@@ -462,85 +460,165 @@ class Warehouse():
         return self._data
 
 
-    ''' Function --- GET LOG ROR ---
+    ''' Function --- GET ROR ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
+            
+            resources:
+                all ROR methods: https://en.wikipedia.org/wiki/Rate_of_return
+                Logarithmic ROR: https://www.rateofreturnexpert.com/log-return/
     '''
-    def get_log_ror(
+    def calc_ror(func):
+        """
+        Description:
+            wrapper function to calculate an ROR method
+        Attributes:
+            func inherits get_ror
+        Returns:
+            ror_calc_wrapper
+        """
+        @functools.wraps(func)
+        def ror_calc_wrapper(self,data,ror_type,num_col,part_col,date_col,**kwargs):
+            """
+            Description:
+                The ror_type defines the ROR method to execute.
+                Executes log10, log2, log1p, and simple ROR methods  
+            Attributes:
+                Same as get_ror function input attributes
+                **kwargs
+                    RORCOLNAME key value defines the name to use for 
+            Returns:
+                self_data (DataFrame) with the requrested ROR computed column
+            """
+            __s_fn_id__ = "function <ror_calc_wrapper>"
+            _ror_col = "ror"
+
+            try:
+                _data, _prev_col, _diff_col = func(self,data,ror_type,num_col,part_col,date_col,**kwargs)
+
+                ''' validate dataframe before applying ROR'''
+                if _data.count()<=0:
+                    raise RuntimeError("Empty dataframe. Aborting ROR computation")
+
+                ''' set ROR parameters '''
+                if "RORCOLNAME" in kwargs.keys():
+                    _ror_col=kwargs['RORCOLNAME']
+                else:
+                    _ror_col="_".join([_ror_col,num_col])
+
+                ''' compute the log of the prev / current '''
+                if ror_type.upper()=='LOG10':
+                    self._data=_data.withColumn(_ror_col,
+                                                F.log10(F.col(num_col)/F.col(_prev_col)))
+                elif ror_type.upper()=='LOG2':
+                    self._data=s_data.withColumn(_ror_col,
+                                                 F.log2(F.col(num_col)/F.col(_prev_col)))
+                elif ror_type.upper() in ['NATLOG','NATURALLOG']:
+                    self._data=_data.withColumn(_ror_col,
+                                                F.log1p(F.col(num_col)/F.col(_prev_col)))
+                elif ror_type.upper() in ['SIMPLE','SIMP']:
+                    self._data=_data.withColumn(_ror_col,
+                                                ((F.col(num_col)-F.col(_prev_col))\
+                                                 /F.col(num_col)))
+                else:
+                    raise RuntimeError("Something went wrong determining the log base.")
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._data.sort(F.col(date_col),F.col(_ror_col)), _ror_col
+
+        return ror_calc_wrapper
+
+    @calc_ror
+    def get_ror(
         self,
         data,
-        num_col_name:str="",
-        part_column :str="",
+        ror_type:str="log10",
+        num_col :str="",
+        part_col:str="",
+        date_col:str="",
         **kwargs,
     ):
         """
         Description:
-            Computes the logarithmic ratio of returns for a specific numeric columns.
+            Computes the logarithmic ratio of returns for a specific numeric columns. If the log base
+            is the kwargs LOGBASE key, then it defaults to log10.
             If the numeric columns are specified, then the log ROR is calculated for them;
             else for all identified numeric columns. The dataset is augmented with a new
             column with the log ROR for those respective numeric columns.
         Attributes:
             data (dataframe) - mandatory valid timeseries dataframe with, at least, one numeric column
-            columns (list) - optional list of column names to compute and augment the log ROR
+            columns (List(str)) - optional list of column names to compute and augment the log ROR
             **kwargs
+                DIFFCOLNAME (str) assigns the the column name to use for the timeseries previous values
+                RORCOLNAME (str) assigns the column name to use for the log ror values
+                LOGBASE (str) assigns the log base value to use 10,2,e accepted values
         Returns:
             self._data (dataframe)
         """
 
-        __s_fn_id__ = "function <get_log_ror>"
-        _log_ror_col_name = None
-        __log_col_prefix__="log_ror_"
-        _diff_col_name = None
-        __diff_prefix__ = 'diff_'
-        _prev_day_num_col=None
+        __s_fn_id__ = "function <get_ror>"
+        _diff_col = None
+        __diff_prefix__ = "diff"
+        _lag_num_col=None
 
         try:
-            if data.count()==0:
-                raise AttributeError("DataFrame cannot be empty")
-            if num_col_name not in data.columns:
-                raise AttributeError("%s is invalid, select a numeric column %s"
-                                     % (num_col_name,data.dtypes))
-            if part_column not in data.columns:
-                raise AttributeError("%s isinvalid, select a proper column %s"
-                                     % (part_column,data.dtypes))
+            if not isinstance(data,DataFrame) or data.count()==0:
+                raise AttributeError("data attribute must be a vaild non-empty DataFrame")
+            if num_col not in data.columns and \
+                data.select(F.col(num_col)).dtypes[0][1]=='string':
+                raise AttributeError("%s is invalid dtype, select a numeric column from %s"
+                                     % (num_col,data.dtypes))
+            if part_col not in data.columns:
+                raise AttributeError("%s is an invalid column name, select a proper column from %s"
+                                     % (part_col,data.dtypes))
 
             ''' get the difference from the previous value '''
             if "DIFFCOLNAME" not in kwargs.keys():
-#                 kwargs['DIFFCOLNAME']=_diff_col_name
-                kwargs['DIFFCOLNAME']=__diff_prefix__+column
+                kwargs['DIFFCOLNAME']="_".join([__diff_prefix__,num_col])
             else:
-                _diff_col_name=kwargs['DIFFCOLNAME']
-            self._data, _prev_day_num_col, _diff_col_name=Warehouse.prev_val_diff(
-                data=data.sort('mcap_date',num_col_name),   # sort by date get previou date value
-                num_column=num_col_name,   #'mcap_value',
-                part_column=part_column, #'asset_name',
+                _diff_col=kwargs['DIFFCOLNAME']
+            self._data, _lag_num_col, _diff_col=RateOfReturns.prev_val_diff(
+                data=data.sort(date_col,num_col),   # sort by date get previou date value
+                num_column=num_col,   #'mcap_value',
+                part_column=part_col, #'asset_name',
                 **kwargs,
             )
-            ''' compute the log10 of the difference '''
-            if "LOGCOLNAME" in kwargs.keys():
-                _log_ror_col_name=kwargs['LOGCOLNAME']
+            if self._data.count()>0:
+                logger.debug("Created new columns %s %s with previous value (lag) "+\
+                             "and difference for %d rows",
+                            _lag_num_col,_diff_col,self._data.count())
             else:
-                _log_ror_col_name=__log_col_prefix__+_diff_col_name
-#             self._data.select(col("mcap_date"),to_date(col("mcap_date"),"MM-dd-yyyy").alias("mcap_date"))
-#             self._data=self._data.withColumn(_log_ror_col_name,F.log10(F.col(_diff_col_name)))
-            ''' compute the log of the prev / current '''
-#             self._data=self._data.withColumn(_log_ror_col_name,
-#                                              F.when(
-#                                                  (F.col(_prev_day_num_col) - F.col(num_col_name))<0,-1,
-#                                              otherwise(
-#                                                  F.log10(F.col(_prev_day_num_col)/F.col(num_col_name))))
-            self._data=self._data.withColumn(_log_ror_col_name,
-                                             F.log10(F.col(_prev_day_num_col)/F.col(num_col_name)))
+                raise RuntimeError("previous value (lag) and difference computation +"\
+                                   "did not return and rows")
+#             ''' compute the log of the prev / current '''
+#             _log_base = '10'
+#             if "LOGBASE" in kwargs.keys() and kwargs['LOGBASE'] in ['2','10','e']:
+#                 _log_base = kwargs['LOGBASE']
+#             if _log_base=='10':
+#                 self._data=self._data.withColumn(_ror_col_name,
+#                                                  F.log10(F.col(_lag_num_col)/F.col(num_col)))
+#             elif _log_base=='2':
+#                 self._data=self._data.withColumn(_ror_col_name,
+#                                                  F.log2(F.col(_lag_num_col)/F.col(num_col)))
+#             elif _log_base=='e':
+#                 self._data=self._data.withColumn(_ror_col_name,
+#                                                  F.log1p(F.col(_lag_num_col)/F.col(num_col)))
+#             else:
+#                 raise RuntimeError("Something went wrong determining the log base.")
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._data.sort(F.col("mcap_date"),F.col(_log_ror_col_name)), _log_ror_col_name
+        return self._data, _lag_num_col, _diff_col
 
 
-    ''' Function --- GET LOG ROR ---
+    ''' Function --- WRITE DATA TO DB ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
@@ -556,15 +634,34 @@ class Warehouse():
         """
 
         __s_fn_id__ = "function <write_data_to_db>"
-        _table ='warehouse.mcap_past'
+
+        _tbl_name='warehouse.mcap_past'
+        _pk = ['mcap_past_pk']
+        _cols_not_for_update = ['mcap_past_pk','uuid','data_source','asset_name','asset_symbol',
+                           'mcap_date','created_dt','created_by','created_proc']
+        _options={
+            "BATCHSIZE":1000,   # batch size to partition the dtaframe
+            "PARTITIONS":1,    # number of parallel clusters to run
+            "OMITCOLS":_cols_not_for_update,    # columns to be excluded from update
+        }
+        records_=0
 
         try:
             if "TABLENAME" in kwargs.keys():
-                _table=kwargs['TABLENAME']
+                _tbl_name=kwargs['TABLENAME']
+
+            records_=clsSDB.upsert_sdf_to_table(
+                save_sdf=data,
+                db_table=_tbl_name,
+                unique_keys=_pk,
+                **_options,
+            )
+
+            logger.debug("Upserted %d records into %s", records_,_tbl_name)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return None
+        return records_
