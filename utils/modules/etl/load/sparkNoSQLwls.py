@@ -1086,6 +1086,9 @@ class NoSQLWorkLoads():
             
             ''' check if collection exists; else create one '''
             if self.dbType.lower() == 'mongodb':
+                ''' confirm database exists '''
+                if not db_name in self.connect.list_database_names():
+                    raise RuntimeError("%s does not exist",db_name)
                 ''' get data from MongoDB collection '''
                 if not db_coll in db.list_collection_names():
                     _collection = db[db_coll]

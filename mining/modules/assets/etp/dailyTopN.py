@@ -41,16 +41,14 @@ except Exception as e:
 
 class WeightedPortfolio():
 
-    ''' Function
-            name: __init__
-            parameters:
-
-            procedure: Initialize the class
-            return None
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
     def __init__(self, desc : str="market cap data prep", **kwargs):
+        """
+        Desciption:
+            Initialize the class
+        Attributes:
+        Returns:
+            None
+        """
 
         self.__name__ = __name__
         self.__package__ = __package__
@@ -294,145 +292,21 @@ class WeightedPortfolio():
         return _diff_data, _prev_val, _diff_col
 
 
-    ''' Function --- READ N CLEAN ---
+    ''' Function --- READ ROR ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def impute(func):
-        """
-        Description:
-            set the function as an input for the wrapper
-        Attributes:
-            func - defines and inherits read_n_clean_mcap 
-        Returns:
-            impute_wrapper (func)
-        """
 
-        @functools.wraps(func)
-        def impute_wrapper(self, query:str="", **kwargs):
-            """
-            Description:
-                Takes the ticker data read from the database to cleanup any Nulls, NaN, or
-                non-numeric values. 
-                Uses the utils/etl/transform/CleanNRich package to. 
-                  * pivots the date with ticker names as columns. 
-                  * Imputes any missing values with the specified strategy for respective dates. 
-                  * Counts the number of Nulls to ensure the timeseries is complete.
-                  * unpivots the dataframe to reconstuct in original form
-            Attributes:
-                **kwargs
-                    AGGREGATE - to set the impute strategy as mean, stddev, avg, ...
-            Returns:
-                self._data (dataframe)
-            """
-
-            __s_fn_id__ = "function <impute_wrapper>"
-            __strategy__='mean'
-            try:
-#                 _asset_data = func(self, query:str="", **kwargs)
-                self._data = func(self, query, **kwargs)
-
-                ''' transpose to get assets in the columns '''
-                self._data=clsSCNR.pivot_data(
-                    data=self._data,
-                    group_columns='mcap_date',
-                    pivot_column='asset_name',
-                    agg_column='mcap_value',
-                    **kwargs,
-                )
-                if not self._data or self._data.count()<=0:
-                    raise RuntimeError("Pivot process in %s returned an empty DataFrame"
-                                       %(" ".join([clsSCNR.__app__,clsSCNR.__module__,
-                                                  clsSCNR.__package__,clsSCNR.__name__])))
-                logger.debug("%s Pivot process returned %d columns and %d rows",
-                             " ".join([clsSCNR.__app__,clsSCNR.__module__,
-                                        clsSCNR.__package__,clsSCNR.__name__]),
-                             len(self._data.columns),self._data.count())
-
-                ''' impute to fill the gaps '''
-                _agg_strategy = __strategy__
-                if "AGGREGATE" in kwargs.keys():
-                    _agg_strategy = kwargs['AGGREGATE']
-
-                _col_subset = self._data.columns
-                _col_subset.remove('mcap_date')
-
-                self._data = clsSCNR.impute_data(
-                    data=self._data,
-                    column_subset=_col_subset,
-                    strategy=_agg_strategy,
-                )
-                if not self._data or self._data.count() <= 0:
-                    raise RuntimeError("Impute process in %s returned an empty DataFrame"
-                                       %(" ".join([clsSCNR.__app__,clsSCNR.__module__,
-                                                  clsSCNR.__package__,clsSCNR.__name__])))
-                logger.debug("%s retuned impute data on %d asset tickers and %d market cap row"
-                             ,__s_fn_id__,len(_col_subset),self._data.count())
-
-                ''' ensure there are no non-numeric values '''
-    #             _col_subset = mcap_sdf.columns
-    #             _col_subset.remove('mcap_date')
-                _nan_counts_sdf = clsSCNR.count_column_nulls(
-                    data=self._data,
-                    column_subset=_col_subset
-                )
-                if not _nan_counts_sdf or _nan_counts_sdf.count() <= 0:
-                    raise RuntimeError("Check of NaN, Null, and Empty cells "+\
-                                       "did not return a valid dataframe")
-                ''' check for assets with nulls '''
-                ''' CAUSING MEMORY ISSUES '''
-                logger.debug("Check for NaN, Null, and Empty cells returned %d columns and %d rows",
-                             len(_nan_counts_sdf.columns),_nan_counts_sdf.count())
-#                 try:
-#                     ''' TODO remove tickers with Null counts > 0 '''
-#                     logger.debug("%s Checking for asset tickers with non-numerics",__s_fn_id__)
-#                     for _ticker in _col_subset:
-#                         _tic_nan_count = _nan_counts_sdf.collect()[0].__getitem__(_ticker)
-#                         if _tic_nan_count!=0:
-#                             raise ValueError("%s has %d Null, NaN, or Non-numeric values"
-#                                              %(_ticker,_tic_nan_count))
-#                 except Exception as ticker_err:
-#                     logger.warning("%s",ticker_err)
-
-                ''' unpivot dataframe '''
-                _piv_col_subset = self._data.columns
-                _piv_col_subset.remove('mcap_date')
-
-                self._data = clsSCNR.unpivot_table(
-                    table = self._data,
-                    unpivot_columns=_piv_col_subset,
-                    index_column='mcap_date',
-                    value_columns=['asset_name','mcap_value'],
-                    where_cols = 'mcap_value',
-                    **kwargs
-                )
-
-                if self._data.count() > 0:
-                    logger.debug("After unpivot, dataframe with rows %d columns %d"
-                                 ,self._data.count(),len(self._data.columns))
-
-                else:
-                    raise ValueError("Irregular unpivot ticker dataset; something went wrong")
-
-            except Exception as err:
-                logger.error("%s %s \n",__s_fn_id__, err)
-                logger.debug(traceback.format_exc())
-                print("[Error]"+__s_fn_id__, err)
-
-            return self._data
-        return impute_wrapper
-
-    @impute
-    def read_n_clean_mcap(self, query:str="", **kwargs):
+    def read_ror(self, select:str="", **kwargs):
         """
         Description:
             The key feature is to read the mcap data from postgresql and impute to ensure
             the data is clean and useable. There are two options for reading the data
-             (i) giving an SQL query as a string
+             (i) giving an SQL select as a string
             (ii) defining the table name to read the entire dataset
             Makes use of sparkDBwls package to read the data from the DB
         Arguments:
-            query (str) - valid SQL select statement with any SQl clauses
+            select (str) - valid SQL select statement with any SQl clauses
             **kwargs - specifying key value pairs
                 TABLENAME - db_able name with or without the schema name
                 COLUMN - partition column name
@@ -441,7 +315,7 @@ class WeightedPortfolio():
         Returns: self._data (dataframe)
         """
 
-        __s_fn_id__ = "function <read_n_clean_mcap>"
+        __s_fn_id__ = "function <read_ror>"
         _table ='warehouse.mcap_past'
         _column='mcap_date'
         _to_date =date.today()
@@ -457,8 +331,8 @@ class WeightedPortfolio():
             if "TODATETIME" in kwargs.keys():
                 _to_date=kwargs['TODATETIME']
 
-            if query is not None and "".join(query.split())!="":
-                self._data = clsSDB.read_data_from_table(select=query, **kwargs)
+            if select is not None and "".join(select.split())!="":
+                self._data = clsSDB.read_data_from_table(select=select, **kwargs)
             else:
                 self._data = clsSDB.read_data_from_table(
                     db_table=_table,
@@ -480,84 +354,6 @@ class WeightedPortfolio():
         return self._data
 
 
-    ''' Function --- GET LOG ROR ---
-
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    def get_log_ror(
-        self,
-        data,
-        num_col_name:str="",
-        part_column :str="",
-        **kwargs,
-    ):
-        """
-        Description:
-            Computes the logarithmic ratio of returns for a specific numeric columns.
-            If the numeric columns are specified, then the log ROR is calculated for them;
-            else for all identified numeric columns. The dataset is augmented with a new
-            column with the log ROR for those respective numeric columns.
-        Attributes:
-            data (dataframe) - mandatory valid timeseries dataframe with, at least, one numeric column
-            columns (list) - optional list of column names to compute and augment the log ROR
-            **kwargs
-        Returns:
-            self._data (dataframe)
-        """
-
-        __s_fn_id__ = "function <get_log_ror>"
-        _log_ror_col_name = None
-        __log_col_prefix__="log_ror_"
-        _diff_col_name = None
-        __diff_prefix__ = 'diff_'
-        _prev_day_num_col=None
-
-        try:
-            if data.count()==0:
-                raise AttributeError("DataFrame cannot be empty")
-            if num_col_name not in data.columns:
-                raise AttributeError("%s is invalid, select a numeric column %s"
-                                     % (num_col_name,data.dtypes))
-            if part_column not in data.columns:
-                raise AttributeError("%s isinvalid, select a proper column %s"
-                                     % (part_column,data.dtypes))
-
-            ''' get the difference from the previous value '''
-            if "DIFFCOLNAME" not in kwargs.keys():
-#                 kwargs['DIFFCOLNAME']=_diff_col_name
-                kwargs['DIFFCOLNAME']=__diff_prefix__+column
-            else:
-                _diff_col_name=kwargs['DIFFCOLNAME']
-            self._data, _prev_day_num_col, _diff_col_name=WeightedPortfolio.prev_val_diff(
-                data=data.sort('mcap_date',num_col_name),   # sort by date get previou date value
-                num_column=num_col_name,   #'mcap_value',
-                part_column=part_column, #'asset_name',
-                **kwargs,
-            )
-            ''' compute the log10 of the difference '''
-            if "LOGCOLNAME" in kwargs.keys():
-                _log_ror_col_name=kwargs['LOGCOLNAME']
-            else:
-                _log_ror_col_name=__log_col_prefix__+_diff_col_name
-#             self._data.select(col("mcap_date"),to_date(col("mcap_date"),"MM-dd-yyyy").alias("mcap_date"))
-#             self._data=self._data.withColumn(_log_ror_col_name,F.log10(F.col(_diff_col_name)))
-            ''' compute the log of the prev / current '''
-#             self._data=self._data.withColumn(_log_ror_col_name,
-#                                              F.when(
-#                                                  (F.col(_prev_day_num_col) - F.col(num_col_name))<0,-1,
-#                                              otherwise(
-#                                                  F.log10(F.col(_prev_day_num_col)/F.col(num_col_name))))
-            self._data=self._data.withColumn(_log_ror_col_name,
-                                             F.log10(F.col(_prev_day_num_col)/F.col(num_col_name)))
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
-
-        return self._data.sort(F.col("mcap_date"),F.col(_log_ror_col_name)), _log_ror_col_name
-
-
     ''' Function --- GET MAXIMUM WEIGHTED PORTFOLIO ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
@@ -574,7 +370,6 @@ class WeightedPortfolio():
 
         @functools.wraps(func)
         def maxportfolio_wrapper(self,data,cols_dict,topN,size,**kwargs):
-#         def maxportfolio_wrapper(self,data,date_col,val_col,name_col,topN,size,**kwargs):
             """
             Description:
                 Loops through the unique dates to compute the optimal weights and the
@@ -589,7 +384,6 @@ class WeightedPortfolio():
             _l_exp_ret=[]   # hold list of weighted portfolio results
 
             try:
-#                 _date_list, _asset_data = func(self,data,date_col,val_col,name_col,topN,size,**kwargs)
                 _date_list, _asset_data = func(self,data,cols_dict,topN,size,**kwargs)
 
                 for _date in _date_list:
@@ -600,12 +394,11 @@ class WeightedPortfolio():
                     _asset_byDate_df = None # dataframe of rows for particular date
                     try:
                         ''' convert dataframe to an array '''
-#                         _top_assets_byDate_df = data_df.loc[data_df['Date'] == date]
                         _asset_byDate_df = _asset_data.filter(F.col(cols_dict['DATECOLUMN'])==_date)\
                                             .toPandas()
-                        _asset_byDate_df.sort_values(by=[cols_dict['RORCOLUMN']],axis=0,
+                        _asset_byDate_df.sort_values(by=[cols_dict['NUMCOLUMN']],axis=0,
                                                      ascending=False,na_position='last',inplace=True)
-                        _asset_byDate_df.dropna(subset=[cols_dict['RORCOLUMN']],
+                        _asset_byDate_df.dropna(subset=[cols_dict['NUMCOLUMN']],
                                                 how='any',axis=0,inplace=True)
                         if _asset_byDate_df.shape[0] <= 0:
                             raise ValueError("No asset data rows for date: %s",str(_date))
@@ -624,13 +417,14 @@ class WeightedPortfolio():
 #                                      ,_topN_byDate,str(_top_asset_arr.ndim))
 
                         ''' get random weights for the number of significant assets '''
-#                         weights=np.random.dirichlet(np.ones(_top_assets_byDate_df.shape[0]),size=size)
                         weights=np.random.dirichlet(np.ones(_topN_byDate),size=size)
                         logger.debug("Generated random weights with dimensions %s", str(weights.ndim))
                         logger.debug("%s",str(weights))
-#                         _wt_ret_arr = np.multiply(_top_asset_arr,weights)
+
                         _wt_ret_arr = np.multiply(\
-                                        np.array(_top_assets_byDate_df[cols_dict['RORCOLUMN']]),\
+                                        np.array(\
+                                                 _top_assets_byDate_df[cols_dict['NUMCOLUMN']]\
+                                                 .astype('float')),\
                                                   weights)
                         logger.debug("Multiplied array generated weighted returns with %s dimensions"
                                      ,str(_wt_ret_arr.ndim))
@@ -642,29 +436,24 @@ class WeightedPortfolio():
                                      ,str(_sum_wt_index.ndim),str(_sum_wt_index))
                         _max_wt_row = np.argmax(np.array(_sum_wt_index), axis=0)
                         logger.debug("Maximum weighted row index %s",str(_max_wt_row))
-#                         wt_mc_rets = np.sum(np.multiply(\
-#                                                         np.array(_top_assets_byDate_df[val_col]),
-#                                                         weights[_max_wt_row]))
-#                         _wt_mc_rets = np.sum(_sum_wt_index[_max_wt_row])
-#                         logger.debug("Weighted mcap return for max weights %d",_wt_mc_rets)
+
                         ''' append results dictionary to list '''
                         _l_exp_ret.append({
+                                        cols_dict["MCAPSOURCE"]:'warehouse.mcap_past',
+                                        cols_dict["PRIMARYKEY"]:list(\
+                                                         _top_assets_byDate_df['mcap_past_pk']),
                                         cols_dict['DATECOLUMN']: _date,
                                         cols_dict['NAMECOLUMN']: list(\
                                                          _top_assets_byDate_df[cols_dict['NAMECOLUMN']]),
-#                                         "max_weigted_row_index": _max_wt_row,
-                                        cols_dict['RORCOLUMN']:list(\
-                                                         _top_assets_byDate_df[cols_dict['RORCOLUMN']]),
-                                        #'wt_sum' : _sum_wt_index,
+                                        cols_dict['NUMCOLUMN']:list(\
+                                                         _top_assets_byDate_df[cols_dict['NUMCOLUMN']]),
                                         cols_dict['WEIGHTCOLUMN']: list(weights[_max_wt_row]),
                                         cols_dict['MCAPCOLUMN']:list(\
                                                          _top_assets_byDate_df[cols_dict['MCAPCOLUMN']]),
-#                                         'wt_'+val_col+'_sum' : _sum_wt_index[_max_wt_row],
-#                                         'wt_'+val_col+'_ror': _wt_mc_rets,
                                         })
 
                     except Exception as asset_err:
-                        logger.warning("%s",asset_err)
+                        logger.warning("Dates loop %s",asset_err)
                         pass
 
                 if len(_l_exp_ret) > 0:
@@ -695,9 +484,11 @@ class WeightedPortfolio():
     ):
         """
         Description:
-            Given a DataFrame of assets and mcap values for a given data range,
-            compute the weights that offer the maximum weighted sum. Thereafter,
-            write the data to the historic weighted portfolio database.
+            Given a DataFrame of assets and mcap ror values for a given data range:
+            - validate the dataframe and parameters
+            - Process will remove any rows will null ror column values
+            - compute the maximal weights that offer the maximum weighted sum.
+            - return the weighted portfolio data dictionary.
         Attribute:
             data (DataFrame) with mcap date and value
             date_col
@@ -707,6 +498,8 @@ class WeightedPortfolio():
             topN (int) number of assets to consider for a portfolio (default = 23)
             **kwargs
         Results:
+            valid_date_list
+            valid_data
         """
 
         __s_fn_id__ = "function <get_weighted_mpt>"
@@ -717,36 +510,38 @@ class WeightedPortfolio():
         __wts_col_name__ = 'weights'
 
         try:
+            ''' validate dataframe '''
             if data is None or data.count()==0:
                 raise AttributeError("DataFrame cannot be empty")
-
-            if "RORCOLUMN" not in cols_dict.keys():
-                cols_dict['RORCOLUMN']=__ror_col_name__
-            if data.select(F.col(cols_dict['RORCOLUMN'])).dtypes[0][1] == 'string':
+            logger.debug("%s ready process %d rows in dataframe",__s_fn_id__,data.count())
+            ''' validate parameters '''
+            if "NUMCOLUMN" not in cols_dict.keys():
+                cols_dict['NUMCOLUMN']=__ror_col_name__
+            if data.select(F.col(cols_dict['NUMCOLUMN'])).dtypes[0][1] == 'string':
                 raise AttributeError("%s is invalid ror column, select a numeric column from %s"
-                                     % (cols_dict['RORCOLUMN'],data.dtypes))
+                                     % (cols_dict['NUMCOLUMN'],data.dtypes))
             ''' remove any rows with null ror value '''
-            _valid_asset_data = data.where(F.col(cols_dict['RORCOLUMN']).isNotNull())
-            if _valid_asset_data.count()==0:
+            valid_asset_data_ = data.where(F.col(cols_dict['NUMCOLUMN']).isNotNull())
+            if valid_asset_data_.count()==0:
                 raise AttributeError("In DataFrame with %d rows %s columns all values are Null."
-                                     % (data.count(),cols_dict['RORCOLUMN']))
+                                     % (data.count(),cols_dict['NUMCOLUMN']))
             logger.debug("Retrieved a valid dataframe with %d of %d rows from orignal dataframe"
-                         ,_valid_asset_data.count(),data.count())
+                         ,valid_asset_data_.count(),data.count())
 
             ''' if not defined then add the column names to dict '''
             if "NAMECOLUMN" not in cols_dict.keys():
                 cols_dict['NAMECOLUMN']=__coin_col_name__
             if "DATECOLUMN" not in cols_dict.keys():
                 cols_dict['DATECOLUMN']=__date_col_name__
-            if _valid_asset_data.select(F.col(cols_dict['DATECOLUMN']))\
+            if valid_asset_data_.select(F.col(cols_dict['DATECOLUMN']))\
                                         .dtypes[0][1] not in ['date','timestamp']:
                 raise AttributeError("%s is invalid date column select from %s"
-                                     % (cols_dict['DATECOLUMN'],_valid_asset_data.dtypes))
+                                     % (cols_dict['DATECOLUMN'],valid_asset_data_.dtypes))
             if "MCAPCOLUMN" not in cols_dict.keys():
                 cols_dict['MCAPCOLUMN']=__mcap_col_name__
-            if _valid_asset_data.select(F.col(cols_dict['MCAPCOLUMN'])).dtypes[0][1] == 'string':
+            if valid_asset_data_.select(F.col(cols_dict['MCAPCOLUMN'])).dtypes[0][1] == 'string':
                 raise AttributeError("%s is invalid mcap value column, select a numeric column from %s"
-                                     % (cols_dict['MCAPCOLUMN'],_valid_asset_data.dtypes))
+                                     % (cols_dict['MCAPCOLUMN'],valid_asset_data_.dtypes))
             if "WEIGHTCOLUMN" not in cols_dict.keys():
                 cols_dict['WEIGHTCOLUMN']=__wts_col_name__
 
@@ -757,26 +552,26 @@ class WeightedPortfolio():
 
             ''' get a list of the unique dates '''
             _dates_list = []
-#             _dates_list = list(set([x[0] for x in _mcap_log_ror.select('mcap_date').collect()]))
-            _dates_list = list(_valid_asset_data.select(\
-                                      F.col(cols_dict['DATECOLUMN'])).toPandas()\
-                                                               [cols_dict['DATECOLUMN']].unique())
+            _dates_list = valid_asset_data_\
+                            .select(F.col(cols_dict['DATECOLUMN']))\
+                            .distinct().collect()
             ''' ensure there is data for the date '''
-            _valid_date_list = []
+            valid_date_list_ = []
             for _date in _dates_list:
-                if _valid_asset_data.filter(F.col(cols_dict['DATECOLUMN'])==_date).count() > 0:
-                    _valid_date_list.append(_date)
-            if len(_valid_date_list)<=0:
+                if valid_asset_data_.filter(F.col(cols_dict['DATECOLUMN'])==_date[0]).count() > 0:
+                    valid_date_list_.append(_date[0])
+            ''' are there any dates with valid data? '''
+            if len(valid_date_list_)<=0:
                 raise AttributeError("No data for the dates %s with data >= %d were found."
                                      % (str(_dates_list),topN))
-            logger.debug("Proceeding with data for %s dates",str(_valid_date_list))
+            logger.debug("Proceeding with data for %s dates",str(valid_date_list_))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return _valid_date_list, _valid_asset_data
+        return valid_date_list_, valid_asset_data_
 
 
     ''' Function --- PORTFOLIO To DB ---
@@ -885,15 +680,23 @@ class WeightedPortfolio():
 #                 _mpt_dict = {}
                 for x in zip(data[cols_dict['NAMECOLUMN']],
                              data[cols_dict['WEIGHTCOLUMN']],
-                             data[cols_dict['RORCOLUMN']],
-                             data[cols_dict['MCAPCOLUMN']]):
+                             data[cols_dict['NUMCOLUMN']],
+                             data[cols_dict['MCAPCOLUMN']],
+                             data[cols_dict['PRIMARYKEY']],
+#                              data[cols_dict['MCAPSOURCE']],
+                            ):
                     ''' convert column names to nosql naming '''
                     _mpt_dict = {}
                     _mpt_dict["date"]=data[cols_dict['DATECOLUMN']].strftime("%Y-%m-%dT%H:%M:%S")
                     _mpt_dict["asset"]=x[0]
-                    _mpt_dict["mcap.weight"]=x[1]
-                    _mpt_dict["mcap.ror"]=x[2]
+                    _mpt_dict["mcap.weight"]=float(x[1])
+                    _mpt_dict["mcap.ror"]=float(x[2])
                     _mpt_dict["mcap.value"]=float(x[3])
+                    _mpt_dict["mcap.db.fk"]=str(x[4])
+                    _mpt_dict["mcap.db.source"]=data[cols_dict['MCAPSOURCE']]
+                    _mpt_dict["audit.mod.by"]=os.environ.get('USERNAME').upper()
+                    _mpt_dict["audit.mod.dt"]=datetime.strftime(datetime.now(),'%Y-%m-%dT%H:%M:%S')
+                    _mpt_dict["audit.mod.proc"]="-".join([self.__name__,__s_fn_id__])
                     ''' append the mpt dict to list '''
                     _mpt_list.append(_mpt_dict)
 

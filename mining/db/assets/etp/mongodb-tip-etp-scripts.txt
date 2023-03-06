@@ -1,6 +1,6 @@
 ## MongoDB shell scripts for creating databases, users, and collections ##
 ##
-## ----- ASSET API CATALOG -----
+## ----- TIP DAILY MPT PORTFOLIO -----
 ##
 ## 1) create database
 ##
@@ -22,3 +22,26 @@ db.createUser(
 
 # 3) create about db collection
 db.about.insertOne({"name":"tip-daily-mpt","desc":"stores daily weighted asset portfolio"})
+
+## ----- TIP PORTFOLIO PERFORMANCE -----
+##
+## 1) create database
+##
+
+use admin;
+use tip-portfolio;
+
+##
+## 2) create a user and grant read/write roles
+##
+
+db.createUser(
+  {
+    user: "farmraider",
+    pwd: "spirittribe",
+    roles: [ { role: "readWrite", db: "tip-portfolio" } ]
+  }
+);
+
+# 3) create about db collection
+db.about.insertOne({"name":"tip-portfolio","desc":"stores daily portfolio performance indicators"})
