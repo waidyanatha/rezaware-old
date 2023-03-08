@@ -745,7 +745,7 @@ class NoSQLWorkLoads():
                 self.connect = {'DBAUTHSOURCE':self.dbName}
             
             if self.dbType.lower() == 'mongodb':
-                db = self.connect[self.dbName]
+                db = self.connect[self._dbName]
                 _coll_list = db.list_collection_names()
             ''' select collections with specified regex '''
             if "COLLLIST" in collection_properties.keys() and len(_coll_list)>0:
@@ -754,8 +754,10 @@ class NoSQLWorkLoads():
                                                 _coll_list
                                                ))
             elif "HASINNAME" in collection_properties.keys() and len(_coll_list)>0:
-                r = re.compile(f".*{collection_properties['HASINNAME']}*")
-                self._collections = list(filter(r.match, _coll_list))
+#                 r = re.compile(f".*{collection_properties['HASINNAME']}*")
+                r = re.compile(f"{collection_properties['HASINNAME']}")
+                self._collections = list(filter(r.search, _coll_list))
+#                 self._collections = list(filter(r.match, _coll_list))
             else:
                 self._collections = _coll_list
 
@@ -909,6 +911,8 @@ class NoSQLWorkLoads():
                 self.dbName = db_name
             if len(db_coll)>0:
                 self.collections={"COLLLIST":db_coll}
+            elif "HASINNAME" in kwargs.keys():
+                self.collections=kwargs
             if doc_find is None:
                 doc_find = {}
 

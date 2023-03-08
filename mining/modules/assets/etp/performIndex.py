@@ -318,7 +318,7 @@ class Portfolio():
 #         __def_coll_pref__ = "mpt"
         
         _mpts = []
-        _db_coll_list = []
+#         _db_coll_list = []
 
         try:
             ''' confirm and set database qualifiers '''
@@ -342,21 +342,24 @@ class Portfolio():
             ''' confirm exists and set collection list '''
             if len(db_coll)>0:
                 ''' check if listed collections exist '''
+                ''' TODO use set intersection '''
                 for _coll in db_coll:
                     if _coll not in _all_colls:
                         raise AttributeError("Invalid collection name: %s was not found in %s" 
                                              % (_coll,_all_colls))
             elif coll_date <= date.today():
                 ''' get all collections containing date postfix using the HASINNAME wild card'''
-                clsNoSQL.collections={"HASINNAME":str(coll_date)}
-                db_coll=clsNoSQL.collections
+                kwargs["HASINNAME"]=coll_date
+#                 clsNoSQL.collections={"HASINNAME":coll_date}
+#                 db_coll=clsNoSQL.collections
+#                 print(db_coll)
             else:
                 raise AttributeError("Either a db_coll list or mpt_date must be specified")
 
             ''' read all collections into a list '''
             _mpts = clsNoSQL.read_documents(
                 as_type="LIST",
-                db_name="",
+                db_name=_db_name,
                 db_coll=db_coll,
                 doc_find={},
                 **kwargs)
@@ -775,15 +778,13 @@ class Portfolio():
         try:
             ''' validate and set portfolio data '''
             self.portfolio=portfolio
-#             self.idxType = index_type.upper()
             _idx_lsit_upper = [x.upper() for x in index_type]
-#             _inval_idxs = set(_idx_upper).symmetric_difference(set(self._idxTypeList))
             _inval_idxs = [idx for idx in _idx_lsit_upper 
                                 if idx not in self._idxTypeList]
             if len(_inval_idxs)>0:
                 raise AttributeError("Invalid index types %s" % str(_inval_idxs))
 
-            _dates_list = [x['date'].split('T')[0] for x in portfolio]
+            _dates_list = [x['date'].split('T')[0] for x in self._portfolio]
             if str(asset_eval_date) not in _dates_list:
                 raise AttributeError("Invalid date %s not in any portfolio dates %s"
                                      % (str(asset_eval_date),str(_dates_list)))
