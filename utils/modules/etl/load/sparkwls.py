@@ -118,8 +118,8 @@ class SparkWorkLoads():
         self.tmpDIR = None
         if "WRITE_TO_FILE" in kwargs.keys():
             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
-            if not os.path.exists(self.tmpDIR):
-                os.makedirs(self.tmpDIR)
+#             if not os.path.exists(self.tmpDIR):
+#                 os.makedirs(self.tmpDIR)
 
         ''' Initialize the DB connection parameters '''
         self.db_port = None

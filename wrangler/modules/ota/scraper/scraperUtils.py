@@ -16,7 +16,7 @@ try:
     import traceback
     import configparser
     import pandas as pd
-    from datetime import datetime, date, timedelta
+    from datetime import datetime, date, timedelta, timezone
 
     print("All {0} in {1} software packages loaded successfully!"\
           .format(__package__,__module__))
@@ -54,10 +54,12 @@ class Utils():
                                       self.__name__])
         else:
             self.__desc__ = desc
+        self._scrapeInterval=60   # set the scrape interval to 30 seconds
 
         global config
         global logger
-        global dataio
+#         global dataio
+        global clsFile
 
         self.cwd=os.path.dirname(__file__)
         config = configparser.ConfigParser()
@@ -65,26 +67,8 @@ class Utils():
 
         self.rezHome = config.get("CWDS","REZAWARE")
         sys.path.insert(1,self.rezHome)
-        from rezaware import Logger as logs
-        
-        ''' import dataio utils to read and write data '''
-        from utils.modules.etl.load import filesRW as rw
-        clsRW = rw.FileWorkLoads(desc=self.__desc__)
-        clsRW.storeMode = config.get("DATASTORE","MODE")
-        clsRW.storeRoot = config.get("DATASTORE","ROOT")
-        self.storePath = os.path.join(
-            self.__app__,
-            "data/",
-            self.__module__,
-            self.__package__,
-        )
-        
-        self.pckgDir = config.get("CWDS",self.__package__)
-        self.appDir = config.get("CWDS",self.__app__)
-        ''' DEPRECATED: get the path to the input and output data '''
-        self.dataDir = config.get("CWDS","DATA")
-
         ''' innitialize the logger '''
+        from rezaware import Logger as logs
         logger = logs.get_logger(
             cwd=self.rezHome,
             app=self.__app__, 
@@ -95,19 +79,25 @@ class Utils():
         ''' set a new logger section '''
         logger.info('########################################################')
         logger.info(self.__name__)
-        logger.info('Module Path = %s', self.pckgDir)
-
-        ''' set the tmp dir to store large data to share with other functions
-            if self.tmpDIR = None then data is not stored, otherwise stored to
-            given location; typically specified in app.conf
-        '''
-        self.tmpDIR = None
-        if "WRITE_TO_FILE":
-#             self.tmpDIR = os.path.join(self.rootDir,config.get('STORES','TMPDATA'))
-#             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
-            self.tmpDIR = os.path.join(self.storePath,"tmp/")
-            if not os.path.exists(self.tmpDIR):
-                os.makedirs(self.tmpDIR)
+#         logger.info('Module Path = %s', self.pckgDir)
+        ''' initialize file read/write '''
+        from utils.modules.etl.load import sparkFILEwls as spark
+        clsFile = spark.FileWorkLoads(desc="ota property price scraper")
+        clsFile.storeMode=config.get("DATASTORE","MODE")
+        clsFile.storeRoot=config.get("DATASTORE","ROOT")
+        
+        ''' UNUSED import dataio utils to read and write data '''
+#         from utils.modules.etl.load import filesRW as rw
+#         clsRW = rw.FileWorkLoads(desc=self.__desc__)
+#         clsRW.storeMode = config.get("DATASTORE","MODE")
+#         clsRW.storeRoot = config.get("DATASTORE","ROOT")
+        self.storePath = os.path.join(
+#             self.cwd,
+            self.__app__,
+            "data/",
+            self.__module__,
+            self.__package__,
+        )
 
         self.scrape_start_date = date.today()
         self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
@@ -128,31 +118,48 @@ class Utils():
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def load_ota_list(self, file_path:str, **kwargs) -> dict:
+#     def load_ota_list(self, file_path:str, **kwargs) -> dict:
+    def load_ota_list(
+        self,
+        folder_path:str=None,
+        file_name:str=None,
+        **kwargs) -> dict:
 
         import os         # apply directory read functions
         import csv        # to read the csv
         import json       # to read the json file
 
         _s_fn_id = "function <load_ota_list>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+#         logger.debug("Executing %s %s" % (self.__name__, _s_fn_id))
 
         _ota_dict = {}
         
         try:
 
             ''' Get the list of urls from the CSV file '''        
-            if not file_path:
-                raise ValueError("Invalid file path to load the ota list of inputs")
+#             if not file_path:
+#                 raise ValueError("Invalid file path to load the ota list of inputs")
 
             ''' read the list of urls from the file '''
-            with open(file_path, newline='') as f:
-                _ota_dict = json.load(f)
+#             with open(file_path, newline='') as f:
+#                 _ota_dict = json.load(f)
+            _ota_dict = clsFile.read_files_to_dtype(
+                as_type='dict',
+                folder_path=folder_path,
+                file_name=file_name,#__local_file_name__,
+                file_type=None,
+                **kwargs,
+            )
+            if len(_ota_dict) <=0:
+                raise ValueError("Empty dictionary, NO destination data recovered from %s in %s"
+                                 %(folder_path,file_name))
+            logger.info("%s %s loaded %d OTA lists from %s in %s",
+                        self.__name__, _s_fn_id,len(_ota_dict),file_name,folder_path)
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id,err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return _ota_dict
 
@@ -172,7 +179,6 @@ class Utils():
     def get_scrape_input_params(self, inputs_dict:dict):
 
         _s_fn_id = "function <get_scrape_input_params>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
 
         try:
             ''' check for property dictionary '''
@@ -194,10 +200,15 @@ class Utils():
                     ''' append the input parameters into a list'''
                     ota_param_list.append(param_dict)
       
+            if len(ota_param_list)<=0:
+                raise ValueError("No input parameter lists constructed")
+            logger.info("%s %s constructed %d parameter lists",
+                        self.__name__, _s_fn_id,len(ota_param_list))
+
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return ota_param_list #, ota_scrape_tags_df
 
@@ -280,22 +291,108 @@ class Utils():
 
         return url_w_params
 
-    ''' Function
-            name: read_folder_csv_to_df
-            parameters:
-                dirPath - string with folder path to the csv files
-                **kwargs - contain the plance holder key value pairs
-                            columns: list
-                            start_date: datetime.date
-                            end_date: datetime.date
-            procedure: give the relative root strage location to amend a data & time
-                        specific folder for the current time
-                        
-            return string (_s3Storageobj or localhost directory path)
+    ''' Function --- GET TIMESTAMPed STORAGE PATH ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    def get_extract_data_stored_path(self, data_store_path:str, parent_dir_name:str, **kwargs):
+    def get_timestamped_storage(
+        self,
+        folder_path:str=None,   # folder path relative to the root dir or bucket
+        folder_prefix:str="",   # a prefix to append to the begining of the time stamp
+        folder_postfix:str="",  # a postfix to append to the end of the time stamp
+        timestamp:datetime=datetime,  # the timestamp to extract the yyyy-mm-dd
+        minute_interval:int=0,   # hh:mm will be rounded up or down to the interval
+        **kwargs,
+    ) -> str:
+        """
+        Description:
+            The scraping is performed at a pertimcular time or with the interest of
+            acquring data for a particular time period. The data will be organized in
+            chronological order. To that end, the data should be stored in a folder
+            with a timestamp as a postfix. The function will:
+            * Use the imput timestamp and the scraping frequency to create a folder name
+            * If the folder in the given path does not exist, it will create the folder
+                * local file systems need the folder create before storing data
+                * AWS S3 & GDS do not require folder to be created
+            * Make use of utils/etl/loader/sparkFILEwls to manage this process
+        Attributes:
+            folder_path (str) - folder path relative to the root dir or bucket
+            folder_prefix (str) -a prefix to append to the time stamp
+            timestamp (datetime)- the timestamp to extract the yyyy-mm-dd
+            minute_interval (int) - hh:mm will be rounded up or down to the interval
+            **kwargs,
+        Returns:
+            rel_dir_path_ (str) returns a relative directory path with new folder
+        Exceptions:
+            * sparkFILEwls to validate and set the folder_path; if not exists
+            * sparkFILEwls to validate and set the folder_path joined folder; if not exists
+            * timestamp is None, will default to current datetime
+            * minute_interval is not specified, will default to 0; i.e. every hour
+        """
+        
+        __s_fn_id__ = "function <get_timestamped_storage>"
+
+        rel_dir_path_ = None
+        
+        try:
+            ''' validate folder path to set new folder '''
+            clsFile.folderPath = folder_path
+            ''' create the new folder with concaternating date hour and minute;
+                rounding to the closest minute specified in the minute_interval'''
+            if not isinstance(minute_interval,int):
+                minute_interval=self._scrapeInterval
+            if minute_interval < 0 or minute_interval > 60:
+                logger.warning("Converting %d to int between 0 and 60: %d",
+                               minute_interval,(abs(minute_interval)%60))
+                minute_interval=abs(minute_interval) % 60
+            if not isinstance(timestamp,datetime):
+                timestamp=datetime.now()
+                logger.warning("Invalid timestamp dtype; setting to default current datetime %s",
+                               str(timestamp))
+            if minute_interval != 0:
+                _scrape_dt = timestamp + (datetime.min - timestamp) % timedelta(minutes=minute_interval)
+            else:
+                _scrape_dt = timestamp + ((datetime.min - timestamp) % timedelta(minutes=60)) \
+                                    - timedelta(minutes=60)
+            ''' create the timestamped folder name '''
+            _dt_dir_name = "-".join([folder_prefix,str(_scrape_dt.year),str(_scrape_dt.month),
+                                     str(_scrape_dt.day),str(_scrape_dt.hour),
+                                     str(_scrape_dt.minute),folder_postfix])
+            _dt_dir_name=_dt_dir_name.rstrip('-').lstrip('-')
+            rel_dir_path_ = os.path.join(clsFile.folderPath, _dt_dir_name)
+            clsFile.folderPath=rel_dir_path_
+            logger.debug("Folder %s created in directory path %s",_dt_dir_name,folder_path)
+            
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return rel_dir_path_
+
+
+    ''' Function --- [DEPRECATE] GET EXTRACT DATA STORED PATH ---
+
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    def get_extract_data_stored_path(
+        self,
+        data_store_path:str,
+        parent_dir_name:str, 
+        **kwargs):
+        """
+        Description:
+            give the relative root strage location to amend a data & time specific
+            folder for the current time. (_s3Storageobj or localhost directory path)
+        Attributes:
+           dirPath - string with folder path to the csv files
+           **kwargs - contain the plance holder key value pairs
+            columns: list
+            start_date: datetime.date
+            end_date: datetime.date
+        Returns:
+        Exceptions:
+        """
 
         _search_data_save_dir = None
         _search_dt = datetime.now()

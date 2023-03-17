@@ -7,7 +7,9 @@ __module__ = "ota"
 __package__ = "scraper"
 __app__ = "wrangler"
 __ini_fname__ = "app.ini"
-__bookings_data__ = "hospitality/bookings/"
+__booking_data_ext__ = "hospitality/bookings/"
+__booking_destin_ext__="destinations/"
+__tmp_data_dir_ext__ = "tmp/"
 
 ''' Load necessary and sufficient python libraries that are used throughout the class'''
 try:
@@ -18,7 +20,7 @@ try:
     import traceback
     import configparser
     import pandas as pd
-    from datetime import datetime, date, timedelta
+    from datetime import datetime, date, timedelta, timezone
 
     print("All {0} software packages loaded successfully!".format(__package__))
 
@@ -63,7 +65,18 @@ class PropertyScraper():
         global logger
         global clsUtil
         global clsNLP
-        global clsSparkWL
+        global clsFile
+
+        self._data = None    # property to hold class datasets
+        self._dataDir=None   # property sets the scraped data storage relative path
+        self._destDir=None   # property sets the destination directory path relative to _dataDir
+        self._tmpDir =None   # property sets the temporary scraped data storate relative pather
+        self._searchTimestamp=None # datetime the booking search was made; i.e. scraping started
+        self._checkInDate= None  # Starting date of the scrape dataset timestamp
+        self._checkOutDate=None  # Ending date of the scrape dataset timestamp
+        self._numOfNights= None  # Number of days to offset the checkout date
+        self._pageUpLimit= None  # Upper limit of the number of web pages to scrape
+        self._pageOffset = None  # Number of pages to retrieve for each request
 
         self.cwd=os.path.dirname(__file__)
         sys.path.insert(1,self.cwd)
@@ -75,32 +88,27 @@ class PropertyScraper():
         self.rezHome = config.get("CWDS","REZAWARE")
         sys.path.insert(1,self.rezHome)
         
-        from utils.modules.etl.load import sparkwls as spark
+        from utils.modules.etl.load import sparkFILEwls as spark
+#         from utils.modules.etl.load import sparkwls as spark
         from utils.modules.ml.natlang import nlp
         ''' initialize util class to use common functions '''
         clsUtil = otasu.Utils(desc='Utilities class for property data scraping')
         clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
-        clsSparkWL = spark.SparkWorkLoads(desc="ota property price scraper")
+        clsFile = spark.FileWorkLoads(desc="ota property price scraper")
+        clsFile.storeMode=config.get("DATASTORE","MODE")
+        clsFile.storeRoot=config.get("DATASTORE","ROOT")
 
-        ''' import dataio utils to read and write data '''
-        from utils.modules.etl.load import filesRW as rw
-        clsRW = rw.FileWorkLoads(desc=self.__desc__)
-        clsRW.storeMode = config.get("DATASTORE","MODE")
-        clsRW.storeRoot = config.get("DATASTORE","ROOT")
-        self.storePath = os.path.join(
-            self.__app__,
-            "data/",
-            self.__module__,
-            self.__package__,
-        )
+#         self.storePath = os.path.join(
+# #             self.cwd,
+#             self.__app__,
+#             "data/",
+#             self.__module__,
+#             self.__package__
+#         )
                 
         ''' set package specific path to the input and output data '''
-#         self.dataDir = os.path.join(config.get("CWDS","DATA"),__bookings_data__)
-        self.dataDir = os.path.join(self.storePath,__bookings_data__)
-
-        ''' Set the wrangler root directory '''
-        self.pckgDir = config.get("CWDS",self.__package__)
-        self.appDir = config.get("CWDS",self.__app__)
+#         self.dataDir = os.path.join(config.get("CWDS","DATA"),__booking_data_ext__)
+#         self.dataDir = os.path.join(self.storePath,__booking_data_ext__)
 
         from rezaware import Logger as logs
         ''' innitialize the logger '''
@@ -112,18 +120,7 @@ class PropertyScraper():
             ini_file=self.__ini_fname__)
         ''' set a new logger section '''
         logger.info('########################################################')
-        logger.info(self.__name__,self.__package__)
-
-#         ''' innitialize the logger '''
-#         logger = logs.get_logger(
-#             cwd=self.rezHome,
-#             app=self.__app__, 
-#             module=self.__module__,
-#             package=self.__package__,
-#             ini_file=self.__ini_fname__)
-#         ''' set a new logger section '''
-#         logger.info('########################################################')
-#         logger.info(self.__name__,self.__package__)
+        logger.info("%s %s",self.__name__,self.__package__)
 
         ''' select the storage method '''
         self.storeMethod = "local"
@@ -132,18 +129,18 @@ class PropertyScraper():
             if self.tmpDIR = None then data is not stored, otherwise stored to
             given location; typically specified in app.conf
         '''
-        self.tmpDIR = None
-        if "WRITE_TO_FILE" in kwargs.keys():
-            self.tmpDIR = os.path.join(self.dataDir,"tmp/")
-            logger.debug("Set tmp file storage path to %s",self.tmpDIR)
-            if not os.path.exists(self.tmpDIR):
-                os.makedirs(self.tmpDIR)
+#         self._tmpDIR = None
+#         if "WRITETOTMP" in kwargs.keys():
+#             self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+#             logger.debug("Set tmp file storage path to %s",self.tmpDIR)
+#             if not os.path.exists(self.tmpDIR):
+#                 os.makedirs(self.tmpDIR)
 
-        self.scrape_start_date = date.today()
-        self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
-        self.page_offset = 10
-        self.page_upper_limit = 150
-        self.checkout_offset = 1
+#         self.scrape_start_date = date.today()
+#         self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
+#         self.page_offset = 10
+#         self.page_upper_limit = 150
+#         self.checkout_offset = 1
 
         self.destination_id = ["Las Vegas",
                                "New York",
@@ -162,20 +159,619 @@ class PropertyScraper():
 # #         print("Data path set to %s" % self.dataDir)
         return None
 
+    ''' Function --- CLASS PROPERTY SETTER/GETTER ---
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
 
-    ''' Function
-            name: build_scrape_url_list
-            parameters:
-                inp_data_dir - path to the directory with property parameters JSON
-                file_name - JSON file containing those parameters
-                kwargs - 
-                        
+    ''' Function -- DATA --
+            TODO: 
+            author: <nuwan.waidyanatha@rezgateway.com>
+    '''
+    @property
+    def data(self):
+        """ @propert data function
 
-            procedure: use the get_scrape_input_params function to load the the JSON file. 
-                        Thenloop through all the OTAs to extract the input parameters
-                        For each OTA template url use the insert_params_in_url function to
-                        construct the list of parameterized URLs
-            return: list with the set of urls (scrape_url_list)
+            gets the class instance set data such as the parameterized
+            url lists and the data collected from scraping the urls.
+
+            return self._data (any)
+        """
+
+        __s_fn_id__ = "function <@property data>"
+
+        try:
+            if self._data is None:
+                raise AttributeError("%s property data cannot be None-type to use in class")
+                
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+    @data.setter
+    def data(self,data):
+        """ @data.setter function
+
+            sets the class instance set data such as the parameterized
+            url lists and the data collected from scraping the urls.
+
+            return self._data (any)
+        """
+
+        __s_fn_id__ = "function <@data.setter>"
+
+        try:
+            if data is None:
+                raise AttributeError("Cannot set an empty dataset")
+            self._data = data
+                
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+    ''' --- DATA DIR --- '''
+    @property
+    def dataDir(self) -> str:
+        """
+        Description:
+            Class property retuns the relative directory path for storing scraped. 
+        Attributes:
+            None
+        Returns:
+            self._dataDir (str)
+        Exceptions:
+            If the property value is None then will attempt to create a directory
+            with the self.__app__, self.__module__, self.__package__, & __booking_data_ext__
+            WARNING - do not create the absolute path because sparkFILEwls does that
+        """
+
+        __s_fn_id__ = "function <@property dataDir>"
+
+        try:
+            if self._dataDir is None:
+                self._dataDir = os.path.join(self.__app__,'data',self.__module__,
+                                             self.__package__,__booking_data_ext__)
+                logger.warning("%s NoneType dataDIR set to default value %s",
+                               __s_fn_id__,self._dataDir)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dataDir
+
+    @dataDir.setter
+    def dataDir(self,data_dir_path:str="")->str:
+        """
+        Description:
+            Class property is set with the dataDir path for storing the scrapped data.
+        Attributes:
+            data_dir_path (str) - a valid os.path
+        Return:
+            self._dataDir
+        Exception:
+            Invalid string with improper director path formats will be rejected
+        """
+
+        __s_fn_id__ = "function <@dataDir.setter>"
+
+        try:
+            if data_dir_path is None or "".join(data_dir_path.split())=="":
+                raise AttributeError("Invalid data dir path")
+            self._dataDir = data_dir_path
+            logger.debug("%s dataDir relative path set to %s",
+                         __s_fn_id__,self._dataDir)
+            
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._dataDir
+
+    ''' --- DESTINATIONS DIR --- '''
+    @property
+    def destDir(self) -> str:
+        """
+        Description:
+            Class property retuns the relative directory path for the destinations directory
+             that holds the data files with destination codes.
+        Attributes:
+            None
+        Returns:
+            self._destDir (str)
+        Exceptions:
+            If self._destDir is None, it will set the default value by joining 
+            __booking_destin_ext__ to self._dataDir.
+            WARNING - do not create the absolute path because sparkFILEwls does that
+        """
+
+        __s_fn_id__ = "function <@property destDir>"
+
+        try:
+            if self._destDir is None:
+                self._destDir = os.path.join(self.dataDir,__booking_destin_ext__)
+                logger.warning("%s NoneType destDir set to default value %s",
+                               __s_fn_id__,self._destDir)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._destDir
+
+    @destDir.setter
+    def destDir(self,destination_dir:str="")->str:
+        """
+        Description:
+            Class property augments the directory path to the self.dataDir path to
+            create a temporary storage of scraped data from each functional step.
+            This is mainly to support data sharing between airflow process functions
+        Attributes:
+            tmp_dir_path (str) - a valid os.path
+        Return:
+            self._tmpDir
+        Exception:
+            Invalid string with improper director path formats will be rejected
+        """
+
+        __s_fn_id__ = "function <@destDir.setter>"
+
+        try:
+            if destination_dir is None or "".join(destination_dir.split())=="":
+                raise AttributeError("Invalid destination directory name")
+            self._destDir = destination_dir
+            logger.debug("%s destDir relative path set to %s",
+                         __s_fn_id__,self._destDir)
+            
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._destDir
+
+    ''' --- TEMP DIR --- '''
+    @property
+    def tmpDir(self) -> str:
+        """
+        Description:
+            Class property retuns the relative directory path for temporary storage of
+             data generated from the scraper functions. This is mainly to support data
+            sharing between airflow process functions
+        Attributes:
+            None
+        Returns:
+            self._tmpDir (str)
+        Exceptions:
+            If the property value is None, then create detfault directory by joining
+            self._dataDir with __tmp_data_dir_ext__.
+            WARNING - do not create the path because sparkFILEwls does that
+        """
+
+        __s_fn_id__ = "function <@property tmpDir>"
+
+        try:
+            if self._tmpDir is None:
+                self._tmpDir = os.path.join(self.dataDir,__tmp_data_dir_ext__)
+                logger.warning("%s NoneType tmpDIR set to default value %s",
+                               __s_fn_id__,self._tmpDir)
+            
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._tmpDir
+
+    @tmpDir.setter
+    def tmpDir(self,tmp_dir_path:str="")->str:
+        """
+        Description:
+            Class property augments the directory path to the self.dataDir path to
+            create a temporary storage of scraped data from each functional step.
+            This is mainly to support data sharing between airflow process functions
+        Attributes:
+            tmp_dir_path (str) - a valid os.path
+        Return:
+            self._tmpDir
+        Exception:
+            Invalid string with improper director path formats will be rejected
+        """
+
+        __s_fn_id__ = "function <@tmpDir.setter>"
+
+        try:
+            if tmp_dir_path is None or "".join(tmp_dir_path.split())=="":
+                raise AttributeError("Invalid tmp dir path")
+            self._tmpDir = tmp_dir_path
+            logger.debug("%s tmpDir relative path set to %s",
+                         __s_fn_id__,self._tmpDir)
+            
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._tmpDir
+
+    ''' --- BOOKING SEARCH DATETIME --- '''
+    @property
+    def searchTimestamp(self) -> datetime:
+        """
+        Description:
+            Class property retuns the starting date of the data with timestamp to be scraped.
+            e.g., booking search datetime starting period
+        Attributes:
+            None
+        Returns:
+            self._dataDir (str)
+        Exceptions:
+            If self._searchTimestamp in None it will set to today
+        """
+
+        __s_fn_id__ = "function <@property searchTimestamp>"
+
+        try:
+            if self._searchTimestamp is None:
+                self._searchTimestamp = datetime.now()
+                logger.warning("%s NoneType searchTimestamp by default set to today %s",
+                               __s_fn_id__,str(self._searchTimestamp))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return (self._searchTimestamp.replace(tzinfo=timezone.utc)).isoformat()
+
+    @searchTimestamp.setter
+    def searchTimestamp(self,search_datetime:datetime=None)->datetime:
+        """
+        Description:
+            Class property retuns the starting date of the data with timestamp to be scraped.
+            e.g., booking search datetime
+        Attributes:
+            search_datetime (datetime) - yyyy-mm-dd
+        Return:
+            self._searchTimestamp
+        Exception:
+            If search_datetime is None raise AttributeError
+        """
+
+        __s_fn_id__ = "function <@searchTimestamp.setter>"
+
+        try:
+            if not isinstance(search_datetime,datetime):
+                raise AttributeError("Invalid search_datetime; must if a valid datetime.date")
+            self._searchTimestamp = search_datetime
+            logger.debug("%s searchTimestamp set to %s",
+                         __s_fn_id__,str(self._searchTimestamp))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return (self._searchTimestamp.replace(tzinfo=timezone.utc)).isoformat()
+
+
+    ''' --- SCRAPE FROM DATE --- '''
+    @property
+    def checkInDate(self) -> date:
+        """
+        Description:
+            Class property retuns the starting date of the data with timestamp to be scraped.
+            e.g., booking search datetime starting period
+        Attributes:
+            None
+        Returns:
+            self._dataDir (str)
+        Exceptions:
+            If self._checkInDate in None it will set to today
+        """
+
+        __s_fn_id__ = "function <@property checkInDate>"
+
+        try:
+            if self._checkInDate is None:
+                self._checkInDate = date.today()
+                logger.warning("%s NoneType checkInDate by default set to today %s",
+                               __s_fn_id__,str(self._checkInDate))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._checkInDate
+
+    @checkInDate.setter
+    def checkInDate(self,check_in_date:datetime=None)->date:
+        """
+        Description:
+            Class property retuns the starting date of the data with timestamp to be scraped.
+            e.g., booking search datetime
+        Attributes:
+            check_in_date (date) - yyyy-mm-dd
+        Return:
+            self._checkInDate
+        Exception:
+            If check_in_date is None raise AttributeError
+        """
+
+        __s_fn_id__ = "function <@checkInDate.setter>"
+
+        try:
+            if not isinstance(check_in_date,date):
+                raise AttributeError("Invalid check_in_date; must if a valid datetime.date")
+            self._checkInDate = check_in_date
+            logger.debug("%s checkInDate set to %s",
+                         __s_fn_id__,str(self._checkInDate))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._checkInDate
+
+
+    ''' --- SCRAPE END DATE --- '''
+    @property
+    def checkOutDate(self) -> date:
+        """
+        Description:
+            Class property retuns the ending date of the data with timestamp to be scraped.
+            e.g., booking search datetime ending period
+        Attributes:
+            None
+        Returns:
+            self._dataDir (str)
+        Exceptions:
+            If self._checkInDate in None it will set to today
+        """
+
+        __s_fn_id__ = "function <@property checkOutDate>"
+
+        try:
+            if self._checkOutDate is None:
+                self._checkOutDate = self.checkInDate + timedelta(days=self.numOfNights)
+                logger.warning("%s NoneType checkOutDate by default set to today %s",
+                               __s_fn_id__,str(self._checkOutDate))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._checkOutDate
+
+    @checkOutDate.setter
+    def checkOutDate(self,scrape_to_date:date=None)->date:
+        """
+        Description:
+            Class property retuns the ending date of the data with timestamp to be scraped.
+            e.g., booking search datetime ending period
+        Attributes:
+            scrape_to_date (datetime.date) - yyyy-mm-dd
+        Return:
+            self._checkOutDate
+        Exception:
+            If scrape_to_date is None raise AttributeError
+        """
+
+        __s_fn_id__ = "function <@checkInDate.setter>"
+
+        try:
+            if not isinstance(scrape_to_date,date):
+                raise AttributeError("Invalid scrape_to_date; must if a valid datetime.date")
+            if scrape_to_date <= self.checkInDate:
+                raise ValueError("%s is an invalid checkOutDate; must be greater that checkInDate:"
+                                 % (scrape_to_date,elf.checkInDate))
+            self._checkOutDate = scrape_to_date
+            logger.debug("%s checkOutDate set to %s",
+                         __s_fn_id__,str(self._checkOutDate))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._checkOutDate
+
+
+    ''' --- NUMBER OF NIGHTS OFFSET --- '''
+    @property
+    def numOfNights(self) -> int:
+        """
+        Description:
+            Class property retuns the value for offsetting the number of days from
+            checkout to checkin.
+        Attributes:
+            None
+        Returns:
+            self._numOfNights (int)
+        Exceptions:
+            If self._numOfNights in None default will be set to 1
+        """
+
+        __s_fn_id__ = "function <@property numOfNights>"
+
+        try:
+            if self._numOfNights is None:
+                self._numOfNights = 1
+                logger.warning("%s NoneType numOfNights by default set to %s",
+                               __s_fn_id__,str(self._numOfNights))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._numOfNights
+
+    @numOfNights.setter
+    def numOfNights(self,num_of_nights:int=1) -> int:
+        """
+        Description:
+            Class property sets the value for offsetting the number of days from
+            checkin to checkout.
+        Attributes:
+            offset (int)
+        Return:
+            self._numOfNights
+        Exception:
+            If num_of_nights is not an int > 0, then raise AttributeError
+        """
+
+        __s_fn_id__ = "function <@numOfNights.setter>"
+
+        try:
+            if not (isinstance(num_of_nights,int) and num_of_nights>0):
+                raise AttributeError("Invalid num_of_nights; must be an INT > 0")
+            self._numOfNights = num_of_nights
+            logger.debug("%s numOfNights set to %s",__s_fn_id__,self._numOfNights)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._numOfNights
+
+
+    ''' --- PAGE UPPER LIMIT --- '''
+    @property
+    def pageUpLimit(self) -> int:
+        """
+        Description:
+            Class property retuns the upper limit to control the number of scrapped web pages.
+            e.g., pageUpLimit = 10
+        Attributes:
+            None
+        Returns:
+            self._pageUpLimit (int)
+        Exceptions:
+            If self._pageUpLimit in None default will be set to 1
+        """
+
+        __s_fn_id__ = "function <@property pageUpLimit>"
+
+        try:
+            if self._pageUpLimit is None:
+                self._pageUpLimit = 1
+                logger.warning("%s NoneType pageUpLimit by default set to %s",
+                               __s_fn_id__,str(self._pageUpLimit))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._pageUpLimit
+
+    @pageUpLimit.setter
+    def pageUpLimit(self,page_upper_limit:date=None) -> int:
+        """
+        Description:
+            Class property set the upper limit to control the number of scrapped web pages.
+            e.g., page_upper_limit = 10
+        Attributes:
+            page_upper_limit (int)
+        Return:
+            self._pageUpLimit
+        Exception:
+            If page_upper_limit is not an int > 0, then raise AttributeError
+        """
+
+        __s_fn_id__ = "function <@pageUpLimit.setter>"
+
+        try:
+            if not (isinstance(page_upper_limit,int) and page_upper_limit>0):
+                raise AttributeError("Invalid page_upper_limit; must be an INT > 0")
+            self._pageUpLimit = page_upper_limit
+            logger.debug("%s pageUpLimit set to %s",
+                         __s_fn_id__,self._pageUpLimit)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._checkOutDate
+
+
+    ''' --- PAGE UPPER LIMIT --- '''
+    @property
+    def pageOffset(self) -> int:
+        """
+        Description:
+            Class property retuns the offset to control the number of web pages
+            to load for scrape at one time; e.g., offset = 10 will break down 
+            the uppe limitinto pageUpLimit/offset number of iterations.
+        Attributes:
+            None
+        Returns:
+            self._pageOffset (int)
+        Exceptions:
+            If self._pageOffset in None default will be set to 1
+        """
+
+        __s_fn_id__ = "function <@property pageOffset>"
+
+        try:
+            if self._pageOffset is None:
+                self._pageOffset = 1
+                logger.warning("%s NoneType pageOffset by default set to %s",
+                               __s_fn_id__,str(self._pageOffset))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._pageOffset
+
+    @pageOffset.setter
+    def pageOffset(self,page_offset:date=None) -> int:
+        """
+        Description:
+            Class property sets the offset to control the number of web pages
+            to load for scrape at one time; e.g., offset = 10 will break down 
+            the uppe limit into pageUpLimit/offset number of iterations.
+        Attributes:
+            offset (int)
+        Return:
+            self._pageOffset
+        Exception:
+            If page_offset is not an int > 0, then raise AttributeError
+        """
+
+        __s_fn_id__ = "function <@pageOffset.setter>"
+
+        try:
+            if not (isinstance(page_offset,int) and page_offset>0):
+                raise AttributeError("Invalid page_upper_limit; must be an INT > 0")
+            self._pageOffset = page_offset
+            logger.debug("%s pageOffset set to %s",__s_fn_id__,self._pageOffset)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._pageOffset
+
+
+    ''' Function --- GET DESTINATION IDS ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
             modified: 2022-09-27
@@ -184,52 +780,67 @@ class PropertyScraper():
                     Need a better method rather than nested loop because not all OTAs will consist
                     of the same input parameters
     '''
-    def get_destination_ids(self, file_name:str, destins_dir=None, col_name="destinationID", **kwargs):
+    def get_destination_ids(
+        self,
+        file_name:str,
+        destins_dir=None,
+        col_name="destinationID",
+        **kwargs
+    ):
+        """
+        Description:
+            use the get_scrape_input_params function to load the the JSON file. 
+            Then loop through all the OTAs to extract the input parameters
+            For each OTA template url use the insert_params_in_url function to
+            construct the list of parameterized URLs
+        Attributes:
+            inp_data_dir - path to the directory with property parameters JSON
+            file_name - JSON file containing those parameters
+            kwargs - 
+        Returns (list) with the set of urls (scrape_url_list)
+        Exceptions
+        """
 
+        __s_fn_id__ = "function <get_destination_ids>"
         _l_dests = []
 
-        __s_fn_id__ = "function <get_scrape_output_params>"
-        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
-
         try:
-            if not file_name:
-                raise ValueError("Invalid file name")
+            if file_name is None or "".join(file_name.split())=="":
+                raise AttributeError("Invalid file_name attribute")
 
             ''' see if the file exists '''
-            if not destins_dir:
-                destins_dir = self.dataDir
-            file_path = os.path.join(destins_dir,file_name)
-            if not os.path.exists(file_path):
-                raise ValueError("File %s does not exisit in folder %s" %(file_name,destins_dir))
+            if destins_dir is not None: # or "".join(destins_dir.split())!="":
+                self.destDir = destins_dir
 
             ''' read the destination ids into the list '''
-            dest_df = pd.read_csv(file_path, sep=',', quotechar='"')
+            options = {"inferSchema":True,"header":True,"delimiter":",",}
+            dest_df=clsFile.read_files_to_dtype(
+                as_type='pandas',
+                folder_path=self.destDir,
+                file_name=file_name,
+                file_type=None,
+                **options,
+            )
             if dest_df.shape[0] <=0:
-                raise ValueError("No destination data recovered from %s" %(file_path))
+                raise ValueError("Empty dataframe, NO destination data recovered from %s"
+                                 %(file_path))
 
             _l_dests = list(dest_df[col_name])
+            if len(_l_dests)>0:
+                logger.info("%s recovered %d destinations from file %s in %s",
+                            __s_fn_id__,len(_l_dests),file_name,destins_dir)
+
 
 
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__,err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return _l_dests
 
 
-    ''' Function
-            name: build_scrape_url_list
-            parameters:
-                inp_data_dir - path to the directory with property parameters JSON
-                file_name - JSON file containing those parameters
-
-            procedure: use the get_scrape_input_params function to load the the JSON file. 
-                        Then loop through all the OTAs to extract the input parameters
-                        For each OTA template url use the insert_params_in_url function to
-                        construct the list of parameterized URLs
-            return: list with the set of urls (scrape_url_list)
-
+    ''' Function --- BUILD SCRAPE URL LIST ---
             author: <nuwan.waidyanatha@rezgateway.com>
             modified: 2022-09-27
 
@@ -237,7 +848,27 @@ class PropertyScraper():
                     Need a better method rather than nested loop because not all OTAs will consist
                     of the same input parameters
     '''
-    def build_scrape_url_list(self, file_name:str, inp_data_dir=None, **kwargs):
+    def build_scrape_url_list(
+        self,
+        file_name:str,
+        inp_data_dir=None, 
+        **kwargs
+    ):
+        """
+        Description:
+            use the get_scrape_input_params function to load the the JSON file. 
+            Then loop through all the OTAs to extract the input parameters
+            For each OTA template url use the insert_params_in_url function to
+            construct the list of parameterized URLs
+        Attributes:
+            inp_data_dir - path to the directory with property parameters JSON
+            file_name - JSON file containing those parameters
+        Returns: 
+            _tmpFPath (str) - 
+            _ota_parameterized_url_list (list) - with the set of urls
+        """
+
+        __s_fn_id__ = "function <build_scrape_url_list>"
 
         _scrape_url_dict = {}
         _ota_parameterized_url_list = [] 
@@ -245,55 +876,43 @@ class PropertyScraper():
         err_count = 0      # logging the number of errors
         _tmpFPath = None   # tempory file path to store the parameterized URL list
         
-        __s_fn_id__ = "function <build_scrape_url_list>"
-        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
+        logger.info("Executing %s %s" % (self.__name__, __s_fn_id__))
 
         try:
             ''' validate and if given the dir path, else revert to defaul '''
-            if not file_name:
-                raise ValueError("Invalid file to fetch scraper property dictionary")
-            if not inp_data_dir:
-                inp_data_dir = self.dataDir
-            logger.debug("Directory path for loading input data %s" % inp_data_dir)
+            if file_name is None or "".join(file_name.split())=="":
+                raise AttributeError("Invalid file_name attribute")
+
+            if inp_data_dir is not None: # or "".join(inp_data_dir.split())!="":
+                self.dataDir=inp_data_dir
             
             ''' check and initialize **kwargs '''
-            if 'pageOffset' in kwargs:
-                self.page_offset = kwargs['pageOffset']
-            if 'pageUpperLimit' in kwargs:
-                self.page_upper_limit = kwargs['pageUpperLimit']
-            if 'startDate' in kwargs:
-                self.scrape_start_date = kwargs['startDate']
-            else:
-                logger.warning("Invalid scrape start date. Setting start date to today %s", str(self.scrape_start_date))
-                print("Invalid scrape start date. Setting start date to today %s" %(str(self.scrape_start_date)))
-            if 'endDate' in kwargs:
-                if self.scrape_start_date < kwargs['endDate']:
-                    self.scrape_end_date = kwargs['endDate']
-                else:
-                    self.scrape_end_date = self.scrape_start_date + timedelta(days=1)
-                    logger.warning("Invalid scrape end date. Setting end date to %s %s",
-                                str(self.scrape_start_date),str(self.scrape_end_date))
-                    print("Invalid scrape end date. Setting end date to %s %s" 
-                          %(str(self.scrape_start_date),str(self.scrape_end_date)))
-            if 'checkoutOffset' in kwargs:
-                self.checkout_offset = kwargs['checkoutOffset']
-
-            ''' set the directory path to csv files with destination ids '''
-            _destins_dir = os.path.join(inp_data_dir, "destinations/")
+            if 'PAGEOFFSET' in kwargs:
+                self.pageOffset = kwargs['PAGEOFFSET']
+            if 'PAGEUPLIMIT' in kwargs:
+                self.pageUpLimit = kwargs['PAGEUPLIMIT']
+            if 'FROMDATE' in kwargs:
+                self.checkInDate = kwargs['FROMDATE']
+            if 'TODATE' in kwargs:
+                self.checkOutDate=kwargs['TODATE']
+            if 'CHECKOUTOFFSET' in kwargs:
+                self._numOfNights = kwargs['CHECKOUTOFFSET']
 
             ''' retrieve OTA input and output property data from json '''
-            property_dict = clsUtil.load_ota_list(os.path.join(inp_data_dir, file_name))
+            property_dict = clsUtil.load_ota_list(
+                folder_path=self.dataDir,
+                file_name=file_name,
+                **kwargs)
 
             if len(property_dict) <= 0:
                 raise ValueError("No data found with %s with defined scrape properties"
                                  % os.path.join(inp_data_dir, file_name))
-            else:
-                logger.info("Loaded %d properties to begin scraping OTA data.", len(property_dict))
-                print("Loaded %d properties to begin scraping OTA data." % (len(property_dict)))
+            logger.debug("Loaded %d properties to begin scraping OTA data.", len(property_dict))
 
             ''' get the input parameters from the properties file '''
             _ota_input_param_list = clsUtil.get_scrape_input_params(property_dict)
-            logger.info("Input parameter list loaded successfully.")
+            logger.info("Input parameter list loaded %d rows successfully.",
+                        len(_ota_input_param_list))
             
             ''' loop through the  ota list to create the url list for each ota '''
             for ota in _ota_input_param_list:
@@ -308,10 +927,11 @@ class PropertyScraper():
                     ''' get the list of destination ids for the particular OTA'''
                     if "locations" in ota.keys():
                         
-                        _l_dest = self.get_destination_ids(file_name=ota["locations"],   # filename with destination ids
-                                                           destins_dir=_destins_dir,   # path to the desitnation folder
-                                                           col_name="destinationID"    # column name with destination ids
-                                                          )
+                        _l_dest = self.get_destination_ids(
+                            file_name=ota["locations"],   # filename with destination ids
+                            destins_dir=self.destDir, #_destins_dir,   path to the desitnation folder
+                            col_name="destinationID"    # column name with destination ids
+                        )
 
                         if len(_l_dest) > 0:
                             self.destination_id = _l_dest
@@ -322,27 +942,32 @@ class PropertyScraper():
                         _inert_param_dict['destinationID'] = destID
 
                         if 'checkIn' in ota['inputs']:
-                            for day_count in range(0,(self.scrape_end_date - self.scrape_start_date).days):
-                                _inert_param_dict['checkIn'] = self.scrape_start_date + timedelta(days=day_count)
-                                ''' if checkout date is a necessary parameter then add 1 day to checkout date'''
+                            for day_count in range(0,(self.checkOutDate - \
+                                                      self.checkInDate).days):
+                                _inert_param_dict['checkIn'] = self.checkInDate + \
+                                                                    timedelta(days=day_count)
+                                ''' if checkout date is a necessary parameter 
+                                    then add 1 day to checkout date'''
                                 if 'checkOut' in ota['inputs']:
-                                    _inert_param_dict['checkOut'] = self.scrape_start_date \
-                                                                    + timedelta(days=day_count+self.checkout_offset)
+                                    _inert_param_dict['checkOut'] = self.checkInDate + \
+                                                    timedelta(days=day_count+self.numOfNights)
                                 if "page" in ota['inputs']:
-                                    page_offset = 0
+                                    next_page_offset = 0
                                     _parameterized_url = None
-                                    while page_offset <= self.page_upper_limit:
-                                        _inert_param_dict['page'] = page_offset
-                                        _parameterized_url = clsUtil.insert_params_in_url(ota['url'],**_inert_param_dict)
+                                    while next_page_offset <= self.pageUpLimit:
+                                        _inert_param_dict['page'] = next_page_offset
+                                        _parameterized_url = clsUtil.insert_params_in_url(
+                                            ota['url'],
+                                            **_inert_param_dict)
 #                                        scrape_url_list.append(_parameterized_url)
                                         _scrape_url_dict = {}     # init otherwise will overwrite the list
                                         _scrape_url_dict['ota']=ota['ota']
                                         _scrape_url_dict['destination_id']=destID
                                         _scrape_url_dict['checkin']=_inert_param_dict['checkIn']
-                                        _scrape_url_dict['page_offset']=page_offset
+                                        _scrape_url_dict['page_offset']=next_page_offset
                                         _scrape_url_dict['url']=_parameterized_url
                                         _ota_parameterized_url_list.append(_scrape_url_dict)
-                                        page_offset += self.page_offset
+                                        next_page_offset += self.pageOffset
 
                     ''' add to dict the paramterized url list for OTA as key '''
 #                    print(scrape_url_list)
@@ -351,92 +976,135 @@ class PropertyScraper():
                 except Exception as err:
                     ''' skip to processing the next OTA url if this one is None '''
                     err_count += 1
-                    logger.warning("%s", __s_fn_id__+" "+err)
+                    logger.warning("%s %s", __s_fn_id__,err)
                     print(err)
-                    
-                logger.info("Build %s completed %d error ota urls", __s_fn_id__, err_count)
-                logger.info("Parameterized %d urls.",len(_ota_parameterized_url_list))
-                if len(_ota_parameterized_url_list) > 0 and self.tmpDIR:
-                    print(len(_ota_parameterized_url_list))
-                    tmpDF = pd.DataFrame(_ota_parameterized_url_list)
+
+            if err_count>0:
+                logger.info("%s skipped constructing %d ota urls with parameter errors",
+                            __s_fn_id__, err_count)
+            if len(_ota_parameterized_url_list) <=0:
+                raise RuntimeError("%s was unable to parameterize %d input urls",
+                                   __s_fn_id__, len(_ota_input_param_list))
+            logger.info("%s parameterized %d urls with input values from %s.",
+                        __s_fn_id__, len(_ota_parameterized_url_list),file_name)
+
+#             if self._tmpDir:
+#             if "WRITETOTMP" in kwargs and kwargs["WRITETOTMP"] is True:
+            tmpDF = pd.DataFrame(_ota_parameterized_url_list)
 #                    _tmpFPath = os.path.join(self.tmpDIR,"build_scrape_url_list.csv")
-                    _tmp_fname = self.__package__+"-"+"build-scrape-url-list.csv"
-                    _tmpFPath = os.path.join(self.tmpDIR,_tmp_fname)
-                    tmpDF.to_csv(_tmpFPath, sep=',', index=False)
-                    logger.info("Data written to %s",_tmpFPath)
+            _tmp_fname = self.__package__+"-"+"build-scrape-url-list.csv"
+#                 _tmpFPath = os.path.join(self.tmpDir,_tmp_fname)
+#                 tmpDF.to_csv(_tmpFPath, sep=',', index=False)
+            tmpDF=clsFile.write_data(
+                file_name=_tmp_fname,
+                folder_path=self.tmpDir,
+                data=tmpDF,
+            )
+            logger.info("%s wrote %d rows ota parameterized url lists to %s in %s",
+                        __s_fn_id__,len(tmpDF),file_name,self._tmpDir)
 
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
-        return _tmpFPath, _ota_parameterized_url_list
+        return self._tmpDir,_tmp_fname, _ota_parameterized_url_list
 
 
-    ''' Function
-            name: make_storage_dir
-            parameters:
-                inp_data_dir - string with folder path to the csv files
-                **kwargs - contain the plance holder key value pairs
-                            columns: list
-                            start_date: datetime.date
-                            end_date: datetime.date
-            procedure: give the relative root strage location to amend a data & time
-                        specific folder for the current time
-                        
-            return string (_s3Storageobj or localhost directory path)
+    ''' Function --- MAKE STORGE DIRECTORY ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
             modified: 2022-09-22
     '''
     def make_storage_dir(self, **kwargs):
+        """
+        Description:
+            give the relative root strage location to amend a date & time
+            specific folder w.r.t the search datetime
+        Attributes:
+            inp_data_dir - string with folder path to the csv files
+            **kwargs - contain the plance holder key value pairs
+                PARENTDIR (str) - to append a directory path to the dataDir
+                FOLDERPATH (str)- directly provide a folder path, relative to the root
+                TIMESTAMP (datetime) - alterative timestamp to the default self_searchTimestamp
+                PREFIX (str) - a string to append before the timestamp in the folder name
+                POSTFIX (str) - a string to append after the timestamp in thefolder name
+                INTERVAL (int) - specifies the searth time in minutes past the hour
+        Returns:
+            _prop_search_folder (str) the relative directory path with the timestamped folder
+        Exceptions:
+            None
+        """
         
         __s_fn_id__ = "function <make_storage_dir>"
-        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
+#         logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
         
         _prop_search_folder = None
         
         try:
-            if "PARENT_DIR" in kwargs.keys():
-                parent_dir_name = kwargs['PARENT_DIR']
-            else:
-                parent_dir_name = "rates/"
-                
-            _prop_search_folder = clsUtil.get_extract_data_stored_path(
-                data_store_path = self.dataDir,
-                parent_dir_name = parent_dir_name,
-                **kwargs)
+            _par_dir = "search"   # initialse parent directory name to append to dataDir
+            if "PARENTDIR" in kwargs.keys():
+                _par_dir = kwargs['PARENTDIR']
+            _dir_path=os.path.join(self.dataDir,_par_dir)   # append parent dir path to dataDir
+            if "FOLDERPATH" in kwargs.keys() and isinstance(kwargs['FOLDERPATH'],str):
+                _dir_path = kwargs['FOLDERPATH']   #   set to what's in the key value
+            _timestamp=self.searchTimestamp   # initialize timestamp with searchTimestamp
+            if "TIMESTAMP" in kwargs.keys() and isinstance(kwargs['TIMESTAMP'],datetime):
+                _timestamp = kwargs['TIMESTAMP']
+            _prefix=""   # initialize the folder name prefix
+            if "PREFIX" in kwargs.keys():
+                _prefix = kwargs['PREFIX']
+            _postfix=""   # initialize the folder name postfix
+            if "POSTFIX" in kwargs.keys():
+                _postfix = kwargs['POSTFIX']
+            _min_interval=0   # initialize the offset time interval
+            if "MININTERVAL" in kwargs.keys() and kwargs['MININTERVAL'] != 0:
+                _min_interval = kwargs['MININTERVAL']
+
+            _prop_search_folder=clsUtil.get_timestamped_storage(
+                folder_path=_dir_path,
+                folder_prefix=_prefix,
+                folder_postfix=_postfix,
+                timestamp=_timestamp,
+                minute_interval=_min_interval,
+                **kwargs
+            )
+
             logger.info("Folder %s ready for storing scraped data" % _prop_search_folder)
 
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__, err)
-            print("[Error]",+self.__package__+__s_fn_id__, err)
-            print(traceback.format_exc())
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return _prop_search_folder
 
 
-    ''' Function
-            name: _scrape_bookings_to_csv
-            parameters:
-                url - string comprising the url with place holders
-                **kwargs - contain the plance holder key value pairs
-
-            procedure: specific to bookings.com scrape, extract, and load the data in a csf file
+    ''' Function --- SCRAPE BOOKINGS TO STORAGE ---
 
             author(s): <nileka.desilva@rezgateway.com>
                         <nuwan.waidyanatha@rezgateway.com>
             modified: 2022-09-10
     '''
-    def _scrape_bookings_to_csv(self,
-                                url,   # parameterized url
-                                ota_name, # ota name
-                                checkin_date, # intended checkin date
-                                search_dt,    # scrape run date time
-                                destination_id, # location searched for
-                                file_name,     # store in csv file
-                                path          # directory path to store csv
-                               ):
+    def _scrape_bookings_to_csv(
+        self,
+        url,   # parameterized url
+        ota_name, # ota name
+        checkin_date, # intended checkin date
+        search_dt,    # scrape run date time
+        destination_id, # location searched for
+        file_name, # store in csv file
+        path       # directory path to store csv
+    ):
+        """
+        Description:
+            specific to bookings.com scrape, extract, and load the data in a csf file
+        Attributes:
+            url - string comprising the url with place holders
+            **kwargs - contain the plance holder key value pairs
+        Returns:
+        Exceptions:
+        """
 
         from bs4 import BeautifulSoup # Import for Beautiful Soup
         import requests # Import for requests
@@ -515,43 +1183,43 @@ class PropertyScraper():
                 except Exception as text_err:
                     _data_dict['distance_desc'] = None
                     _data_err = True
-                    logger.warning('distance_desc',text_err)
+                    logger.warning('distance_desc - %s',text_err)
                 try:
                     _data_dict['room_desc'] = _list.find('div', class_='cb5b4b68a4').text
                 except Exception as text_err:
                     _data_dict['room_desc'] = None
                     _data_err = True
-                    logger.warning('room_desc',text_err)
+                    logger.warning('room_desc - %s',text_err)
                 try:
                     _data_dict['breakfast'] = _list.find('span', class_='e05969d63d').text
                 except Exception as text_err:
                     _data_dict['breakfast'] = None
                     _data_err = True
-                    logger.warning('breakfast', text_err)
+                    logger.warning('breakfast - %s', text_err)
                 try:
                     _data_dict['cancellations'] = _list.find('div', class_='d506630cf3').text
                 except Exception as text_err:
                     _data_dict['cancellations'] = None
                     _data_err = True
-                    logger.warning('cancellations', text_err)
+                    logger.warning('cancellations - %s', text_err)
                 try:
                     _data_dict['availability'] = _list.find('div', class_='cb1f9edcd4').text
                 except Exception as text_err:
                     _data_dict['availability'] = None
                     _data_err = True
-                    logger.warning('availability', text_err)
+                    logger.warning('availability - %s', text_err)
                 try:
                     _data_dict['_star_rating_info'] = _list.find('div', class_='e4755bbd60').text
                 except Exception as text_err:
                     _data_dict['_star_rating_info'] = None
                     _data_err = True
-                    logger.warning('_star_rating_info', text_err)
+                    logger.warning('_star_rating_info - %s', text_err)
                 try:
                     _data_dict['star_rating'] = _star_rating_info.get('aria-label')
                 except Exception as text_err:
-                    _data_dict['star_rating' = None
+                    _data_dict['star_rating'] = None
                     _data_err = True
-                    logger.warning('star_rating', text_err)
+                    logger.warning('star_rating - %s', text_err)
 
                 if bool(_data_dict):
                     _save_df = pd.concat([_save_df,pd.DataFrame(_data_dict)])
@@ -560,111 +1228,140 @@ class PropertyScraper():
 
 
             if _save_df.shape[0] > 0:
-                if self.storeMethod == 'local':
-#                    print(saveTo)
-                    _save_df.to_csv(saveTo,index=False, sep=',')
-                elif self.storeMethod == 'AWS-S3':
-                    print("todo")
-                else:
-                    raise ValueError("%s is an undefined storage location in **kwargs"
-                                     % (kwargs['storageLocation']))
+                saved_data_ = clsFile.write_data(
+                    file_name=file_name,
+                    folder_path=path,
+                    data=_save_df,
+                )
+#                 if self.storeMethod == 'local':
+# #                    print(saveTo)
+#                     _save_df.to_csv(saveTo,index=False, sep=',')
+#                 elif self.storeMethod == 'AWS-S3':
+#                     print("todo")
+#                 else:
+#                     raise ValueError("%s is an undefined storage location in **kwargs"
+#                                      % (kwargs['storageLocation']))
 
 #                _save_df.to_csv(saveTo,index=False, sep=',')
             
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return saveTo
 
 
-    ''' Function
-            name: scrape_url_list
-            parameters:
-                otasuRLlist - string with folder path to the csv files
-                **kwargs - contain the plance holder key value pairs
-                            columns: list
-                            start_date: datetime.date
-                            end_date: datetime.date
-            procedure: reads the all the csv files in the entire folder and
-                        appends the data for the relevant columns defined in
-                        the dictionary into a dataframe
-            return dataframe (ota_bookings_df)
-
+    ''' Function --- SCRAPE URL LIST ---
+    
             author: <nuwan.waidyanatha@rezgateway.com>
-            modified: 2022-09-20
+            modified: 2023-03-17
     '''
 
-    def scrape_url_list(self,otasuRLlist, searchDT: datetime, data_store_dir:str):
-
-        saveTo = None   # init file name
-        _l_saved_files = []
+    def scrape_url_list(
+        self,
+        ota_url_file_name:str=None,  # file name holding the parameterized urls
+        ota_url_dir_path:str =None,  # directory path to the file with parameterized urls
+#         otasURLlist:list = None,   # parameter inserted url list to run scraping 
+        search_datetime:datetime=None,   # search datetime to search for rooms and prices
+        save_in_dir:str=None,     # timestamped folder path to store data
+        **kwargs,
+    ):
+        """
+        Description:
+            reads the all the csv files in the entire folder and appends the data
+            for the relevant columns defined in the dictionary into a dataframe
+        Attributes:
+            otasURLlist (str) - parameter inserted url list to run scraping 
+            search_datetime (datetime) - sets the searchTimestamp searching rooms and prices
+            save_in_dir (str)- timestamped folder path to store data
+        Returns:
+            saved_file_list_ (list) - list of scraped data saved csv file names
+        Exceptions:
+            Do not proceed if otasURLlist has no values
+        """
 
         __s_fn_id__ = "function <scrape_url_list>"
-        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
+
+        saveTo = None   # init file name
+        otasURLlist = None
+        saved_file_list_ = []
+
+#         logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
 
         try:
-            if len(otasuRLlist) > 0:
-                logger.info("loading parameterized urls from list %d records", len(otasuRLlist))
-                print("loading parameterized urls from list %d records" % len(otasuRLlist))
-            else:
-                raise ValueError("List of URLs required to proceed; non defined in list.")
+#                 urlDF = clsFile.read_csv(_otaURLfilePath, sep=",")
+            urls_df = clsFile.read_files_to_dtype(
+                as_type='pandas',
+                folder_path=ota_url_dir_path,
+                file_name=ota_url_file_name,#__local_file_name__,
+                file_type=None,
+                **kwargs,
+            )
+            otasURLlist = urls_df.to_dict('records')
+            logger.debug("loaded %d parameterized urls from list %s",
+                        len(otasURLlist),os.path.join(ota_url_dir_path,ota_url_file_name))
 
+#             if len(otasURLlist) <= 0:
+#                 raise ValueError("List of URLs required to proceed; non defined in list.")
+#                 print("loading parameterized urls from list %d records" % len(otasuRLlist))
+#             else:
+            if isinstance(search_datetime,datetime):
+                self.searchTimestamp=search_datetime
+            if save_in_dir is None or "".join(save_in_dir.split())=="":
+                save_in_dir=self.make_storage_dir(**kwargs)
+                logger.warning("Unspecified storage location; default set to %s",save_in_dir)
+                
             ''' loop through the list of urls to scrape and save the data'''
-            for ota_dict in otasuRLlist:
-
-                ''' file name is concaternation of ota name + location + checkin date + page offset and .csv file extension'''
-                _fname = str(ota_dict['ota'])+"."+\
-                        str(ota_dict['destination_id'])+"."+\
-                        str(ota_dict['checkin'])+"."+\
-                        str(ota_dict['page_offset']).zfill(3)+\
-                        ".csv"
+            for ota_dict in otasURLlist:
+                ''' file name is concaternation of ota name + location + checkin date + page offset
+                    and .csv file extension'''
+#                 _fname = str(ota_dict['ota'])+"."+\
+#                         str(ota_dict['destination_id'])+"."+\
+#                         str(ota_dict['checkin'])+"."+\
+#                         str(ota_dict['page_offset']).zfill(3)+\
+#                         ".csv"
+                _fname = ".".join([str(ota_dict['ota']),str(ota_dict['destination_id']),
+                                   str(ota_dict['checkin']),str(ota_dict['page_offset']).zfill(3),
+                                   "csv"])
                 _fname=_fname.replace(" ",".")
 
                 ''' TODO add search_datetime'''
                 if ota_dict['ota'] == 'booking.com':
-                    saveTo = self._scrape_bookings_to_csv(ota_dict['url'],   # constructed url with parameters
-                                                          ota_dict['ota'],   # ota name data source
-                                                          ota_dict['checkin'],  # booking intended checkin date
-                                                          searchDT,   # date & time scraping was executed
-                                                          ota_dict['destination_id'],  # destingation id to lookup the name
-                                                          _fname,       # csv file name to store in
-                                                          data_store_dir     # folder name to save the files
-                                                         )
-                    _l_saved_files.append(saveTo)
+                    saveTo = self._scrape_bookings_to_csv(
+                        url=ota_dict['url'],   # constructed url with parameters
+                        ota_name=ota_dict['ota'],   # ota name data source
+                        checkin_date=ota_dict['checkin'],  # booking intended checkin date
+                        search_dt=self.searchTimestamp, # date & time scraping was executed
+#                         searchDT,   # date & time scraping was executed
+                        destination_id=ota_dict['destination_id'],  # destingation id to lookup the name
+                        file_name=_fname,     # csv file name to store in
+                        path=save_in_dir     # folder name to save the files
+                    )
+                    saved_file_list_.append(saveTo)
+
 
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
-        return _l_saved_files
+        return saved_file_list_
 
     ''' Function
-            name: extract_room_rate
-            parameters:
-                otasuRLlist - string with folder path to the csv files
-                **kwargs - contain the plance holder key value pairs
-                            columns: list
-                            start_date: datetime.date
-                            end_date: datetime.date
-            procedure: reads the all the csv files in the entire folder and
-                        appends the data for the relevant columns defined in
-                        the dictionary into a dataframe
-            return dataframe (ota_bookings_df)
 
             author: <nuwan.waidyanatha@rezgateway.com>
             modified: 2022-09-29
     '''
 
-    def extract_room_rate(self, 
-                          room_data_df,   # data frame with the room rates
-                          rate_col_name:str="room_rate",   # column name with the room rates
-                          aug_col_name:str="room_price",   # column name to save the room category
-                          curr_col_name:str="currency",   # column to store the currency abbr
-                          **kwargs,       # kwargs = {}
-                         ):
+    def extract_room_rate(
+        self,
+        room_data_df,   # data frame with the room rates
+        rate_col_name:str="room_rate",   # column name with the room rates
+        aug_col_name:str="room_price",   # column name to save the room category
+        curr_col_name:str="currency",   # column to store the currency abbr
+        **kwargs,       # kwargs = {}
+    ):
         
         __s_fn_id__ = "function <extract_room_rate>"
         logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
@@ -686,9 +1383,9 @@ class PropertyScraper():
                          %(rate_col_name,aug_col_name))
 
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return aug_rate_df
 
@@ -743,11 +1440,12 @@ class PropertyScraper():
             ''' get the catergorized room type data '''
             _room_taxo = pd.read_csv(os.path.join(self.dataDir,_room_cate_file), delimiter=',')
             logger.debug("loaded %d room descriptors", _room_taxo.shape[0])
-            ''' iterate through each room type to get the similarity scores against the room type taxonomy '''
+            ''' iterate through each room type to get the similarity scores 
+                against the room type taxonomy '''
             for rowIdx, rowVal in room_data_df.iterrows():
                 ''' get the similarity scores from nlp utils calss'''
                 sim_scores_df = clsNLP.get_similarity_scores(
-                    input_sentences = [rowVal.room_type],   # cannot use list() it will split into letters
+                    input_sentences = [rowVal.room_type], # cannot use list() it will split into letters
                     lookup_sentences =list(_room_taxo.description),
                     **emb_kwargs)
                 sim_scores_df=sim_scores_df.reset_index()
@@ -783,9 +1481,9 @@ class PropertyScraper():
                 raise ValueError("No similarity room categories assigned")
 
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return _merged_room_cate_df
 
@@ -851,9 +1549,9 @@ class PropertyScraper():
             _lx_assign_df["dest_lx_type"] = "city"
 
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return _lx_assign_df
 
@@ -902,9 +1600,9 @@ class PropertyScraper():
             logger.info("Data %d rows loaded into %s table",count,table_name)
 
         except Exception as err:
-            logger.error("%s %s \n", __s_fn_id__, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return count, data_df
 
@@ -913,27 +1611,26 @@ class PropertyScraper():
      procedure: clean and replace unwanted characters in room_data_df columns'''
 
     def _clean_columns(self, room_data_df, col_name, **kwargs):
+        __s_fn_id__ = "function <_clean_columns>"
+        logger.info("Executing %s %s", self.__package__, __s_fn_id__)
 
-    __s_fn_id__ = "function <_clean_columns>"
-    logger.info("Executing %s %s", self.__package__, __s_fn_id__)
+        emb_kwargs = {
+            "LOWER": True,
+            "NO_STOP_WORDS": False,
+            "METRIC": 'COSIN',
+            "MAX_SCORES": 2,
+        }
+        try:
+            room_data_df['room_desc'] = room_data_df['room_desc'].str.replace("•", "|")
+            room_data_df['cancellations'] = room_data_df['cancellations'].str.replace("•", "|")
+            room_data_df['breakfast'] = room_data_df['breakfast'].replace("Breakfast included",
+                                                                                              "yes").replace("None", "no")
+            booking_com_details_df['Star Rating(out of 5)'] = booking_com_details_df['Star Rating(out of 5)'].str.replace(
+                " out of 5", "")
 
-    emb_kwargs = {
-        "LOWER": True,
-        "NO_STOP_WORDS": False,
-        "METRIC": 'COSIN',
-        "MAX_SCORES": 2,
-    }
-    try:
-        room_data_df['room_desc'] = room_data_df['room_desc'].str.replace("•", "|")
-        room_data_df['cancellations'] = room_data_df['cancellations'].str.replace("•", "|")
-        room_data_df['breakfast'] = room_data_df['breakfast'].replace("Breakfast included",
-                                                                                          "yes").replace("None", "no")
-        booking_com_details_df['Star Rating(out of 5)'] = booking_com_details_df['Star Rating(out of 5)'].str.replace(
-            " out of 5", "")
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
-    except Exception as err:
-        logger.error("%s %s \n", __s_fn_id__, err)
-        print("[Error]" + __s_fn_id__, err)
-        print(traceback.format_exc())
-
-    return _clean_columns
+        return _clean_columns

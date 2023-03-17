@@ -1,33 +1,31 @@
 {
     "booking.com": [{
-        "url": "https://www.booking.com/searchresults.en-gb.html?aid=318615&label=New_English_EN_USD_27026936425-5WQxik%2A5vqjOdJbH0vs4ggS217290507247%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi2642648920%3Atidsa-302962658775%3Alp9069783%3Ali%3Adec%3Adm&sid=6ffc8b26c9bbcc341461e4b1a20a470c&tmpl=searchresults&checkin={checkin}&checkout={checkout}&class_interval=1&dest_id=20079110&dest_type=city&dtdisc=0&group_adults=1&group_children=0&highlighted_hotels=580015&inac=0&index_postcard=0&label_click=undef&nflt=%3Bht_id%3D204&no_rooms=1&offset=0&postcard=0&raw_dest_type=city&room1=A&sb_price_type=total&sb_travel_purpose=leisure&shw_aparth=1&slp_r_match=0&src=searchresults&srpvid=dabe52a917840104&ss=Las%20Vegas&ss_all=0&ssb=empty&sshis=0&ssne={location}&ssne_untouched=Las%20Vegas&changed_currency=1&selected_currency=USD&offset={page}",
-        "inputs": ["page", "checkin", "checkout", "location"],
-        "outputs": [{
-            "room_type": [{
-                "span": ".d20f4628d0"
-            }],
-            "room_rate": [{
-                "div": ".d20f4628d0"
-            }],
-            "hotel_name": [{
-                "span": "fcab3ed991 a23c043802"
-            }]
-        }]
+        "url": "https://www.booking.com/searchresults.en-gb.html?ss=Las+Vegas&label=gen173nr-1DCAEoggI46AdIM1gEaIUBiAEBmAEJuAEXyAEM2AED6AEBiAIBqAIDuAK_g7aYBsACAdICJDFiNWFiNzM3LTQ0YmItNDIzOC04NDM0LWRjMDFlNmZhYTUwM9gCBOACAQ&sid=36e124997ccdbec4823b6c98d5931c2e&aid=304142&lang=en-gb&sb=1&src_elem=sb&src=searchresults&dest_id={destinationID}&dest_type=city&checkin={checkIn}&checkout={checkOut}&group_adults=1&no_rooms=1&group_children=0&selected_currency=USD&offset={page}",
+        "inputs": ["page", "checkIn", "checkOut", "destinationID"],
+        "locations": "cityCodesBookingCom.csv",
+        "outputs": [
+            {"variable": "content_block", "tag": "div", "code": ".d20f4628d0"},
+            {"variable": "property_name", "tag": "span", "code": "fcab3ed991 a23c043802"},
+            {"variable": "room_type", "tag": "span", "code": "df597226dd"},
+            {"variable": "room_rate", "tag": "div", "code": "fcab3ed991 bd73d13072"},
+            {"variable": "review_score", "tag": "div", "code": "b5cd09854e d10a6220b4"},
+            {"variable": "location", "tag": "div", "code": "a1fbd102d9"},
+            {"variable": "Other", "tag": "div", "code": "d22a7c133b"}
+        ]
     }],
     "hotels.com": [{
         "url": "https://www.hotels.com/searchresults.en-gb.html?aid=318615&label=New_English_EN_USD_27026936425-5WQxik%2A5vqjOdJbH0vs4ggS217290507247%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi2642648920%3Atidsa-302962658775%3Alp9069783%3Ali%3Adec%3Adm&sid=6ffc8b26c9bbcc341461e4b1a20a470c&tmpl=searchresults&checkin={checkin}&checkout={checkout}&class_interval=1&dest_id=20079110&dest_type=city&dtdisc=0&group_adults=1&group_children=0&highlighted_hotels=580015&inac=0&index_postcard=0&label_click=undef&nflt=%3Bht_id%3D204&no_rooms=1&offset=0&postcard=0&raw_dest_type=city&room1=A&sb_price_type=total&sb_travel_purpose=leisure&shw_aparth=1&slp_r_match=0&src=searchresults&srpvid=dabe52a917840104&ss=Las%20Vegas&ss_all=0&ssb=empty&sshis=0&ssne={location}&ssne_untouched=Las%20Vegas&changed_currency=1&selected_currency=USD&offset={page}",
-        "inputs": ["page", "checkin", "checkout", "location", "somekey"],
-        "outputs": [{
-            "room_type": [{
-                "span": ".d20f4628d0"
-            }],
-            "room_rate": [{
-                "div": ".d20f4628d0"
-            }],
-            "hotel_name": [{
-                "span": "fcab3ed991 a23c043802"
-            }]
-        }]
+        "inputs": ["page", "checkIn", "checkOut", "destinationID"],
+        "locations": "cityCodesBookingCom.csv",
+        "outputs": [
+            {"variable": "content_block", "tag": "div", "code": ".d20f4628d0"},
+            {"variable": "property_name", "tag": "span", "code": "fcab3ed991 a23c043802"},
+            {"variable": "room_type", "tag": "span", "code": "df597226dd"},
+            {"variable": "room_rate", "tag": "div", "code": "fcab3ed991 bd73d13072"},
+            {"variable": "review_score", "tag": "div", "code": "b5cd09854e d10a6220b4"},
+            {"variable": "location", "tag": "div", "code": "a1fbd102d9"},
+            {"variable": "Other", "tag": "div", "code": "d22a7c133b"}
+        ]
     }]
 
 }

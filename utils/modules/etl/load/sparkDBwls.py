@@ -155,19 +155,19 @@ class SQLWorkLoads():
         return None
 
     ''' Function --- SPARK DB PROPERTIES ---
-            name: session @property and @setter functions
-            parameters:
-
-            procedure: 
-                @property - if None try __conf_file__; else throw exception
-                @setter - if None or Empty throw exception; else set it
-            return self._* (* is the property attribute name)
-
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
-    ''' --- TYPE --- '''
+    ''' --- DB TYPE --- '''
     @property
     def dbType(self) -> str:
+        """
+        Description: 
+            session @property and @setter functions
+            @property - if None try __conf_file__; else throw exception
+            @setter - if None or Empty throw exception; else set it
+        Attributes: 
+        Return self._* (* is the property attribute name)
+        """
 
         __s_fn_id__ = "function <@property dbType>"
 

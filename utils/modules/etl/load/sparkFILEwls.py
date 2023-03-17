@@ -25,8 +25,9 @@ try:
     from pyspark.sql import DataFrame
     import boto3   # handling AWS S3 
     from google.cloud import storage   # handles GCS reads and writes
-#     import pandas as pd
-#     import numpy as np
+    import pandas as pd
+    import numpy as np
+    import json
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -46,20 +47,21 @@ except Exception as e:
         https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
 '''
 class FileWorkLoads():
-    ''' Function
-            name: __init__
-            parameters:
-                    @name (str)
-                    @enrich (dict)
-            procedure: 
-            return None
-            
-            author: <nuwan.waidyanatha@rezgateway.com>
+    ''' Function --- INIT ---
+    
+        author: <nuwan.waidyanatha@rezgateway.com>
 
     '''
     def __init__(self, desc : str="spark workloads",   # identifier for the instances
                  **kwargs:dict,   # can contain hostIP and database connection settings
                 ):
+        """
+        Description:
+        Attributes:
+        Returns:
+            None
+        Exceptions:
+        """
 
         self.__name__ = __name__
         self.__package__ = __package__
@@ -82,12 +84,13 @@ class FileWorkLoads():
         self._data = None
         self._storeMode = None
         self._storeModeList = [
-            'local-fs',     # local hard drive on personal computer
-            'aws-s3-bucket', # cloud amazon AWS S3 Bucket storage
-            'google-storage',   # google cloud storage buckets
+            'local-fs',   # local hard drive on personal computer
+            'aws-s3-bucket',   # cloud amazon AWS S3 Bucket storage
+            'google-storage',  # google cloud storage buckets
         ]
-        self._storeRoot = None   # holds the data root path or bucket name
-        self._storeData = None
+        self._storeRoot =None  # holds the data root path or bucket name
+        self._folderPath=None  # property attr for the set/get folder path
+        self._data = None
         self._asType = None
         self._asTypeList = [
             'str',   # text string ""
@@ -123,42 +126,42 @@ class FileWorkLoads():
         global pkgConf
         global appConf
 
-        self.cwd=os.path.dirname(__file__)
-        pkgConf = configparser.ConfigParser()
-        pkgConf.read(os.path.join(self.cwd,__ini_fname__))
-
-        self.rezHome = pkgConf.get("CWDS","REZAWARE")
-        sys.path.insert(1,self.rezHome)
-        from rezaware import Logger as logs
-
-        ''' Set the wrangler root directory '''
-        self.pckgDir = pkgConf.get("CWDS",self.__package__)
-        self.appDir = pkgConf.get("CWDS",self.__app__)
-        ''' get the path to the input and output data '''
-        self.dataDir = pkgConf.get("CWDS","DATA")
-
-        appConf = configparser.ConfigParser()
-        appConf.read(os.path.join(self.appDir, self.__conf_fname__))
-        
-        ''' innitialize the logger '''
-        logger = logs.get_logger(
-            cwd=self.rezHome,
-            app=self.__app__, 
-            module=self.__module__,
-            package=self.__package__,
-            ini_file=self.__ini_fname__)
-        ''' set a new logger section '''
-        logger.info('########################################################')
-        logger.info("%s %s",self.__name__,self.__package__)
-        
-        ''' get tmp storage location '''
-        self.tmpDIR = None
-        if "WRITE_TO_FILE" in kwargs.keys():
-            self.tmpDIR = os.path.join(self.dataDir,"tmp/")
-            if not os.path.exists(self.tmpDIR):
-                os.makedirs(self.tmpDIR)
-
         try:
+            self.cwd=os.path.dirname(__file__)
+            pkgConf = configparser.ConfigParser()
+            pkgConf.read(os.path.join(self.cwd,__ini_fname__))
+
+            self.rezHome = pkgConf.get("CWDS","REZAWARE")
+            sys.path.insert(1,self.rezHome)
+            from rezaware import Logger as logs
+
+            ''' Set the wrangler root directory '''
+            self.pckgDir = pkgConf.get("CWDS",self.__package__)
+            self.appDir = pkgConf.get("CWDS",self.__app__)
+            ''' get the path to the input and output data '''
+            self.dataDir = pkgConf.get("CWDS","DATA")
+
+            appConf = configparser.ConfigParser()
+            appConf.read(os.path.join(self.appDir, self.__conf_fname__))
+
+            ''' innitialize the logger '''
+            logger = logs.get_logger(
+                cwd=self.rezHome,
+                app=self.__app__, 
+                module=self.__module__,
+                package=self.__package__,
+                ini_file=self.__ini_fname__)
+            ''' set a new logger section '''
+            logger.info('########################################################')
+            logger.info("%s %s",self.__name__,self.__package__)
+
+            ''' get tmp storage location '''
+            self.tmpDIR = None
+            if "WRITE_TO_FILE" in kwargs.keys():
+                self.tmpDIR = os.path.join(self.dataDir,"tmp/")
+                if not os.path.exists(self.tmpDIR):
+                    os.makedirs(self.tmpDIR)
+
             logger.info("Connection complete! ready to load data.")
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
@@ -200,7 +203,7 @@ class FileWorkLoads():
                 self._data = self.session.createDataFrame(self._data)
             if self._data.count() <= 0:
                 raise ValueError("No records found in data") 
-                
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
@@ -259,8 +262,8 @@ class FileWorkLoads():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._storeMode
 
@@ -292,8 +295,8 @@ class FileWorkLoads():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._storeMode
 
@@ -326,8 +329,8 @@ class FileWorkLoads():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._storeRoot
 
@@ -383,10 +386,123 @@ class FileWorkLoads():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._storeRoot
+
+
+    @property
+    def folderPath(self) -> str:
+        """
+        Description:
+            property gets the vaildated folder path; if not exists raises an exception
+        Attributes:
+            NA
+        Returns:
+            self._folderPath (str)
+        """
+
+        __s_fn_id__ = "function <@property folderPath>"
+
+        try:
+            if self._folderPath is None:
+                raise AttributeError("%s None-type folder cannot be used in this class" % __s_fn_id__)
+            elif self._storeMode == "aws-s3-bucket":
+                ''' check if bucket exists '''
+                s3_resource = boto3.resource('s3')
+                path = self._folderPath.rstrip('/') 
+                s3_bucket = s3_resource.Bucket(name=self._storeRoot)
+                resp = s3_resource.list_objects(
+                    Bucket=s3_resource.Bucket(name=self._storeRoot),
+                    Prefix=path,
+                    Delimiter='/',
+                    MaxKeys=1)
+                if "CommonPrefixes" not in resp:
+                    raise ValueError("%s Bucket %s does not contain a folder with path %s"
+                                     % (__s_fn_id__,str(_bucket.name),path))
+
+            elif self._storeMode == "local-fs":
+                ''' check if folder path exists '''
+                if not os.path.exists(os.path.join(self._storeRoot,self._folderPath)):
+                    raise ValueError("Invalid local folder path %s does not exists in root %s." 
+                                     % (self._folderPath),self._storeRoot)
+
+            elif self._storeMode == "google-storage":
+                ''' check if bucket exists '''
+                logger.debug("%s %s",__s_fn_id__,self.storeMode)
+            else:
+                raise ValueError("%s something went wrong with getting %s from root %s in %s" 
+                                 % (__s_fn_id__,self._folderPath,self._storeRoot,self._storeMode))
+        
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._folderPath
+
+    @folderPath.setter
+    def folderPath(self,folder_path:str=None) -> str:
+        """
+        Description:
+            property sets folder with path in the storeRoot
+        Attributes:
+            folder_path (str) - folder path relative to the root
+        Returns:
+            self._folderPath (str)
+        """
+
+        __s_fn_id__ = "function <@folderPath.setter>"
+
+        try:
+            if folder_path is None:
+                raise AttributeError("Non-type folder_path value is unacceptable")
+
+                ''' S3 creates the folder when saving a file; there's no concept of folders '''
+#             elif self._storeMode == "aws-s3-bucket":
+#                 ''' check if bucket exists '''
+#                 s3_resource = boto3.resource('s3')
+#                 path = self._folderPath.rstrip('/') 
+#                 s3_bucket = s3_resource.Bucket(name=self._storeRoot)
+#                 resp = s3_resource.list_objects(
+#                     Bucket=s3_resource.Bucket(name=self._storeRoot),
+#                     Prefix=path,
+#                     Delimiter='/',
+#                     MaxKeys=1)
+#                 ''' create folder if not exists '''
+#                 if "CommonPrefixes" not in resp:
+#                     k = s3_bucket.new_key(folder_path)
+#                     k.set_contents_from_string('')
+#                     logger.debug("%s Created the nonexistant folder %s in bucket %s %s",
+#                                  __s_fn_id__,folder_path,self._storeRoot)
+# #                     raise ValueError("%s Bucket %s does not contain a folder with path %s"
+# #                                      % (__s_fn_id__,str(_bucket.name),path))
+
+            elif self._storeMode == "local-fs":
+                ''' check if folder path exists '''
+                if not os.path.exists(os.path.join(self._storeRoot,folder_path)):
+                    os.makedirs(os.path.join(self._storeRoot,folder_path))
+#                     raise ValueError("Invalid local folder path %s does not exists in root %s." 
+#                                      % (self._folderPath),self._storeRoot)
+
+            elif self._storeMode == "google-storage":
+                ''' check if bucket exists '''
+                logger.debug("%s %s",__s_fn_id__,self.storeMode)
+            else:
+                raise ValueError("%s something went wrong with setting folder %s in root %s of %s" 
+                                 % (__s_fn_id__,folder_path,self._storeRoot,self._storeMode))
+
+            self._folderPath=folder_path
+            logger.debug("%s Folder %s successfully set in root %s of %s",
+                         __s_fn_id__,folder_path,self._storeRoot,self._storeMode)
+    
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._folderPath
 
     @property
     def asType(self) -> str:
@@ -407,10 +523,10 @@ class FileWorkLoads():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
-        return self._asType
+        return self._asType.lower()
 
     @asType.setter
     def asType(self, as_type:str="") -> str:
@@ -432,8 +548,8 @@ class FileWorkLoads():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._asType
 
@@ -986,7 +1102,6 @@ class FileWorkLoads():
             try:
 #                 format_, as_type_ = func(self,as_type,folder_path,file_name,file_type,**options)
                 data_ = func(self,as_type,folder_path,file_name,file_type,**options)
-
                 if data_ is None:
                     raise AttributeError("Cannot initiate %s with Non-type dataset" % __s_fn_id__)
 
@@ -995,7 +1110,10 @@ class FileWorkLoads():
                     self._data = data_.toPandas()
                     logger.debug("Converted %d rows to pandas dataframe",self._data.shape[0])
                 elif self.asType == 'dict':
-                    self._data = data_.toPandas().T.to_dict('list')
+                    if isinstance(data_,dict):
+                        self._data=data_
+                    else:
+                        self._data = data_.toPandas().T.to_dict('list')
                     logger.debug("Converted %d rows to dictionary",len(self._data))
                 elif self.asType == 'list':
                     logger.warning("Returning data as pyspark dataframe. "+\
@@ -1047,26 +1165,29 @@ class FileWorkLoads():
                 if format_ is None or as_type_ is None:
                     raise AttributeError("The format_ or as_type_ can not be a Non-Types")
 
+                '''set and validate the folder path '''
+                self.folderPath=folder_path
+
                 if self.storeMode == 'local-fs':
                     ''' read content from local file system '''
                     if file_name:
-                        file_path = str(os.path.join(self.storeRoot,folder_path,file_name))
+                        file_path = str(os.path.join(self.storeRoot,self._folderPath,file_name))
                     else:
-                        file_path = str(os.path.join(self.storeRoot,folder_path))
-
+                        file_path = str(os.path.join(self.storeRoot,self._folderPath))
+                    print(file_path)
                 elif self.storeMode == 'aws-s3-bucket':
                     ''' read content from s3 bucket '''
                     if file_name:
-                        file_path = str(os.path.join(self.storeRoot,folder_path,file_name))
+                        file_path = str(os.path.join(self.storeRoot,self._folderPath,file_name))
                     else:
-                        file_path = str(os.path.join(self.storeRoot,folder_path))
+                        file_path = str(os.path.join(self.storeRoot,self._folderPath))
                     file_path = "s3a://"+file_path
                     self.context = {}
 
                 elif self.storeMode == 'google-storage':
                     ''' read content from google cloud storage '''
                     if file_name:
-                        file_path = str(os.path.join(self.storeRoot,folder_path,file_name))
+                        file_path = str(os.path.join(self.storeRoot,self._folderPath,file_name))
 #                         client = storage.Client()
 #                         bucket = client.bucket(self.storeRoot)
 #                         blob = bucket.blob(file_path)
@@ -1075,19 +1196,24 @@ class FileWorkLoads():
 #                             file_content = f.read()
                     elif file_type:
                         ''' multiple files of same file type '''
-                        file_path = str(os.path.join(self.storeRoot,folder_path))
+                        file_path = str(os.path.join(self.storeRoot,self._folderPath))
                     file_path = "gs://"+file_path
                 else:
                     raise typeError("Invalid storage mode %s" % self.storeMode)
 
-                sdf = self.session.read\
-                                .format(self.rwFormat)\
-                                .options(**options)\
-                                .load(file_path)
-
-                if sdf.count() > 0:
-                    self._data = sdf
-                    logger.info("Read %d rows of data into dataframe",self._data.count())
+                if as_type_ in ['spark','pandas','array','list']:
+                    sdf = self.session.read\
+                                    .format(self.rwFormat)\
+                                    .options(**options)\
+                                    .load(file_path)
+                    if sdf.count() > 0:
+                        self._data = sdf
+                        logger.info("Read %d rows of data into dataframe",self._data.count())
+                elif as_type_ in ['dict']:
+                    ''' TOD MOVE TO @staticmethod and add S3 & GS '''
+                    with open(file_path, 'r') as _dict_file:
+                        self._data = json.load(_dict_file)
+                        logger.info("Read %d rows of data into dictionary",len(self._data))
 
             except Exception as err:
                 logger.error("%s %s",__s_fn_id__, err)
@@ -1139,7 +1265,7 @@ class FileWorkLoads():
         try:
             self.asType = as_type  # validate and set the property
             logger.info("Reading data from %s at root %s",self.storeMode,self.storeRoot)
-            if  file_name is not None and \
+            if file_name is not None and \
                 "".join(file_name.split())!="":
                 ''' check if supported file type and set the reFormat propert '''
                 _fname, _fext = os.path.splitext(file_name)  
@@ -1248,22 +1374,249 @@ class FileWorkLoads():
             print("[Error]"+__s_fn_id__, err)
 
         return _csv_to_sdf
-        
-    ''' Function
-            name: read_csv_to_sdf
-            parameters:
-                    filesPath (str)
-                    @enrich (dict)
-            procedure: 
-            return DataFrame
+
+
+    ''' Function - write_data with wrapper_converter
+
+            author(s): <nuwan.waidyanatha@rezgateway.com>
+            
+            TODO: cleanup this code to modify the tmp file save and read
+                before saving to storeMode. For example, pyspard dataframe
+                is converted to pandas to the tmp file save.
+    '''
+    def writer(func):
+
+        @functools.wraps(func)
+        def wrapper_writer(
+            self,
+            file_name:str,   # optional - name of the file to read
+            folder_path:str, # mandatory - relative path, w.r.t. self.storeRoot
+            data,   # data to be stored
+        ):
+
+            _file_path=func(self,file_name,folder_path,data)
+            
+            ''' create a tmp folder to stage the file before writing to file path '''
+            _tmp_folder_path = os.path.join(self.dataDir,"tmp")
+            if not os.path.exists(_tmp_folder_path):
+                os.makedir(_tmp_folder_path)
+                logger.debug("Created a new tmp folder %s",_tmp_folder_path)
+            else:
+                logger.debug("%s tmp folder exists",_tmp_folder_path)
+            ''' make the tmp file path to save '''    
+            _tmp_file_path = os.path.join(_tmp_folder_path,file_name)
+            logger.debug("tmp_file_path set to %s",_tmp_file_path)
+
+            ''' check data type and save to tmp '''
+            _file_type = file_name.rsplit('.',1)[1]
+
+            if isinstance(data,str):
+                ''' Strings to txt, csv, json files '''
+                if _file_type == 'txt':
+                    print(_file_type)
+                elif _file_type == 'csv':
+                    print(_file_type)
+
+            elif isinstance(data,dict):
+                ''' Dictionary to txt, csv, json files '''
+                if _file_type == 'csv':
+                    with open(_tmp_file_path, 'w') as f:  
+                        writer = csv.writer(f)
+                        for key, value in data.items():
+                            writer.writerow([key, value])
+                elif _file_type == 'json':
+                    with open(_tmp_file_path, "w") as f:
+                        json.dump(data, f)
+                else:
+                    raise TypeError("Unsupported file type for dictionary data type")
+
+            elif isinstance(data,list):
+                ''' List to txt, csv, json files '''
+                if _file_type == 'txt':
+                    print("TBD",_file_type)
+                elif _file_type == 'json':
+                    with open(_tmp_file_path, "w") as f:
+                        json.dump(data, f)
+                elif _file_type == 'csv':
+                    print(_file_type)
+                else:
+                    raise TypeError("Unsupported file type for List data type")
+
+            elif isinstance(data,np.ndarray):
+                ''' Array to txt, csv files '''
+                if _file_type == 'txt':
+                    np.savetxt(_tmp_file_path, data)
+                elif _file_type == 'csv':
+                    np.savetxt(_tmp_file_path, data, delimiter=",")
+                else:
+                    raise TypeError("Unsupported file type for Array data type")
+
+            elif isinstance(data,pd.DataFrame):
+                ''' Pandas DataFrame to txt, csv, json files '''
+                if file_name.rsplit('.',1)[1] == "csv":
+                    data.to_csv(_tmp_file_path,index=False)
+                elif file_name.rsplit('.',1)[1] == "json":
+                    data.to_json(_tmp_file_path)
+                else:
+                    raise TypeError("Unsupported file type for Pandas DataFrame data type")
+
+            elif isinstance(data,DataFrame):
+                ''' Spark dataframe to txt, csv, json files '''
+#                 _data_type = "SPARK"
+#                 options={
+#                     "header":True,
+#                 }
+#                 self.saveMode="Overwrite"
+#                 self._data.write.mode(self._saveMode)\
+#                         .option("header",True)\
+#                         .format(self.rwFormat)\
+#                         .save(_tmp_file_path)
+                self._data = data.toPandas()
+                if file_name.rsplit('.',1)[1] == "csv":
+                    self._data.to_csv(_tmp_file_path,index=False)
+                elif file_name.rsplit('.',1)[1] == "json":
+                    self._data.to_json(_tmp_file_path)
+                else:
+                    raise TypeError("Unsupported file type for Pandas DataFrame data type")
+            else:
+                raise TypeError("Unrecognized data type %s must be either of\n%s"
+                                % (type(self._data),str(self._asTypeList)))
+
+            ''' transfer the tmp file to storage '''
+            with open(_tmp_file_path,'r') as infile:
+#                 object_data = infile.read()
+                self._data = infile.read()
+
+                if self.storeMode == 'aws-s3-bucket':
+                    ''' write file to AWS S3 Bucket '''
+                    s3 = boto3.client('s3')
+                    s3.put_object(Body=self._data, 
+                                  Bucket=self.storeRoot,
+                                  Key=_file_path)
+
+                elif self.storeMode == 'local-fs':
+                    ''' write file to Local File System '''
+                    with open(_file_path,'w') as savefile:
+                        savefile.write(self._data)
+
+                elif self.storeMode == 'google-storage':
+                    ''' write file to google-cloud-storage '''
+                    client = storage.Client()
+                    bucket = client.bucket(self.storeRoot)
+                    blob = bucket.blob(_file_path)
+#                     blob.upload_from_filename(_tmp_file_path)
+                    with blob.open("w") as f:
+                        f.write(self._data)
+
+                else:
+                    raise RuntimeError("Something went wrong writing %s file to %s"
+                                       % (_tmp_file_path,self.storeMode))
+
+            ''' remove the tmp file throw exception if something other than does not exists '''
+            try:
+                os.remove(_tmp_file_path)
+            except OSError as e:
+                if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                    raise # re-raise exception if a different error occurred
+
+            return self._data
+
+        return wrapper_writer
+
+    @writer
+    def write_data(
+        self,
+        file_name:str,   # optional - name of the file to read
+        folder_path:str, # mandatory - relative path, w.r.t. self.storeRoot
+        data,   # data to be stored
+    ):
+        """
+        Description:
+
+        Attributes:
+            as_type (str) - mandatory - define the data type to return
+            folder_path(str) - madandatory to give the relative path w.r.t. store_root
+            file_name (str) - is mandatory and can be any defined in self._asTypeList
+            file_type:str=None    # optional - read all the files of same type
+        Returns (str) _file_path
+
+        Resources:                     
+          * https://www.sqlservercentral.com/articles/reading-a-specific-file-from-an-s3-bucket-using-python
+          * https://realpython.com/python-boto3-aws-s3/
+        """
+
+        _s_fn_id = "function <write_data>"
+        file_content=None
+
+        try:
+#             self.data=data
+#             logger.debug("Writing %d rows of data to %s",self.data.count(),self.storeMode)
+            if data is None:
+                raise AttributeError("None-type data set cannot be processed")
+
+            if self.storeMode == 'aws-s3-bucket':
+                ''' check if s3 bucket key not exists, then create '''
+                s3 = boto3.client('s3')
+                try:
+                    _header = s3.head_object(Bucket=self.storeRoot,
+                                   Key=folder_path)
+                    logger.debug("Key folder %s in %s s3 bucket exists "+\
+                                 "with content length %s last modified %s",
+                                 folder_path,
+                                 self.storeRoot,
+                                 _header['ContentLength'],
+                                 _header['LastModified'])
+                except ClientError as s3e:
+                    if s3e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
+                        ''' Not found then create '''
+                        s3.put_object(Bucket=self.storeRoot,Body='', Key=folder_path)
+                        logger.debug("Created a new Key folder %s in %s s3 bucket",
+                                     folder_path,self.storeRoot)
+                    else:
+                        raise RuntimeError("Something was wrong when checking S3 bucket key header\n%s",
+                                    s3e)
+                ''' set the full key path with file '''
+                _file_path = str(os.path.join(folder_path,file_name))
+
+            elif self.storeMode == 'local-fs':
+                ''' check if folder existis '''
+                if not os.path.exists(os.path.join(self.storeRoot,folder_path)):
+                    os.makedir(os.path.join(self.storeRoot,folder_path))
+                    logger.debug("Created a new folder %s in %s root path ",
+                                     folder_path,self.storeRoot)
+                else:
+                    logger.debug("Folder %s in %s root path Exists",
+                                     folder_path,self.storeRoot)
+                ''' give absolute path to write '''
+                _file_path = str(os.path.join(self.storeRoot,folder_path,file_name))
+
+            elif self.storeMode == 'google-storage':
+                ''' check if google bucket key not exists, then create '''
+                _file_path = str(os.path.join(folder_path,file_name))
+
+            else:
+                raise typeError("Invalid storage mode %s" % self.storeMode)
+
+
+        except Exception as err:
+            logger.error("%s %s \n",_s_fn_id, err)
+            print("[Error]"+_s_fn_id, err)
+            print(traceback.format_exc())
+
+        return _file_path
+
+
+    ''' Function --- SAVE SDF TO CSV
 
             author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def save_sdf_to_csv(self, sdf, filesPath=None, **kwargs):
+        """
+        """
         
         _csv_file_path = None
 
-        __s_fn_id__ = "function <read_folder_csv_to_sdf>"
+        __s_fn_id__ = "function <save_sdf_to_csv>"
         logger.info("Executing %s in %s",__s_fn_id__, __name__)
 
         try:
@@ -1396,199 +1749,6 @@ class credentials():
 
         return aws_access_key_id, aws_secret_access_key
 
-#     ''' Function
-#             name: reset_type to the original data type
-#             parameters:
-
-#             procedure: 
-#             return self._data
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def reset_dtype(self,data):
-        
-#         ___s_fn_id____ = "function <reset_dtype>"
-#         reset_data = None
-
-#         try:
-#             if self.dType == 'RDD':
-#                 reset_data=self.data
-#             elif self.dType == 'PANDAS':
-#                 reset_data=self.data.toPandas()
-#             elif self.dType == 'DICT':
-#                 print('Method to be done')
-#             elif self.dType == 'ARRAY':
-#                 print('Method to be done')
-#             else:
-#                 raise RuntimeError("Something went wrong?")
-
-#         except Exception as err:
-#             logger.error("%s %s \n",___s_fn_id____, err)
-#             print("[Error]"+___s_fn_id____, err)
-#             print(traceback.format_exc())
-
-#         return reset_data
-
-
-#     ''' Function
-#             name: dType @property and @setter functions
-#             parameters:
-
-#             procedure: 
-#             return self._dType
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     @property
-#     def dType(self):
-#         return self._dType
-
-#     @dType.setter
-#     def dType(self,data_type:str):
-
-#         ___s_fn_id____ = "function <@dType.setter>"
-
-#         try:
-#             if data_type is None and not data_type in self._dTypeList:
-#                 raise AttributeError('Invalid data_type or is set to empty string')
-#             self._dType = data_type
-
-#         except Exception as err:
-#             logger.error("%s %s \n",___s_fn_id____, err)
-#             print("[Error]"+___s_fn_id____, err)
-#             print(traceback.format_exc())
-
-#         return self._dType
-
-
-#     ''' Function
-#             name: get_data_from_table
-#             parameters:
-#                     @name (str)
-#                     @enrich (dict)
-#             procedure: 
-#             return DataFrame
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def read_data_from_table(self, db_table:str, **kwargs):
-
-#         load_sdf = None   # initiatlize return var
-#         __s_fn_id__ = "function <read_data_from_table>"
-
-#         try:
-#             ''' validate table '''
-            
-#             ''' TODO: add code to accept options() to manage schema specific
-#                 authentication and access to tables '''
-
-#             print("Wait a moment, retrieving data ...")
-#             ''' jdbc:postgresql://<host>:<port>/<database> '''
-            
-#             # driver='org.postgresql.Driver').\
-#             load_sdf = self.session.read.format("jdbc").\
-#                 options(
-#                     url=self.dbConnURL,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
-#                     dbtable=self.dbSchema+"."+db_table,      # '_issuefix_bkdata.customerbookings',
-#                     user=self.dbUser,     # 'postgres',
-#                     password=self.dbPswd, # 'postgres',
-#                     driver=self.dbDriver).load()
-#             logger.debug("loaded %d rows into pyspark dataframe" % load_sdf.count())
-
-#             ''' drop duplicates '''
-#             if "DROP_DUPLICATES" in kwargs.keys() and kwargs['DROP_DUPLICATES']:
-#                 load_sdf = load_sdf.distinct()
-
-#             ''' convert to pandas dataframe '''
-#             if 'TO_PANDAS' in kwargs.keys() and kwargs['TO_PANDAS']:
-#                 load_sdf = load_sdf.toPandas()
-#                 logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
-#                              % load_sdf.shape[0])
-
-#             print("Loading complete!")
-
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             logger.debug(traceback.format_exc())
-#             print("[Error]"+__s_fn_id__, err)
-
-#         return load_sdf
-
-#     ''' Function
-#             name: insert_sdf_into_table
-#             parameters:
-#                     @name (str)
-#                     @enrich (dict)
-#             procedure: 
-#             return DataFrame
-
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     def insert_sdf_into_table(self, save_sdf, db_table:str, **kwargs):
-        
-#         __s_fn_id__ = "function <insert_sdf_into_table>"
-#         _num_records_saved = 0
-        
-#         try:
-#             if not save_sdf is None:
-#                 self.data = save_sdf
-#             if self.data.count() <= 0:
-#                 raise ValueError("No data to insert into database table %s"% db_table)
-#             if len(kwargs) > 0:
-#                 self.session = kwargs
-#             else:
-#                 self.session = {}
-# #             ''' convert pandas to spark dataframe '''
-# #             if isinstance(save_sdf,pd.DataFrame):
-# # #                 save_sdf = self.session.createDataFrame(save_sdf) 
-# #                 save_sdf = self.session.createDataFrame(save_sdf) 
-# #             ''' validate sdf have data '''
-# #             if save_sdf.count() <= 0:
-# #                 raise ValueError("Invalid spark dataframe with %d records" % (save_sdf.count())) 
-#             ''' TODO validate table exists '''
-            
-#             ''' if created audit columns don't exist add them '''
-#             listColumns=self.data.columns
-#             if "created_dt" not in listColumns:
-#                 self.data = self.data.withColumn("created_dt", current_timestamp())
-#             if "created_by" not in listColumns:
-#                 self.data = self.data.withColumn("created_by", lit(self.dbUser))
-#             if "created_proc" not in listColumns:
-#                 self.data = self.data.withColumn("created_proc", lit("Unknown"))
-            
-#             ''' TODO: add code to accept options() to manage schema specific
-#                 authentication and access to tables '''
-
-# #             if "saveMode" in kwargs.keys():
-# # #                 self.sparkSaveMode = kwargs['saveMode']
-# #                 self.sparkSaveMode = kwargs['SAVEMODE']
-                
-#             logger.info("Wait a moment while we insert data int %s", db_table)
-#             ''' jdbc:postgresql://<host>:<port>/<database> '''
-            
-#             # driver='org.postgresql.Driver').\
-#             self.data.select(self.data.columns).\
-#                     write.format(self.rwFormat).\
-#                     mode(self.saveMode).\
-#                 options(
-#                     url=self.dbConnURL,    # 'jdbc:postgresql://10.11.34.33:5432/Datascience', 
-#                     dbtable=self.dbSchema+"."+db_table,       # '_issuefix_bkdata.customerbookings',
-#                     user=self.dbUser,     # 'postgres',
-#                     password=self.dbPswd, # 'postgres',
-#                     driver=self.dbDriver).save(self.saveMode.lower())
-# #                     driver=self.dbDriver).save("append")
-# #            load_sdf.printSchema()
-
-#             logger.info("Saved %d  rows into table %s in database %s complete!"
-#                         ,self.data.count(), self.dbSchema+"."+db_table, self.dbName)
-#             _num_records_saved = self.data.count()
-
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             logger.debug(traceback.format_exc())
-#             print("[Error]"+__s_fn_id__, err)
-
-#         return _num_records_saved
 
 #     ''' Function
 #             name: read_s3obj_to_sdf
