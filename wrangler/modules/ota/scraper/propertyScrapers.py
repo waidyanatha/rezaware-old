@@ -1129,7 +1129,6 @@ class PropertyScraper():
             soup = BeautifulSoup(response.text,"lxml")
 
             lists = soup.select(".d20f4628d0")
-#            lists2 = soup.select(".c8305f6688")
 
             saveTo = os.path.join(path, file_name)
 
@@ -1158,7 +1157,7 @@ class PropertyScraper():
                     logger.warning('room_type - %s',text_err)
                     pass
                 try:
-                    _data_dict['room_rate'] = _list.find('span', class_='fcab3ed991 bd73d13072').text
+                    _data_dict['room_rate'] = _list.find('span', class_='fcab3ed991 fbd1d3018c e729ed5ab6').text
                 except Exception as text_err:
                     _data_dict['room_rate'] = None
                     _data_err = True
@@ -1178,12 +1177,10 @@ class PropertyScraper():
                     _data_err = True
                     logger.warning('location_desc - %s',text_err)
                     pass
-                try:
-                    _data_dict['distance_desc'] = _list.find('span', class_='f4bd0794db').text
                 except Exception as text_err:
                     _data_dict['distance_desc'] = None
                     _data_err = True
-                    logger.warning('distance_desc - %s',text_err)
+                    logger.warning('distance_desc - %s',text_err)                 
                 try:
                     _data_dict['room_desc'] = _list.find('div', class_='cb5b4b68a4').text
                 except Exception as text_err:
