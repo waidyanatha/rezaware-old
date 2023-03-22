@@ -232,64 +232,64 @@ class WeightedPortfolio():
 
         return self._portfolio
 
-    ''' Function --- PREVIOUS VAL DIFFERENCE ---
+#     ''' Function --- PREVIOUS VAL DIFFERENCE ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
-    '''
-    @staticmethod
-    def prev_val_diff(
-        data:DataFrame,
-        num_column:str,
-        part_column:str,
-        **kwargs,
-    ) -> DataFrame:
-        """
-        Description:
-            for a given numeric column, the function computes the difference between
-            the current cell and the previous cell
-        Attributes:
-            data (DataFrame) a valid pyspark dataframe
-            column - specifies column to compute the difference
-            **kwargs
-                DIFFCOLNAME - the column name
-        Returns:
-        """
+#             author: <nuwan.waidyanatha@rezgateway.com>
+#     '''
+#     @staticmethod
+#     def prev_val_diff(
+#         data:DataFrame,
+#         num_column:str,
+#         part_column:str,
+#         **kwargs,
+#     ) -> DataFrame:
+#         """
+#         Description:
+#             for a given numeric column, the function computes the difference between
+#             the current cell and the previous cell
+#         Attributes:
+#             data (DataFrame) a valid pyspark dataframe
+#             column - specifies column to compute the difference
+#             **kwargs
+#                 DIFFCOLNAME - the column name
+#         Returns:
+#         """
 
-        __s_fn_id__ = "function <unpivot_table>"
-        _diff_data = None
-        _diff_col = "diff"
-        __prev_val_pofix__ = "_prev_val"
-        _prev_val=None
+#         __s_fn_id__ = "function <unpivot_table>"
+#         _diff_data = None
+#         _diff_col = "diff"
+#         __prev_val_pofix__ = "_prev_val"
+#         _prev_val=None
 
-        try:
-            if data.count() <= 2:
-                raise AttributeError("Dataframe must have, at least, 2 rows to compute the difference ")
-            if num_column not in data.columns and \
-                not isinstance(data.num_column,int) and\
-                not isinstance(data.num_column,float):
-                raise AttributeError("%s must be a numeric dataframe column" % num_column)
-            if part_column not in data.columns:
-                raise AttributeError("%s must be a column in the dataframe: %s" 
-                                     % (num_column,data.columns))
-            if "DIFFCOLNAME" in kwargs.keys():
-                _diff_col = kwargs['DIFFCOLNAME']
-            if "PREVALCOLNAME" in kwargs.keys():
-                _prev_val = kwargs['PREVALCOLNAME']
-            _prev_val = num_column+__prev_val_pofix__
+#         try:
+#             if data.count() <= 2:
+#                 raise AttributeError("Dataframe must have, at least, 2 rows to compute the difference ")
+#             if num_column not in data.columns and \
+#                 not isinstance(data.num_column,int) and\
+#                 not isinstance(data.num_column,float):
+#                 raise AttributeError("%s must be a numeric dataframe column" % num_column)
+#             if part_column not in data.columns:
+#                 raise AttributeError("%s must be a column in the dataframe: %s" 
+#                                      % (num_column,data.columns))
+#             if "DIFFCOLNAME" in kwargs.keys():
+#                 _diff_col = kwargs['DIFFCOLNAME']
+#             if "PREVALCOLNAME" in kwargs.keys():
+#                 _prev_val = kwargs['PREVALCOLNAME']
+#             _prev_val = num_column+__prev_val_pofix__
 
-            _win = Window.partitionBy(part_column).orderBy(part_column)
-            _diff_data = data.withColumn(_prev_val, F.lag(data[num_column]).over(_win))
-            _diff_data = _diff_data.withColumn(_diff_col,\
-                                    F.when(\
-                                      F.isnull(_diff_data[num_column] - _diff_data[_prev_val]), 0)\
-                                      .otherwise(_diff_data[num_column] - _diff_data[_prev_val]))
+#             _win = Window.partitionBy(part_column).orderBy(part_column)
+#             _diff_data = data.withColumn(_prev_val, F.lag(data[num_column]).over(_win))
+#             _diff_data = _diff_data.withColumn(_diff_col,\
+#                                     F.when(\
+#                                       F.isnull(_diff_data[num_column] - _diff_data[_prev_val]), 0)\
+#                                       .otherwise(_diff_data[num_column] - _diff_data[_prev_val]))
 
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             print("[Error]"+__s_fn_id__, err)
+#             print(traceback.format_exc())
 
-        return _diff_data, _prev_val, _diff_col
+#         return _diff_data, _prev_val, _diff_col
 
 
     ''' Function --- READ ROR ---

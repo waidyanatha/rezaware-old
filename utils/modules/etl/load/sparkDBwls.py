@@ -1059,7 +1059,7 @@ class SQLWorkLoads():
             if "driver" not in options.keys():
                 options['driver'] = self.dbDriver
 
-            print("Wait a moment, retrieving data ...")
+#             print("Wait a moment, retrieving data ...")
             ''' use query else use partition column'''
             if select is not None and "".join(select.split())!="":
                 options['query'] = select
