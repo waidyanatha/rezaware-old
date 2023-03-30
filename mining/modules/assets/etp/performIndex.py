@@ -82,9 +82,9 @@ class Portfolio():
         global logger
         global clsSDB
         global clsNoSQL
-        global clsSCNR
+#         global clsSCNR
         global clsStats
-        global clsMPT
+#         global clsMPT
 
         try:
             self.cwd=os.path.dirname(__file__)
@@ -111,18 +111,18 @@ class Portfolio():
 #             from utils.modules.etl.load import sparkDBwls as sparkDB
 #             clsSDB = sparkDB.SQLWorkLoads(desc=self.__desc__)
 #             ''' import spark clean-n-rich work load utils to transform the data '''
-            from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
-            clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
+            from utils.modules.etl.load import sparkDBwls as spark
+            clsSDB =spark.SQLWorkLoads(desc=self.__desc__)
             ''' import spark mongo work load utils to read and write data '''
             from utils.modules.etl.load import sparkNoSQLwls as nosql
             clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
+#             from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
+#             clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
             ''' import spark time-series work load utils for rolling mean/variance computations '''
             from utils.modules.ml.timeseries import rollingstats as stats
             clsStats = stats.RollingStats(desc=self.__desc__)
-            from mining.modules.assets.etp import dailyTopN as topN
-            clsMPT =topN.WeightedPortfolio(desc=self.__desc__)
-            from utils.modules.etl.load import sparkDBwls as spark
-            clsSDB =spark.SQLWorkLoads(desc=self.__desc__)
+#             from mining.modules.assets.etp import dailyTopN as topN
+#             clsMPT =topN.WeightedPortfolio(desc=self.__desc__)
 
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,

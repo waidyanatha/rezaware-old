@@ -23,6 +23,8 @@ try:
     from pyspark.sql.window import Window
     from pyspark.ml.feature import Imputer
     from pyspark.sql import DataFrame
+    from pyspark.sql.types import DoubleType
+    from pyspark.ml.feature import MinMaxScaler, StandardScaler, VectorAssembler
 
     print("All functional %s-libraries in %s-package of %s-module imported successfully!"
           % (__name__.upper(),__package__.upper(),__module__.upper()))
@@ -529,3 +531,94 @@ class Transformer():
             print(traceback.format_exc())
 
         return _unique_sdf
+
+
+    ''' Function --- SCALE COLUMN DATA ---
+
+        authors: <samana.thetha@gmail.com>
+    '''
+    @staticmethod
+    def scale(
+        data:DataFrame=None,  # mix of numeric and categorical data
+        col_list:list=None,   # list of columns; must be numeric data columns
+        col_prefix:str="scaled",
+        scale_method="MINMAX",
+    ) -> DataFrame:
+        """
+        Description:
+            Apply the pyspark ML feature Scaler methods: MinMax and Standard scalers
+        Attributes:
+            data (DataFrame)- mix of numeric and none-numeric columns
+            col_list (list) - column names to consider applying the scaler method
+            col_prefix (str)- string to concaternate to the column name to identify the new colum
+            scale_method(str)-eithe MinMaxScaler or StandardScaler methods
+        Returns:
+            data (DataFrame) - augment additional columns to dataframe with scaler data
+        Exceptions:
+            * data must be a pyspark DataFrame or compatible dtype that can be converted
+            * if col_list is empty will default to all numeric columns
+            * eliminate all non-numeric columns defined in col_list
+            * if col_prefix is undefined; default to 'scaled'
+        """
+
+        __s_fn_id__ = "function <scale>"
+
+        try:
+            ''' vaidate and set data property '''
+            if not isinstance(data,DataFrame):
+                raise AttributeError("Invalid dataframe must be pyspark dataframe")
+
+            _num_cols = [x[0] for x in data.dtypes if x[1] not in ['string','date','timestamp']]
+            if col_list is None or len(col_list)==0:
+                _cols = _num_cols
+                logger.warning("%s No columns defined; defaulting to all numeric columns; %s",
+                               __s_fn_id__,_cols)
+            else:
+                _cols = list(set(col_list).intersection(set(_num_cols)))
+                logger.debug("%s Working with valid numeric columns %s",__s_fn_id__,_cols)
+            if len(_cols) <= 0:
+                raise AttributeError("Invalid set of columns defined: %s must be numeric columns: %s"
+                                     % (col_list,_num_cols))
+
+            if "".join(col_prefix.split())=="":
+                col_prefix='scaled'
+
+            _scaled_cols = []
+            unlist = F.udf(lambda x: round(float(list(x)[0]),4), DoubleType())
+            
+            if scale_method.upper() in ['MINMAX']:
+                for scal_col in _cols:
+                    _feat_col="_".join(['feat',scal_col])
+                    assembler = VectorAssembler(inputCols=[scal_col], outputCol=_feat_col)
+                    assembled = assembler.transform(data)
+                    
+                    _scal_col_name = "_".join([col_prefix,scal_col])
+                    scaler = MinMaxScaler(inputCol=_feat_col,outputCol=_scal_col_name).fit(assembled)
+                    data=scaler.transform(assembled)\
+                                .withColumn(_scal_col_name,unlist(_scal_col_name))\
+                                .drop(_feat_col)
+
+            elif scale_method.upper() in ['STANDARD']:
+                for scal_col in _cols:
+                    _feat_col="_".join(['feat',scal_col])
+                    assembler = VectorAssembler(inputCols=[scal_col], outputCol=_feat_col)
+                    assembled = assembler.transform(data)
+                    
+                    _scal_col_name = "_".join([col_prefix,scal_col])
+                    scaler = StandardScaler(inputCol=_feat_col,outputCol=_scal_col_name,
+                                          withStd=True, withMean=False).fit(assembled)
+                    data=scaler.transform(assembled)\
+                                .withColumn(_scal_col_name,unlist(_scal_col_name))\
+                                .drop(_feat_col)
+
+            else:
+                raise AttributeError("Unrecognized standardization type must be MINMAX or STANDARD")
+
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return data
+

@@ -60,13 +60,16 @@ class WeightedPortfolio():
 
         self._data = None
         self._portfolio=None
+        self._index= None
 
         global pkgConf
         global appConf
         global logger
         global clsSDB
-        global clsSCNR
+#         global clsSCNR
         global clsNoSQL
+        global clsIndx
+        global clsPCA
 
         try:
             self.cwd=os.path.dirname(__file__)
@@ -98,15 +101,21 @@ class WeightedPortfolio():
             logger.info('########################################################')
             logger.info("%s Class",self.__name__)
 
+#             ''' import spark clean-n-rich work load utils to transform the data '''
+#             from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
+#             clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
             ''' import spark database work load utils to read and write data '''
             from utils.modules.etl.load import sparkDBwls as sparkDB
             clsSDB = sparkDB.SQLWorkLoads(desc=self.__desc__)
-            ''' import spark clean-n-rich work load utils to transform the data '''
-            from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
-            clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
             ''' import mongo work load utils to read and write data '''
             from utils.modules.etl.load import sparkNoSQLwls as nosql
             clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
+            ''' import assset performance index class '''
+            from mining.modules.assets.etp import performIndex as indx
+            clsIndx =indx.Portfolio(desc=self.__desc__)
+            ''' import feature engineering class '''
+            from utils.modules.ml.dimreduc import pca
+            clsPCA = pca.FeatureEngineer(desc=self.__desc__)
 
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
@@ -127,7 +136,7 @@ class WeightedPortfolio():
 
     ''' Function --- DATA ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+            author: <samana.thetha@gmail.com
     '''
     @property
     def data(self):
@@ -172,7 +181,7 @@ class WeightedPortfolio():
 
     ''' Function --- PORTFOLIO ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+            author: <samana.thetha@gmail.com>
     '''
     @property
     def portfolio(self) -> list:
@@ -188,14 +197,6 @@ class WeightedPortfolio():
 
         try:
             if not isinstance(self._portfolio,list):
-#                 pass
-#             elif isinstance(self._portfolio,pd.DataFrame):
-#                 self._portfolio = clsSDB.data(self._portfolio)
-#             elif isinstance(self._portfolio,list):
-#                 self._portfolio = clsSDB.data(pd.DataFrame(self._portfolio))
-#             elif isinstance(self._portfolio,dict):
-#                 self._portfolio = clsSDB.data(pd.DataFrame([self._portfolio]))
-#             else:
                 raise AttributeError("Invalid self._portfolio; must a valid pyspark DataFrame dtype")
 
         except Exception as err:
@@ -212,17 +213,6 @@ class WeightedPortfolio():
 
         try:
             if len(portfolio)<=0:
-#             if portfolio is None:
-#                 raise AttributeError("Invalid portfolio attribute, must be a valid non-empty list")
-#             if isinstance(portfolio,DataFrame):
-#                 self._portfolio = portfolio
-#             elif isinstance(portfolio,pd.DataFrame):
-#                 self._portfolio = clsSDB.data(portfolio)
-#             elif isinstance(portfolio,list):
-#                 self._portfolio = clsSDB.data(pd.DataFrame(portfolio))
-#             elif isinstance(portfolio,dict):
-#                 self._portfolio = clsSDB.data(pd.DataFrame([portfolio]))
-#             else:
                 raise AttributeError("Invalid portfolio attribute, must be a non-empy list")
 
         except Exception as err:
@@ -232,69 +222,56 @@ class WeightedPortfolio():
 
         return self._portfolio
 
-#     ''' Function --- PREVIOUS VAL DIFFERENCE ---
 
-#             author: <nuwan.waidyanatha@rezgateway.com>
-#     '''
-#     @staticmethod
-#     def prev_val_diff(
-#         data:DataFrame,
-#         num_column:str,
-#         part_column:str,
-#         **kwargs,
-#     ) -> DataFrame:
-#         """
-#         Description:
-#             for a given numeric column, the function computes the difference between
-#             the current cell and the previous cell
-#         Attributes:
-#             data (DataFrame) a valid pyspark dataframe
-#             column - specifies column to compute the difference
-#             **kwargs
-#                 DIFFCOLNAME - the column name
-#         Returns:
-#         """
+    ''' Function --- INDEXES ---
 
-#         __s_fn_id__ = "function <unpivot_table>"
-#         _diff_data = None
-#         _diff_col = "diff"
-#         __prev_val_pofix__ = "_prev_val"
-#         _prev_val=None
+            author: <samana.thetha@gmail.com
+    '''
+    @property
+    def index(self):
+        """
+        Description:
+            index @property and @setter functions to hold index measurements
+        Attributes:
+            None
+        Returns (dataframe) self._index
+        """
 
-#         try:
-#             if data.count() <= 2:
-#                 raise AttributeError("Dataframe must have, at least, 2 rows to compute the difference ")
-#             if num_column not in data.columns and \
-#                 not isinstance(data.num_column,int) and\
-#                 not isinstance(data.num_column,float):
-#                 raise AttributeError("%s must be a numeric dataframe column" % num_column)
-#             if part_column not in data.columns:
-#                 raise AttributeError("%s must be a column in the dataframe: %s" 
-#                                      % (num_column,data.columns))
-#             if "DIFFCOLNAME" in kwargs.keys():
-#                 _diff_col = kwargs['DIFFCOLNAME']
-#             if "PREVALCOLNAME" in kwargs.keys():
-#                 _prev_val = kwargs['PREVALCOLNAME']
-#             _prev_val = num_column+__prev_val_pofix__
+        __s_fn_id__ = "function <@property index>"
 
-#             _win = Window.partitionBy(part_column).orderBy(part_column)
-#             _diff_data = data.withColumn(_prev_val, F.lag(data[num_column]).over(_win))
-#             _diff_data = _diff_data.withColumn(_diff_col,\
-#                                     F.when(\
-#                                       F.isnull(_diff_data[num_column] - _diff_data[_prev_val]), 0)\
-#                                       .otherwise(_diff_data[num_column] - _diff_data[_prev_val]))
+        try:
+            if self._index is None:
+                raise ValueError("%s Index is of NoneType; cannot be used in any %s computations"
+                                 %(__s_fn_id__,self.__name__))
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             print("[Error]"+__s_fn_id__, err)
-#             print(traceback.format_exc())
+        return self._index
 
-#         return _diff_data, _prev_val, _diff_col
+    @index.setter
+    def index(self,index):
+
+        __s_fn_id__ = "function <@setter index>"
+
+        try:
+            if index is None:
+                raise AttributeError("Invalid index attribute")
+
+            self._index = index
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._index
 
 
     ''' Function --- READ ROR ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+            author: <samana.thetha@gmail.com>
     '''
 
     def read_ror(self, select:str="", **kwargs):
@@ -356,7 +333,7 @@ class WeightedPortfolio():
 
     ''' Function --- GET MAXIMUM WEIGHTED PORTFOLIO ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+            author: <samana.thetha@gmail.com>
     '''
     def maxportfolio(func):
         """
@@ -388,8 +365,8 @@ class WeightedPortfolio():
 
                 for _date in _date_list:
                     ''' initialize vars'''
-                    _sum_wt_index=np.nan   # sum of weigted index
-                    _wt_mc_rets=np.nan     # weighted marcket cap returns
+                    _sum_wt_index=np.nan    # sum of weigted index
+                    _wt_mc_rets=np.nan      # weighted marcket cap returns
                     _max_weight_row=np.nan  # row with maximum weights
                     _asset_byDate_df = None # dataframe of rows for particular date
                     try:
@@ -576,7 +553,7 @@ class WeightedPortfolio():
 
     ''' Function --- PORTFOLIO To DB ---
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+            author: <samana.thetha@gmail.com>
     '''
     def dbwrite(func):
         """
@@ -714,3 +691,254 @@ class WeightedPortfolio():
 
         return self._portfolio
 
+
+    ''' Function --- SELECT TOP ASSETS ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+    def select_assets(func):
+        """
+        Description:
+        Attributes:
+        Returns:
+            pca_wrapper
+        """
+        @functools.wraps(func)
+        def select_wrapper(self,mcap_date,mcap_value_lb,**kwargs):
+            """
+            Description:
+            Attributes:
+            Returns:
+                self._portfolio
+            """
+
+            __s_fn_id__ = "function <indicators_wrapper>"
+
+            try:
+#                 _data, _portf = func(self,mcap_date,mcap_value_lb,**kwargs)
+                _indic_df = func(self,mcap_date,mcap_value_lb,**kwargs)
+ 
+                ''' Normalize the columns between 0 and 1.0 '''
+                self._index=clsCNR.scale(
+                    data=_indic_df,
+                    col_list=['PCA[0]','PCA[1]'],
+                    col_prefix=kwargs['COLPREFIX'],
+                    scale_method=kwargs['STANDARDIZE'],
+                )
+                self._index = self._index.withColumn("1-PCA[0]",1-F.col(kwargs['COLPREFIX']+'_PCA[0]'))\
+                            .withColumn("1-PCA[1]",1-F.col(kwargs['COLPREFIX']+'_PCA[1]'))
+                self._index.select(F.col('asset_name'),F.col('mcap_date'),
+                             F.col('1-PCA[0]'),F.col('1-PCA[1]'))\
+                                .sort(['1-PCA[0]','1-PCA[1]','asset_name'],ascending = False)
+                self._portfolio = self._index.filter(F.col('1-PCA[0]') >= 0.7)
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._portfolio
+
+        return select_wrapper
+
+    def calc_pca(func):
+        """
+        Description:
+        Attributes:
+            func - inherits indicators_wrapper
+        Returns:
+        """
+        @functools.wraps(func)
+        def pca_wrapper(self,mcap_date,mcap_value_lb,**kwargs):
+            """
+            Description:
+                wrapper applies a dimension reduction on the indicator measuraments by
+                applying PCA to compute the 1st and 2nd components.
+            Attributes:
+                same as select_top_assets
+            Returns:
+                self._data (DataFrame) with the PCA feature components
+            """
+
+            __s_fn_id__ = "function <indicators_wrapper>"
+
+            try:
+#                 _data, _portf = func(self,mcap_date,mcap_value_lb,**kwargs)
+                _indic_df = func(self,mcap_date,mcap_value_lb,**kwargs)
+
+                _pca = clsPCA.get_features(
+                    data=_indic_df,
+                    feature_cols=None,
+                    **kwargs,
+                )
+                _pca = _pca.withColumn("row_idx",
+                                       F.row_number()\
+                                       .over(Window.orderBy(F.monotonically_increasing_id())))
+                self._data = self._data.withColumn("row_idx",
+                                                   F.row_number()\
+                                               .over(Window.orderBy(F.monotonically_increasing_id())))
+
+                self._index = self._data.join(_pca, _pca.row_idx == self._data.row_idx).drop('row_idx')
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._index
+
+        return pca_wrapper
+
+    def calc_indicators(func):
+        """
+        Description:
+            declaration of a wraper function to compute the perforamnce indicators
+        Attributes:
+            func - inherits the wrapper function
+        Returns:
+            index_wrapper (func)
+        """
+        @functools.wraps(func)
+        def indicators_wrapper(self,mcap_date,mcap_value_lb,**kwargs):
+            """
+            Description:
+            Attributes:
+            Returns:
+                self._data (DataFrame) with the PCA components
+            """
+
+            __s_fn_id__ = "function <indicators_wrapper>"
+
+            __idx_type__=['adx','sharp','rsi','mfi','beta'] # performance indicator list to compute
+#             _coll_dt=mcap_date #date(2022,1,30)
+            __val_col__="simp_ror" # the column name with the mcap value
+            __name_col__='asset_name' # the column name with the mcap asset names
+            __date_col__='mcap_date'  # the column name with mcap date for which value was set
+            __rf_assets__=['btc']  # of 'risk free' assets to use as the baseline
+            __rf_val_col__="simp_ror" # the column name with the mcap value
+            __rf_name_col__='asset_name' # the column name with the mcap asset names
+            __rf_date_col__='mcap_date'  # the column name with mcap date for which value was set
+
+            try:
+                _data, _portf = func(self,mcap_date,mcap_value_lb,**kwargs)
+
+#                 _kwargs={
+#                     "WINLENGTH":7,
+#                     "WINUNIT":'DAY',
+#                 }
+                self._index=pd.DataFrame()
+                __idx_dict={}
+                for asset_portf in _portf:
+                    _idx_dict = clsIndx.get_index(
+                        portfolio=[asset_portf],
+                        asset_eval_date=mcap_date,
+                        asset_name_col=__name_col__,
+                        asset_val_col =__val_col__,
+                        asset_date_col=__date_col__,
+                        index_type=__idx_type__,
+                        risk_free_assets=__rf_assets__,
+                        risk_free_name_col=__rf_name_col__,
+                        risk_free_val_col=__rf_val_col__,
+                        risk_free_date_col=__rf_date_col__,
+                        **kwargs,
+                    )
+                    _idx_dict['asset']=asset_portf['asset']
+                    self._index=pd.concat([self._index,pd.DataFrame([_idx_dict])])
+                self._index.insert(0, 'asset', self._index.pop('asset'))
+                if self._index.shape[0]<=0:
+                    raise RuntimeError("%s resulted in an empty index dataframe, aborting" % __s_fn_id__)
+                logger.debug("%s resulted in an index dataframe with %d rows and %d columns",
+                             __s_fn_id__,self._index.shape[0],self._index.shape[1])
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._index
+
+        return indicators_wrapper
+
+    @select_assets
+    @calc_pca
+    @calc_indicators
+    def select_top_assets(
+        self,
+        mcap_date:date=None,
+        mcap_value_lb:float=10000.0,
+        **kwargs,
+    ) -> DataFrame:
+        """
+        Description:
+            For a given date, the procedure selects a limited number of assets from a sorted
+            list with mcap value. The indexes, such as ADX, RSI, MFI, SHARP, etc for each asset
+            is calculated. Thereafter, a PCA dimensionality reduction is applied on the
+            standardized index measures to find the statistically top most assets with trending
+            variances above a given threshold; e.g. 0.7 from a sandardized scale of [0,1]
+        Attributes:
+            mcap_date (date) - date to select the statistically significant set of assets
+            mcap_value_lb (float) - lower bound cutoff value to filter assets with mcap_value
+            **kwargs -
+                TABLENAME (str) - change the table name from the default <warehouse.mcap_past>
+                ASSETCOUNT (int)- number of assets to limit in the set; default <23>
+        Returns:
+            self._data (DataFrame) with the statistically significan top N assets
+        Exceptions:
+        """
+
+        __s_fn_id__ = "function <select_top_assets>"
+        ''' define default values '''
+        __def_mcap_lower__ = 10000.0
+        _table_name = "warehouse.mcap_past"
+        _asset_count= 23
+
+        try:
+            ''' validate input attributes '''
+            if not isinstance(mcap_date,date):
+                mcap_date=date.today()
+            mcap_date=datetime.strftime(mcap_date,'%Y-%m-%dT00:00:00')
+            if not isinstance(mcap_value_lb,float) and mcap_value_lb<=0:
+                mcap_value_lb=__def_mcap_lower__
+            if "TABLENAME" in kwargs.keys() and "".join(kwargs["TABLENAME"].split())!="":
+                _table_name=kwargs["TABLENAME"]
+            if "ASSETCOUNT" in kwargs.keys() \
+                and isinstance(kwargs["ASSETCOUNT"],int) \
+                and kwargs["ASSETCOUNT"]>0:
+                _asset_count=kwargs["ASSETCOUNT"]
+
+            ''' read data from database '''
+            _query =f"select * from {_table_name} wmp where wmp.mcap_date = '{mcap_date}' " +\
+                    f"and wmp.mcap_value > {mcap_value_lb} " +\
+                    f"order by wmp.mcap_value DESC limit {_asset_count} "
+            self._data = clsSDB.read_data_from_table(select=_query, **kwargs)
+            if self._data.count()<=0:
+                raise RuntimeError("%s query resulted in empty dataframe; aborting." % __s_fn_id__)
+            logger.debug("%s query returned %d dataframe rows",__s_fn_id__,self._data.count())
+
+            ''' construct portfolio with selected assets '''
+            _assets=self._data.select(F.col('mcap_date'),F.col('asset_name'),F.col('mcap_value'))\
+                                .distinct()
+            if _assets.count()<=0:
+                raise RuntimeError("%s select distinct assets resulted in empty dataframe"
+                                   % __s_fn_id__)
+            self._portfolio=[]
+            for _asset in _assets.collect():
+                _asset_dict={}
+                _asset_dict={"date" : datetime.strftime(_asset[0],'%Y-%m-%dT00:00:00'),
+                             "asset": _asset[1],
+                             'mcap.weight': 1.0,
+                             'mcap.value' : float(_asset[2]),
+                            }
+                self._portfolio.append(_asset_dict)
+                self._portfolio=sorted(self._portfolio, key=lambda d: d['mcap.value'], reverse=True)
+            if len(self._portfolio)<=0:
+                raise RuntimeError("%s failed to construct portfolio for %d assets"
+                                   %(__s_fn_id__,_assets.count()))
+            logger.debug("%s constructed portfolio with %d assets",__s_fn_id__,len(self._portfolio))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data,self._portfolio
