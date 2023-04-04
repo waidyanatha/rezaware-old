@@ -67,7 +67,7 @@ class FeatureEngineer():
         
         self._session=None   # spark session property
         self._data = None    # dataframe property
-        self._factors=None   # PCA derived components; i.e. PCA1, PCA2, etc
+        self._features=None   # PCA derived components; i.e. PCA1, PCA2, etc
 #         self._endDT = None
 #         self._dtAttr = None  # timestamp property
 #         self._partAttr=None  # partitionBy column name
@@ -193,12 +193,15 @@ class FeatureEngineer():
             self._data (DataFrame)
         """
         
-        __s_fn_id__ = "function <@propert data>"
+        __s_fn_id__ = "function <@property data>"
         
         try:
             if self._data is None:
                 raise ValueError("Data is of NoneType; cannot be used in any %s %s computations"
                                  % (self.__package__,self.__name__))
+            if not isinstance(self._data,DataFrame):
+                self._data = self.session.createDataFrame(data)
+                logger.debug("Data of dtype %s converted to pyspark DataFrame", type(data))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -292,7 +295,7 @@ class FeatureEngineer():
             if features is None:
                 raise AttributeError("Dataset cannot be empty")
 
-            if not isinstance(factors,DataFrame):
+            if not isinstance(features,DataFrame):
                 self._features = self.session.createDataFrame(features)
                 logger.debug("Data of dtype %s converted to pyspark DataFrame", type(features))
             else:
@@ -314,7 +317,6 @@ class FeatureEngineer():
     def get_features(
         self,
         data=None, # mix of numeric and categorical data
-#         part_col:str=None   # partition column that defines the index of unique values
         feature_cols:list=None,   # list of columns; must be numeric data columns
         **kwargs,
     ) -> DataFrame:
@@ -332,11 +334,11 @@ class FeatureEngineer():
         try:
             ''' vaidate and set data and other property values'''
             self.data=data
-#             if not isinstance(part_col,str) or "".join(part_col.split())=="":
-#                 raise AttributeError("%s Invalid partition column, aborting process." 
-#                                      % (__s_fn_id__))
-            _num_cols = [x[0] for x in self._data.dtypes if x[1] not in ['string']]
+
+            _num_cols = [x[0] for x in self._data.dtypes if x[1] not in ['string','date','timestamp']]
+
             if feature_cols is None or len(feature_cols)==0:
+#             if len(feature_cols)==0:
                 _cols = _num_cols
                 logger.warning("%s No columns defined; defaulting to all numeric columns; %s",
                                __s_fn_id__,_cols)
@@ -346,6 +348,7 @@ class FeatureEngineer():
             if len(_cols) <= 0:
                 raise AttributeError("Invalid set of columns defined: %s must be numeric columns: %s"
                                      % (feature_cols,_num_cols))
+
             if not "COLPREFIX" in kwargs.keys():
                 kwargs['COLPREFIX']='scaled'
             if not "STANDARDIZE" in kwargs.keys() and \
@@ -355,10 +358,11 @@ class FeatureEngineer():
             ''' Normalize the columns between 0 and 1.0 '''
             self._data=clsCNR.scale(
                 data=self._data,
-                col_list=[],
+                col_list=_cols,
                 col_prefix=kwargs['COLPREFIX'],
                 scale_method=kwargs['STANDARDIZE'],
             )
+
             ''' redefining the set of feature columns '''
             _feat_cols = [x for x in self._data.columns if kwargs['COLPREFIX']+"_" in x]
             if self._data.count() <= 0:
@@ -373,31 +377,24 @@ class FeatureEngineer():
                 
             pca = PCA(k=kwargs['COMPONENTS'], inputCol='features', outputCol='pca_features')
             pca_model = pca.fit(assembled)
-#             unlist = F.udf(lambda x: round(float(list(x)[0]),4), DoubleType())
-#             self._features=pca_model.transform(assembled)\
-#                         .withColumn('pca_features',unlist('pca_features'))#\
-#                         .drop('features')
 
             self._data=pca_model.transform(assembled)
+            if self._data.count()<=0:
+                raise RuntimeError("%s empty dataframe with PCA dimension reduction" % __s_fn_id__)
+            logger.debug("%s transformed %d rows with PCA dimensionality reduction",
+                         __s_fn_id__,self._data.count())
+            
             ''' split the features into columns '''
-#             column_names=['PCA_'+str(i) for i in range(kwargs['COMPONENTS'])]
             to_list = lambda v : v.toArray().tolist()
             split_array_to_list = lambda _col : F.udf(to_list, ArrayType(DoubleType()))(_col)
             self._features = self._data.select(split_array_to_list(F.col('pca_features'))\
-                                               .alias('PCA'))\
-                                        .select([F.col("PCA")[i] for i in range(kwargs['COMPONENTS'])])
-#             self._features=self._features.select([F.col("PCA")[i] for i in range(kwargs['COMPONENTS'])])
-#             self._features = self._features.withColumn("row_idx",
-#                                              F.row_number()\
-#                                              .over(Window.orderBy(F.monotonically_increasing_id())))
-#             self._data = self._data.withColumn("row_idx", 
-#                                        F.row_number()\
-#                                        .over(Window.orderBy(F.monotonically_increasing_id())))
-
-#             self._features = self._features.join(self._data.select(F.col(part_col)),
-#                                                  self._features.row_idx == self._data.row_idx)
-#             self._data = self._data.join(self._features, self._features.row_idx == self._data.row_idx)\
-#                                     .drop('row_idx')
+                                               .alias('PC'))\
+                                        .select([F.col("PC")[i] for i in range(kwargs['COMPONENTS'])])
+            self._data = self._data.drop('features','pca_features')
+            if self._features.count() <= 0:
+                raise RuntimeError("%s could not construct PCA feature columns" % __s_fn_id__)
+            logger.debug("%s constructed %d feature columns with %d rows",
+                         __s_fn_id__,len(self._features.columns),self._features.count())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -405,5 +402,3 @@ class FeatureEngineer():
             print(traceback.format_exc())
 
         return self._features
-
-

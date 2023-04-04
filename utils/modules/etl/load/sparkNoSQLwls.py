@@ -739,11 +739,13 @@ class NoSQLWorkLoads():
                 self.dbType = collection_properties['DBTYPE'].lower()
             if "DBAUTHSOURCE" in collection_properties.keys():
                 self.dbAuthSource = collection_properties['DBAUTHSOURCE']
-                self.connect = {'DBAUTHSOURCE':collection_properties['DBAUTHSOURCE']}
+#                 self.connect = {'DBAUTHSOURCE':collection_properties['DBAUTHSOURCE']}
+#                 self.connect = {'DBAUTHSOURCE':self._dbAuthSource}
             else:
                 self.dbAuthSource = self.dbName
-                self.connect = {'DBAUTHSOURCE':self.dbName}
-            
+#                 self.connect = {'DBAUTHSOURCE':self.dbName}
+            self.connect = {'DBAUTHSOURCE':self._dbAuthSource}
+
             if self.dbType.lower() == 'mongodb':
                 db = self.connect[self._dbName]
                 _coll_list = db.list_collection_names()
@@ -776,14 +778,25 @@ class NoSQLWorkLoads():
             return (dtype) any data type: str, dict, list, dataframe, array, and so on
 
             author: <nuwan.waidyanatha@rezgateway.com>
-            
     '''
     @property
     def documents(self):
+        """
+        Description:
+        Attributes:
+        Returns:
+        Exceptions:
+        """
         return self._documents
 
     @documents.setter
     def documents(self, docMeta:dict):
+        """
+        Description:
+        Attributes:
+        Returns:
+        Exceptions:
+        """
     
         __s_fn_id__ = "function @data.setter"
 
@@ -907,8 +920,9 @@ class NoSQLWorkLoads():
         _docs_sdf = None
 
         try:
-            if db_name:
-                self.dbName = db_name
+#             if db_name:
+#                 self.dbName = db_name
+            self.dbName = db_name
             if len(db_coll)>0:
                 self.collections={"COLLLIST":db_coll}
             elif "HASINNAME" in kwargs.keys():

@@ -62,11 +62,13 @@ class WeightedPortfolio():
         self._portfolio=None
         self._index= None
 
+        ''' functions '''
         global pkgConf
         global appConf
         global logger
+        ''' classes '''
         global clsSDB
-#         global clsSCNR
+        global clsCNR
         global clsNoSQL
         global clsIndx
         global clsPCA
@@ -101,9 +103,6 @@ class WeightedPortfolio():
             logger.info('########################################################')
             logger.info("%s Class",self.__name__)
 
-#             ''' import spark clean-n-rich work load utils to transform the data '''
-#             from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
-#             clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
             ''' import spark database work load utils to read and write data '''
             from utils.modules.etl.load import sparkDBwls as sparkDB
             clsSDB = sparkDB.SQLWorkLoads(desc=self.__desc__)
@@ -116,6 +115,9 @@ class WeightedPortfolio():
             ''' import feature engineering class '''
             from utils.modules.ml.dimreduc import pca
             clsPCA = pca.FeatureEngineer(desc=self.__desc__)
+            ''' import spark clean-n-rich work load utils to transform the data '''
+            from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
+            clsCNR = sparkCNR.Transformer(desc=self.__desc__)
 
             logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
                          %(self.__app__,
@@ -214,6 +216,7 @@ class WeightedPortfolio():
         try:
             if len(portfolio)<=0:
                 raise AttributeError("Invalid portfolio attribute, must be a non-empy list")
+            self._portfolio=portfolio
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -551,145 +554,89 @@ class WeightedPortfolio():
         return valid_date_list_, valid_asset_data_
 
 
-    ''' Function --- PORTFOLIO To DB ---
+    ''' Function --- BUILD WEIGTED PORTFOLIO ---
 
             author: <samana.thetha@gmail.com>
     '''
-    def dbwrite(func):
-        """
-        Description:
-            wrapper function to write dicts to nosqldb
-        Attributes:
-            func - inherits write_mpt_to_db
-        Returns:
-            dbwrite_wrapper
-        """
-        @functools.wraps(func)
-        def dbwrite_wrapper(self,mpt_data,cols_dict,**kwargs):
-
-            __s_fn_id__ = "function <dbwrite_wrapper>"
-
-            __destin_db_name__ = "tip-daily-mpt"
-            __destin_coll_prefix__ = 'mpt'
-            __uids__ = ['date',  # portfolio date
-                        'asset']  # asset name
-
-            try:
-                _data = func(self,mpt_data,cols_dict,**kwargs)
-
-                ''' set database name & check exists'''
-                _destin_db = __destin_db_name__
-                if "DESTINDBNAME" in kwargs.keys():
-                    _destin_db = kwargs["DESTINDBNAME"]
-                if "DBAUTHSOURCE" in kwargs.keys():
-                    clsNoSQL.connect={'DBAUTHSOURCE':kwargs['DBAUTHSOURCE']}
-                else:
-                    clsNoSQL.connect={'DBAUTHSOURCE':_destin_db}
-                ''' confirm database exists '''
-                if not _destin_db in clsNoSQL.connect.list_database_names():
-                    raise RuntimeError("%s does not exist",_destin_db)
-
-                ''' set collection prefix '''
-                _mpt_coll_prefix = __destin_coll_prefix__
-                if "COLLPREFIX" in kwargs.keys():
-                    _mpt_coll_prefix = kwargs["COLLPREFIX"]
-
-                ''' write portfolio to collection '''
-                _colls_list=[]
-                _uniq_dates = set([x['date'] for x in _data])
-                for _date in _uniq_dates:
-                    _mpt_for_date = list(filter(lambda d: d['date'] == _date, _data))
-                    _destin_coll = '.'.join([
-                        _mpt_coll_prefix,"top"+str(len(_mpt_for_date)),_date.split('T')[0]
-                    ])
-                    _mpt_coll = clsNoSQL.write_documents(
-                        db_name=_destin_db,
-                        db_coll=_destin_coll,
-                        data=_mpt_for_date,
-                        uuid_list=__uids__)
-                    _colls_list.append(_mpt_coll)
-                    logger.debug("%d documents written to %s collection"
-                                 ,len(_mpt_for_date),_destin_coll)
-                ''' confirm returned collection counts '''
-                if len(_colls_list) > 0:
-                    self._portfolio = _colls_list
-                    logger.info("Wrote %d mpt collections successfully to %s %s",
-                                len(self._portfolio),clsNoSQL.dbType,_destin_db)
-                else:
-                    raise RuntimeError("Something was wrong with writing mpt to collections in %s %s"
-                                       ,clsNoSQL.dbType,_destin_db)
-
-            except Exception as err:
-                logger.error("%s %s \n",__s_fn_id__, err)
-                logger.debug(traceback.format_exc())
-                print("[Error]"+__s_fn_id__, err)
-
-            return self._portfolio
-
-        return dbwrite_wrapper
-
-    @dbwrite
-    def write_mpt_to_db(
+    def build_weighted_portfolio(
         self,
-        mpt_data:list=[],   # data with portfolio weights, ror, and assets
-        cols_dict:dict={},  # dict defining the column names
-        **kwargs
-    ):
+        mcap_date:date=None,
+        pick_asset_db_name:str=None,
+        mcap_ror_db_name:str=None,
+        **kwargs,
+    ) -> DataFrame:
         """
         Description:
-            writes the mpt data; namely the assets, weights, and mcap for each date
         Attributes:
-            data (list) of dicts with the asset-wise, weight, log-ror, & mcap-value
         Returns:
-            
+        Exception:
         """
+        
+        __s_fn_id__ = "function <build_weighted_portfolio>"
 
-        __s_fn_id__ = "function <write_mpt_to_db>"
-        _mpt_list = []
+        __def_portf_db_name__ = "tip-portfolio"
+        __def_mcap_db_name__ = "warehouse.mcap_past"
+
+        _cols={
+            "PRIMARYKEY":'mcap_past_pk',
+            "UUID" : 'uuid',
+            "NAMECOLUMN":'asset_name',
+            "DATECOLUMN":'mcap_date',
+            "NUMCOLUMN" :'log_ror',
+            "MCAPCOLUMN":'mcap_value',
+            "WEIGHTCOLUMN":'weights',
+            "MCAPSOURCE":'source',
+        }
 
         try:
-            if len(mpt_data)==0:
-                raise AttributeError("Cannot process an empty mpt list")
-            if cols_dict=={}:
-                raise AttributeError("Cannot process with an empty cols_dict")
+            ''' validate input attributes '''
+            if not isinstance(mcap_date,date):
+                mcap_date=date.today()
+            kwargs['HASINNAME']=str(mcap_date)
+            if not isinstance(pick_asset_db_name,str) or "".join(pick_asset_db_name.split())=="":
+                pick_asset_db_name=__def_portf_db_name__
 
-            for idx,data in enumerate(mpt_data):
-#                 _mpt_dict = {}
-                for x in zip(data[cols_dict['NAMECOLUMN']],
-                             data[cols_dict['WEIGHTCOLUMN']],
-                             data[cols_dict['NUMCOLUMN']],
-                             data[cols_dict['MCAPCOLUMN']],
-                             data[cols_dict['PRIMARYKEY']],
-#                              data[cols_dict['MCAPSOURCE']],
-                            ):
-                    ''' convert column names to nosql naming '''
-                    _mpt_dict = {}
-                    _mpt_dict["date"]=data[cols_dict['DATECOLUMN']].strftime("%Y-%m-%dT%H:%M:%S")
-                    _mpt_dict["asset"]=x[0]
-                    _mpt_dict["mcap.weight"]=float(x[1])
-                    _mpt_dict["mcap.ror"]=float(x[2])
-                    _mpt_dict["mcap.value"]=float(x[3])
-                    _mpt_dict["mcap.db.fk"]=str(x[4])
-                    _mpt_dict["mcap.db.source"]=data[cols_dict['MCAPSOURCE']]
-                    _mpt_dict["audit.mod.by"]=os.environ.get('USERNAME').upper()
-                    _mpt_dict["audit.mod.dt"]=datetime.strftime(datetime.now(),'%Y-%m-%dT%H:%M:%S')
-                    _mpt_dict["audit.mod.proc"]="-".join([self.__name__,__s_fn_id__])
-                    ''' append the mpt dict to list '''
-                    _mpt_list.append(_mpt_dict)
+            self._portfolio = clsNoSQL.read_documents(
+                as_type="list",
+                db_name=pick_asset_db_name,
+                db_coll=[],
+                doc_find={},
+                **kwargs
+            )
+            if len(self._portfolio)<=0:
+                raise RuntimeError("%s read documents returned an empty dataframe" % __s_fn_id__)
+            logger.debug("%s document read from %s returned %d rows",
+                         __s_fn_id__,pick_asset_db_name,len(self._portfolio))
 
-            if len(_mpt_list)>0:
-                self._portfolio=_mpt_list
-                logger.debug("Created database collection ready dict list with %d documents"
-                          ,len(self._portfolio))
-            else:
-                raise ValueError("Empty mpt list, not data to write")
+            _from_date = min([x['asset.mcap.date'] for x in self.portfolio]).split('T')[0]
+            _to_date = max([x['asset.mcap.date'] for x in self.portfolio]).split('T')[0]
+            _asset_collect = ",".join([f"'{x}'" for x in \
+                                       [_p['asset.name'] for _p in self.portfolio]])
+
+            if not isinstance(mcap_ror_db_name,str) or "".join(mcap_ror_db_name.split())=="":
+                mcap_ror_db_name=__def_mcap_db_name__
+
+            _query =f"select * from {mcap_ror_db_name} "+\
+                    f"where mcap_date between '{_from_date}' and '{_to_date}' "+\
+                    f"and asset_name in ({_asset_collect}) and log_ror is not null"
+
+            self._data = self.read_ror(select=_query,**kwargs)
+
+            self._porfolio,_cols_dict=self.get_weighted_mpt(
+                data=self._data,
+                cols_dict=_cols,
+                topN=3,
+                size=5,
+            )
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._portfolio
+        return self._porfolio
+
+#         return valid_date_list_, valid_asset_data_
 
 
     ''' Function --- SELECT TOP ASSETS ---
@@ -712,25 +659,35 @@ class WeightedPortfolio():
                 self._portfolio
             """
 
-            __s_fn_id__ = "function <indicators_wrapper>"
+            __s_fn_id__ = "function <select_wrapper>"
+            
+            _pca_lb = 0.7
 
             try:
-#                 _data, _portf = func(self,mcap_date,mcap_value_lb,**kwargs)
                 _indic_df = func(self,mcap_date,mcap_value_lb,**kwargs)
  
                 ''' Normalize the columns between 0 and 1.0 '''
                 self._index=clsCNR.scale(
                     data=_indic_df,
-                    col_list=['PCA[0]','PCA[1]'],
+                    col_list=['PC[0]','PC[1]'],
                     col_prefix=kwargs['COLPREFIX'],
                     scale_method=kwargs['STANDARDIZE'],
                 )
-                self._index = self._index.withColumn("1-PCA[0]",1-F.col(kwargs['COLPREFIX']+'_PCA[0]'))\
-                            .withColumn("1-PCA[1]",1-F.col(kwargs['COLPREFIX']+'_PCA[1]'))
-                self._index.select(F.col('asset_name'),F.col('mcap_date'),
-                             F.col('1-PCA[0]'),F.col('1-PCA[1]'))\
-                                .sort(['1-PCA[0]','1-PCA[1]','asset_name'],ascending = False)
-                self._portfolio = self._index.filter(F.col('1-PCA[0]') >= 0.7)
+                self._index = self._index.withColumn("1-PC[0]",1-F.col(kwargs['COLPREFIX']+'_PC[0]'))\
+                            .withColumn("1-PC[1]",1-F.col(kwargs['COLPREFIX']+'_PC[1]'))
+
+                if "PCALOWERBOUND" in kwargs.keys() \
+                    and isinstance(kwargs['PCALOWERBOUND'],float) \
+                    and 0<=kwargs['PCALOWERBOUND']<=1.0:
+                    _pca_lb=kwargs['PCALOWERBOUND']
+                self._portfolio=self._index.filter(F.col('1-PC[0]') >= _pca_lb)\
+                                            .rdd.map(lambda row: row.asDict()).collect()
+                if len(self._portfolio)<=0:
+                    raise RuntimeError("%s filter on 1-PC[0]>=%0.4f returned empty portfolio "+\
+                                       "from %d indexed assets" 
+                                       % __s_fn_id__,_pca_lb,self._index.count())
+                logger.debug("%s Filter 1-PC[0]>=%0.4f returned %d of %d indexed assets",
+                             __s_fn_id__,_pca_lb,len(self._portfolio),self._index.count())
 
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
@@ -745,7 +702,7 @@ class WeightedPortfolio():
         """
         Description:
         Attributes:
-            func - inherits indicators_wrapper
+            func - inherits pca_wrapper
         Returns:
         """
         @functools.wraps(func)
@@ -760,25 +717,50 @@ class WeightedPortfolio():
                 self._data (DataFrame) with the PCA feature components
             """
 
-            __s_fn_id__ = "function <indicators_wrapper>"
+            __s_fn_id__ = "function <pca_wrapper>"
+            _idx_types=['adx','sharp','rsi','mfi','beta'] # performance indicator list to compute
 
             try:
-#                 _data, _portf = func(self,mcap_date,mcap_value_lb,**kwargs)
                 _indic_df = func(self,mcap_date,mcap_value_lb,**kwargs)
+
+                if "INDEXTYPELIST" in kwargs.keys():
+                    _idx_types=kwargs['INDEXTYPELIST']
 
                 _pca = clsPCA.get_features(
                     data=_indic_df,
-                    feature_cols=None,
+                    feature_cols=_idx_types,
                     **kwargs,
                 )
+                if _pca is None or _pca.count()<=0:
+                    raise RuntimeError("%s did not return any PCA features",__s_fn_id__)
+                logger.debug("%s received %d PCA features for %d assets",
+                             __s_fn_id__,len(_pca.columns),_pca.count())
                 _pca = _pca.withColumn("row_idx",
                                        F.row_number()\
-                                       .over(Window.orderBy(F.monotonically_increasing_id())))
-                self._data = self._data.withColumn("row_idx",
+                                       .over(Window.partitionBy(F.lit(0))\
+                                             .orderBy(F.monotonically_increasing_id())))
+                self._index = clsPCA.data.withColumn("row_idx",
                                                    F.row_number()\
-                                               .over(Window.orderBy(F.monotonically_increasing_id())))
+                                               .over(Window.partitionBy(F.lit(0))\
+                                                     .orderBy(F.monotonically_increasing_id())))
 
-                self._index = self._data.join(_pca, _pca.row_idx == self._data.row_idx).drop('row_idx')
+                self._index = self._index.join(_pca, _pca.row_idx == self._index.row_idx).drop('row_idx')
+                if self._index.count()<=0:
+                    raise RuntimeError("%s could not merge %d PCA features and %d asssets "+\
+                                       "with %d PCA data columns and %d rows",
+                                       __s_fn_id__,len(_pca.columns),_pca.count(),
+                                       len(clsPCA.data.columns),clsPCA.data.count())
+                logger.debug("%s successfuly merged %d PCA features and %d asssets "+\
+                                       "with %d PCA data columns and %d rows",
+                                       __s_fn_id__,len(_pca.columns),_pca.count(),
+                                       len(clsPCA.data.columns),clsPCA.data.count())
+
+                self._data = self._data.unionByName(self._index,allowMissingColumns=True)
+                if self._data.count()>0:
+                    logger.debug("%s successfuly merged %d index rows and %d columns "+\
+                                       "with class property data %d columns and %d rows",
+                                       __s_fn_id__,len(self._index.columns),self._index.count(),
+                                       len(self._data.columns),self._data.count())
 
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
@@ -809,8 +791,7 @@ class WeightedPortfolio():
 
             __s_fn_id__ = "function <indicators_wrapper>"
 
-            __idx_type__=['adx','sharp','rsi','mfi','beta'] # performance indicator list to compute
-#             _coll_dt=mcap_date #date(2022,1,30)
+            _idx_types=['adx','sharp','rsi','mfi','beta'] # performance indicator list to compute
             __val_col__="simp_ror" # the column name with the mcap value
             __name_col__='asset_name' # the column name with the mcap asset names
             __date_col__='mcap_date'  # the column name with mcap date for which value was set
@@ -822,11 +803,10 @@ class WeightedPortfolio():
             try:
                 _data, _portf = func(self,mcap_date,mcap_value_lb,**kwargs)
 
-#                 _kwargs={
-#                     "WINLENGTH":7,
-#                     "WINUNIT":'DAY',
-#                 }
-                self._index=pd.DataFrame()
+                if "INDEXTYPELIST" in kwargs.keys():
+                    _idx_types=kwargs['INDEXTYPELIST']
+
+                _index_df=pd.DataFrame()
                 __idx_dict={}
                 for asset_portf in _portf:
                     _idx_dict = clsIndx.get_index(
@@ -835,16 +815,34 @@ class WeightedPortfolio():
                         asset_name_col=__name_col__,
                         asset_val_col =__val_col__,
                         asset_date_col=__date_col__,
-                        index_type=__idx_type__,
+                        index_type=_idx_types,
                         risk_free_assets=__rf_assets__,
                         risk_free_name_col=__rf_name_col__,
                         risk_free_val_col=__rf_val_col__,
                         risk_free_date_col=__rf_date_col__,
                         **kwargs,
                     )
-                    _idx_dict['asset']=asset_portf['asset']
-                    self._index=pd.concat([self._index,pd.DataFrame([_idx_dict])])
-                self._index.insert(0, 'asset', self._index.pop('asset'))
+                    _idx_dict['mcap_past_pk']=asset_portf['mcapid']
+                    _idx_dict['uuid']=asset_portf['uuid']
+                    _idx_dict['asset_name']=asset_portf['asset']
+                    _idx_dict['mcap_date']=mcap_date
+                    _idx_dict['mcap_value']=asset_portf['mcap.value']
+                    _index_df=pd.concat([_index_df,pd.DataFrame([_idx_dict])])
+                _index_df.insert(0, 'mcap_past_pk', _index_df.pop('mcap_past_pk'))
+                _index_df.insert(1, 'uuid', _index_df.pop('uuid'))
+                _index_df.insert(2, 'asset_name', _index_df.pop('asset_name'))
+                _index_df.insert(3, 'mcap_date', _index_df.pop('mcap_date'))
+                _index_df.insert(4, 'mcap_value', _index_df.pop('mcap_value'))
+
+                ''' remove rows with NaN,None values '''
+                _drop_idx_df = pd.DataFrame()
+                self._index = pd.DataFrame()
+                self._index = _index_df.dropna(subset=_idx_types)
+                _drop_idx_df = pd.concat([_index_df,self._index]).drop_duplicates(keep=False)
+                if _drop_idx_df.shape[0]>0:
+                    logger.warning("%s Dropped assets with NaN/None/Null index values: %s",
+                                   __s_fn_id__,str(_drop_idx_df['asset_name'].to_list()))
+
                 if self._index.shape[0]<=0:
                     raise RuntimeError("%s resulted in an empty index dataframe, aborting" % __s_fn_id__)
                 logger.debug("%s resulted in an index dataframe with %d rows and %d columns",
@@ -916,7 +914,8 @@ class WeightedPortfolio():
             logger.debug("%s query returned %d dataframe rows",__s_fn_id__,self._data.count())
 
             ''' construct portfolio with selected assets '''
-            _assets=self._data.select(F.col('mcap_date'),F.col('asset_name'),F.col('mcap_value'))\
+            _assets=self._data.select(F.col('mcap_past_pk'),F.col('uuid'),F.col('mcap_date'),
+                                      F.col('asset_name'),F.col('mcap_value'))\
                                 .distinct()
             if _assets.count()<=0:
                 raise RuntimeError("%s select distinct assets resulted in empty dataframe"
@@ -924,11 +923,14 @@ class WeightedPortfolio():
             self._portfolio=[]
             for _asset in _assets.collect():
                 _asset_dict={}
-                _asset_dict={"date" : datetime.strftime(_asset[0],'%Y-%m-%dT00:00:00'),
-                             "asset": _asset[1],
-                             'mcap.weight': 1.0,
-                             'mcap.value' : float(_asset[2]),
-                            }
+                _asset_dict={
+                    "mcapid":_asset[0],
+                    "uuid" : _asset[1],
+                    "date" : datetime.strftime(_asset[2],'%Y-%m-%dT00:00:00'),
+                    "asset": _asset[3],
+                    'mcap.weight': 1.0,
+                    'mcap.value' : float(_asset[4]),
+                }
                 self._portfolio.append(_asset_dict)
                 self._portfolio=sorted(self._portfolio, key=lambda d: d['mcap.value'], reverse=True)
             if len(self._portfolio)<=0:
@@ -942,3 +944,293 @@ class WeightedPortfolio():
             print("[Error]"+__s_fn_id__, err)
 
         return self._data,self._portfolio
+
+
+    ''' Function --- GET REFERENCE INDEX ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+    @calc_indicators
+    def get_reference_index(
+        self,
+        mcap_date:date=None,
+        mcap_value_lb:float=10000.0,
+        asset_name:str='btc',
+        **kwargs,
+    ) -> DataFrame:
+
+        __s_fn_id__ = "function <get_reference_index>"
+        ''' define default values '''
+        _table_name = "warehouse.mcap_past"
+
+        try:
+            ''' validate input attributes '''
+            if not isinstance(mcap_date,date):
+                mcap_date=date.today()
+            mcap_date=datetime.strftime(mcap_date,'%Y-%m-%dT00:00:00')
+
+            if "TABLENAME" in kwargs.keys() and "".join(kwargs["TABLENAME"].split())!="":
+                _table_name=kwargs["TABLENAME"]
+            
+            ''' read data from database '''
+            _query =f"select * from {_table_name} wmp where wmp.mcap_date = '{mcap_date}' " +\
+                    f"and wmp.asset_name = '{asset_name}' "
+            self._data = clsSDB.read_data_from_table(select=_query, **kwargs)
+
+            if self._data.count()<=0:
+                raise RuntimeError("%s query resulted in empty dataframe; aborting." % __s_fn_id__)
+            logger.debug("%s query returned %d dataframe rows",__s_fn_id__,self._data.count())
+
+            ''' construct portfolio with selected assets '''
+            _assets=self._data.select(F.col('mcap_past_pk'),F.col('uuid'),F.col('mcap_date'),
+                                      F.col('asset_name'),F.col('mcap_value'))\
+                                .distinct()
+            if _assets.count()<=0:
+                raise RuntimeError("%s select distinct assets resulted in empty dataframe"
+                                   % __s_fn_id__)
+            self._portfolio=[]
+            for _asset in _assets.collect():
+                _asset_dict={}
+                _asset_dict={
+                    "mcapid":_asset[0],
+                    "uuid" : _asset[1],
+                    "date" : datetime.strftime(_asset[2],'%Y-%m-%dT00:00:00'),
+                    "asset": _asset[3],
+                    'mcap.weight': 1.0,
+                    'mcap.value' : float(_asset[4]),
+                }
+                self._portfolio.append(_asset_dict)
+                self._portfolio=sorted(self._portfolio, key=lambda d: d['mcap.value'], reverse=True)
+            if len(self._portfolio)<=0:
+                raise RuntimeError("%s failed to construct portfolio for %d assets"
+                                   %(__s_fn_id__,_assets.count()))
+            logger.debug("%s constructed portfolio with %d assets",__s_fn_id__,len(self._portfolio))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data,self._portfolio
+
+
+    ''' Function --- MPT PORTFOLIO To DB ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+    def dbwrite(func):
+        """
+        Description:
+            wrapper function to write dicts to nosqldb
+        Attributes:
+            func - inherits write_mpt_to_db
+        Returns:
+            dbwrite_wrapper
+        """
+        @functools.wraps(func)
+        def dbwrite_wrapper(self,portfolio_data,cols_dict,**kwargs):
+
+            __s_fn_id__ = "function <dbwrite_wrapper>"
+
+            __destin_db_name__ = "tip-daily-mpt"
+            __destin_coll_prefix__ = 'mpt'
+            _uids = ['date',  # portfolio date
+                     'asset']  # asset name
+            _def_data_col = 'date'
+
+            try:
+                _data = func(self,portfolio_data,cols_dict,**kwargs)
+
+                ''' set database name & check exists'''
+                _destin_db = __destin_db_name__
+                if "DESTINDBNAME" in kwargs.keys():
+                    _destin_db = kwargs["DESTINDBNAME"]
+                if "DBAUTHSOURCE" in kwargs.keys():
+                    clsNoSQL.connect={'DBAUTHSOURCE':kwargs['DBAUTHSOURCE']}
+                else:
+                    clsNoSQL.connect={'DBAUTHSOURCE':_destin_db}
+                ''' confirm database exists '''
+                if not _destin_db in clsNoSQL.connect.list_database_names():
+                    raise RuntimeError("%s does not exist",_destin_db)
+                ''' set index attributes '''
+                if "UIDSLIST" in kwargs.keys():
+                    _uids = kwargs["UIDSLIST"]               
+
+                ''' set collection prefix '''
+                _mpt_coll_prefix = __destin_coll_prefix__
+                if "COLLPREFIX" in kwargs.keys():
+                    _mpt_coll_prefix = kwargs["COLLPREFIX"]
+
+                ''' write portfolio to collection '''
+                _colls_list=[]
+                if not "DATECOLNAME" in kwargs.keys():
+                    kwargs['DATECOLNAME']='date'
+                _uniq_dates = set([x[kwargs['DATECOLNAME']] for x in _data])
+                for _date in _uniq_dates:
+                    _mpt_for_date = list(filter(lambda d: d[kwargs['DATECOLNAME']] == _date, _data))
+                    _destin_coll = '.'.join([
+                        _mpt_coll_prefix,"top"+str(len(_mpt_for_date)),_date.split('T')[0]
+                    ])
+                    _mpt_coll = clsNoSQL.write_documents(
+                        db_name=_destin_db,
+                        db_coll=_destin_coll,
+                        data=_mpt_for_date,
+                        uuid_list=_uids)
+                    _colls_list.append(_mpt_coll)
+                    logger.debug("%d documents written to %s collection"
+                                 ,len(_mpt_for_date),_destin_coll)
+                ''' confirm returned collection counts '''
+                if len(_colls_list) > 0:
+                    self._portfolio = _colls_list
+                    logger.info("Wrote %d mpt collections successfully to %s %s",
+                                len(self._portfolio),clsNoSQL.dbType,_destin_db)
+                else:
+                    raise RuntimeError("Something was wrong with writing mpt to collections in %s %s"
+                                       ,clsNoSQL.dbType,_destin_db)
+
+            except Exception as err:
+                logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
+                print("[Error]"+__s_fn_id__, err)
+
+            return self._portfolio
+
+        return dbwrite_wrapper
+
+    @dbwrite
+    def write_mpt_to_db(
+        self,
+        portfolio_data:list=[],   # data with portfolio weights, ror, and assets
+        cols_dict:dict={},  # dict defining the column names
+        **kwargs
+    ):
+        """
+        Description:
+            writes the mpt data; namely the assets, weights, and mcap for each date
+        Attributes:
+            data (list) of dicts with the asset-wise, weight, log-ror, & mcap-value
+        Returns:
+            
+        """
+
+        __s_fn_id__ = "function <write_mpt_to_db>"
+        _mpt_list = []
+
+        try:
+            if len(portfolio_data)==0:
+                raise AttributeError("Cannot process an empty mpt list")
+            if cols_dict=={}:
+                raise AttributeError("Cannot process with an empty cols_dict")
+
+            for idx,data in enumerate(portfolio_data):
+#                 _mpt_dict = {}
+                for x in zip(data[cols_dict['NAMECOLUMN']],
+                             data[cols_dict['WEIGHTCOLUMN']],
+                             data[cols_dict['NUMCOLUMN']],
+                             data[cols_dict['MCAPCOLUMN']],
+                             data[cols_dict['PRIMARYKEY']],
+#                              data[cols_dict['MCAPSOURCE']],
+                            ):
+                    ''' convert column names to nosql naming '''
+                    _mpt_dict = {}
+                    _mpt_dict["date"]=data[cols_dict['DATECOLUMN']].strftime("%Y-%m-%dT%H:%M:%S")
+                    _mpt_dict["asset"]=x[0]
+                    _mpt_dict["mcap.weight"]=float(x[1])
+                    _mpt_dict["mcap.ror"]=float(x[2])
+                    _mpt_dict["mcap.value"]=float(x[3])
+                    _mpt_dict["mcap.db.fk"]=str(x[4])
+                    _mpt_dict["mcap.db.source"]=data[cols_dict['MCAPSOURCE']]
+                    _mpt_dict["audit.mod.by"]=os.environ.get('USERNAME').upper()
+                    _mpt_dict["audit.mod.dt"]=datetime.strftime(datetime.now(),'%Y-%m-%dT%H:%M:%S')
+                    _mpt_dict["audit.mod.proc"]="-".join([self.__name__,__s_fn_id__])
+                    ''' append the mpt dict to list '''
+                    _mpt_list.append(_mpt_dict)
+
+            if len(_mpt_list)>0:
+                self._portfolio=_mpt_list
+                logger.debug("Created database collection ready dict list with %d documents"
+                          ,len(self._portfolio))
+            else:
+                raise ValueError("Empty mpt list, not data to write")
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._portfolio
+
+
+    ''' Function --- SELECTED ASSETS TO DB ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+    @dbwrite
+    def write_asset_picks_to_db(
+        self,
+        portfolio_data:list=[],   # data with portfolio weights, ror, and assets
+        cols_dict:dict={},   # dict defining the column name mapping
+        **kwargs
+    ) -> str:
+        """
+        Description:
+        Attribute:
+        Returns:
+        Exception:
+        """
+
+        __s_fn_id__ = "function <write_asset_picks_to_db>"
+        
+        __def_cols_dict__={
+            "mcap_past_pk":"mcap.db.fk",
+            "uuid" : "uuid",
+            "asset_name": "asset.name",
+            "mcap_date" : "asset.mcap.date",
+            "mcap_value": "asset.mcap.value",
+            "adx" : "index.adx",
+            "sharp":"index.sharp",
+            "rsi" : "index.rsi",
+            "mfi" : "index.mfi",
+            "beta": "index.beta",
+            "scaled_adx" : "index.scaled.adx",
+            "scaled_sharp":"index.scaled.sharp",
+            "scaled_rsi" : "index.scaled.rsi",
+            "scaled_mfi" : "index.scaled.mfi",
+            "scaled_beta": "index.scaled.beta",
+            "PC[0]" : "index.pc.0",
+            "PC[1]" : "index.pc.1",
+            "scaled_PC[0]":'index.scaled.pc.0',
+            "scaled_PC[1]":'index.scaled.pc.1',
+            "1-PC[0]":'index.scaled.1-pc.0',
+            "1-PC[1]":'index.scaled.1-pc.1',
+        }
+        
+        try:
+            self.portfolio = portfolio_data
+            if not isinstance(cols_dict,dict) or cols_dict=={}:
+                cols_dict=__def_cols_dict__
+            _port_list=[]
+            for _port_dict in self._portfolio:
+                for _key,_val in cols_dict.items():
+                    _port_dict = {_val if k==_key else k:v for k,v in _port_dict.items()}
+                if "DATECOLNAME" in kwargs.keys():
+                    _port_dict[kwargs['DATECOLNAME']]=datetime.strftime(
+                        _port_dict[kwargs['DATECOLNAME']],
+                        '%Y-%m-%dT00:00:00')
+                _port_dict["audit.mod.by"]=os.environ.get('USERNAME').upper()
+                _port_dict["audit.mod.dt"]=datetime.strftime(datetime.now(),'%Y-%m-%dT%H:%M:%S')
+                _port_dict["audit.mod.proc"]="-".join([self.__name__,__s_fn_id__])
+                _port_list.append(_port_dict)
+
+            if len(_port_list)<=0:
+                raise ValueError("Empty mpt list, not data to write")
+            self._portfolio=_port_list
+            logger.debug("Created database collection ready dict list with %d documents"
+                      ,len(self._portfolio))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._portfolio

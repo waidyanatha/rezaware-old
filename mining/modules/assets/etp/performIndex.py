@@ -208,9 +208,10 @@ class Portfolio():
                     db_coll="",
                     mpt_date=date.today(),
                 )
-                logger.warning("Portfolio is Non-type; retrieved portfolio data for %s "+\
-                               "of dtype %s with %d records"
-                               ,str(date.today()),type(self._portfolio),len(self._portfolio))
+                logger.warning("%s Portfolio is Non-type; retrieved portfolio data for %s "+\
+                               "of dtype %s with %d records",
+                               __s_fn_id__,str(date.today()),
+                               type(self._portfolio),len(self._portfolio))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -228,8 +229,8 @@ class Portfolio():
             if len(portfolio)<=0:
                 raise AttributeError("Invalid portfolio attribute, must be a non-empy list")
             self._portfolio = portfolio
-            logger.debug("Portfolio class property set with %s of length %d"
-                         %(type(self._portfolio),len(self._portfolio)))
+            logger.debug("%s Portfolio class property set with %s of length %d"
+                         %(__s_fn_id__,type(self._portfolio),len(self._portfolio)))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -253,7 +254,7 @@ class Portfolio():
 
         try:
             if self._movement is None:
-                logger.warning("Movement class property is Non-type")
+                logger.warning("%s Movement class property is Non-type",__s_fn_id__)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -271,8 +272,8 @@ class Portfolio():
             if len(movement)<=0:
                 raise AttributeError("Invalid movement attribute, must be a non-empy list")
             self._movement = movement
-            logger.debug("Movement class property set with %s of length %d"
-                         %(type(self._portfolio),len(self._portfolio)))
+            logger.debug("%s Movement class property set with %s of length %d"
+                         %(__s_fn_id__,type(self._portfolio),len(self._portfolio)))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -365,7 +366,7 @@ class Portfolio():
                 **kwargs)
             if len(_mpts)>0:
                 self._portfolio = _mpts
-                logger.info("Loaded %d portfolios",len(self._portfolio))
+                logger.info("%s Loaded %d portfolios",__s_fn_id__,len(self._portfolio))
             else:
                 raise ValueError("No portfolios found for collections: %s in %s %s"
                                  % (db_coll,clsNoSQL.dbType,clsNoSQL.dbName))
@@ -474,8 +475,9 @@ class Portfolio():
 #             _colls_list.append(_mpt_coll)
             ''' confirm returned collection counts '''
             if len(_write_coll) > 0:
-                logger.debug("%d documents written to %s collection in %s %s database"
-                             ,len(_movement_list),_destin_coll,clsNoSQL.dbType,_destin_db)
+                logger.debug("%s %d documents written to %s collection in %s %s database",
+                             __s_fn_id__,len(_movement_list),
+                             _destin_coll,clsNoSQL.dbType,_destin_db)
 #             if len(_colls_list) > 0:
 #                 self._portfolio = _colls_list
 #                 logger.info("Wrote %d mpt collections successfully to %s %s",
@@ -534,21 +536,21 @@ class Portfolio():
             if self.idxType.upper() in ['RSI','MFI'] and \
                 float(index_value)>=0 and float(index_value)<=1.0:
                 self._idxValue = float(index_value)
-                logger.debug("Validated %s value %0.4f set for class property",
-                             self.idxType.upper(),self._idxValue)
+                logger.debug("%s Validated %s value %0.4f set for class property",
+                             __s_fn_id__,self.idxType.upper(),self._idxValue)
             elif self.idxType.upper() in ['SORTIONO','SHARP'] and float(index_value)>=0:
                 self._idxValue = float(index_value)
-                logger.debug("Validated %s value  %0.4f set for class property",
-                             self.idxType.upper(),self._idxValue)
+                logger.debug("%s Validated %s value  %0.4f set for class property",
+                             __s_fn_id__,self.idxType.upper(),self._idxValue)
             elif self.idxType.upper() in ['BETA','ALPHA'] and \
                 float(index_value)>=-1.0 and float(index_value)<=1.0:
                 self._idxValue = float(index_value)
-                logger.debug("Validated %s value %0.4f set for class property",
-                             self.idxType.upper(),self._idxValue)
+                logger.debug("%s Validated %s value %0.4f set for class property",
+                             __s_fn_id__,self.idxType.upper(),self._idxValue)
             else:
                 self._idxValue = index_value
-                logger.warning("%s index value %0.4f set as class property"
-                               ,self.idxType,self._idxValue)
+                logger.warning("%s %s index value %0.4f set as class property",
+                               __s_fn_id__,self.idxType,self._idxValue)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -690,8 +692,8 @@ class Portfolio():
                         if idx_val_ is None:
                             raise ValueError("%s returned None type %s value"
                                              ,__s_fn_id__,_idx_name)
-                        logger.info("%s computed index value for %s = %0.4f"
-                                    % (__s_fn_id__,_idx_name,idx_val_))
+                        logger.info("%s computed index value for %s = %0.4f",
+                                    __s_fn_id__,_idx_name,idx_val_)
                         idx_val_dict[_idx_name]=idx_val_
 
                     except Exception as idx_err:
@@ -818,8 +820,8 @@ class Portfolio():
             self.data = clsSDB.read_data_from_table(select=_query, **kwargs)
             self._data.na.drop(subset=[asset_val_col])
             if self._data.count() > 0:
-                logger.debug("%s loaded %d rows and %d columns between %s and %s from %s"
-                             ,__s_fn_id__,self._data.count(),len(self._data.columns),
+                logger.debug("%s loaded %s assets %d rows and %d columns between %s and %s from %s"
+                             ,__s_fn_id__,str(_assets_in),self._data.count(),len(self._data.columns),
                              str(_from_date),str(_to_date),_tbl_name.upper())
             else:
                 raise ValueError("No data portfolio asset data received for query %s: " % _query)
@@ -919,8 +921,8 @@ class Portfolio():
             ''' check if non-empty dataframe '''
             if weighted_data_.count()<=0:
                 raise AttributeError("No rows in merged wieghted dataframe")
-            logger.debug("Merged dataframes returning %d rows and %d columns"
-                         ,weighted_data_.count(),len(weighted_data_.columns))
+            logger.debug("%s Merged dataframes returning %d rows and %d columns",
+                         __s_fn_id__,weighted_data_.count(),len(weighted_data_.columns))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1289,9 +1291,9 @@ class Portfolio():
             risk_free_data_ = clsSDB.read_data_from_table(select=_query, **kwargs)
             risk_free_data_.na.drop(subset=[asset_val_col])
             if risk_free_data_.count() > 0:
-                logger.debug("%s loaded %d rows and %d columns for %s assets"
-                             ,__s_fn_id__,risk_free_data_.count()
-                             ,len(risk_free_data_.columns), str(_assets_in))
+                logger.debug("%s loaded %d rows and %d columns for %s assets",
+                             __s_fn_id__,risk_free_data_.count(),
+                             len(risk_free_data_.columns), str(_assets_in))
             else:
                 raise ValueError("No asset data received for query %s: " % _query)
 
