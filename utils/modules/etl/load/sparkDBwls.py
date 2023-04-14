@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 ''' Initialize with default environment variables '''
-__name__ = "sparkdbwls"
+__name__ = "sparkDBwls"
 __module__ = "etl"
 __package__ = "load"
 __app__ = "utils"
@@ -105,7 +105,7 @@ class SQLWorkLoads():
             'stdv',
         ]
 
-        __s_fn_id__ = "__init__"
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
 
         ''' initiate to load app.cfg data '''
         global logger
@@ -169,12 +169,12 @@ class SQLWorkLoads():
         Return self._* (* is the property attribute name)
         """
 
-        __s_fn_id__ = "function <@property dbType>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbType>"
 
         try:
             if self._dbType is None and appConf.has_option('DATABASE','DBTYPE'):
                 self._dbType = appConf.get('DATABASE','DBTYPE')
-                logger.debug("@property Database dbType set to: %s",self._dbType)
+                logger.debug("%s class property dbType set to: %s",__s_fn_id__,self._dbType)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -186,7 +186,7 @@ class SQLWorkLoads():
     @dbType.setter
     def dbType(self,db_type:str='') -> str:
 
-        __s_fn_id__ = "function <@dbType.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@dbType.setter>"
 
         try:
             if db_type not in self._dbTypeList:
@@ -206,12 +206,12 @@ class SQLWorkLoads():
     @property
     def dbDriver(self) -> str:
 
-        __s_fn_id__ = "function <@property dbDriver>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbDriver>"
 
         try:
             if self._dbDriver is None and appConf.has_option('DATABASE','DBDRIVER'):
                 self._dbDriver = appConf.get('DATABASE','DBDRIVER')
-                logger.debug("@property Database dbDriver set to: %s",self._dbDriver)
+                logger.debug("%s class property dbDriver set to: %s",__s_fn_id__,self._dbDriver)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -223,7 +223,7 @@ class SQLWorkLoads():
     @dbDriver.setter
     def dbDriver(self,db_driver:str='') -> str:
 
-        __s_fn_id__ = "function <@dbDriver.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@dbDriver.setter>"
 
         try:
             if db_driver is None or "".join(db_driver.strip()) == "":
@@ -243,12 +243,12 @@ class SQLWorkLoads():
     @property
     def dbHostIP(self) -> str:
 
-        __s_fn_id__ = "function <@property dbHostIP>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbHostIP>"
 
         try:
             if self._dbHostIP is None and appConf.has_option('DATABASE','DBHOSTIP'):
                 self._dbHostIP = appConf.get('DATABASE','DBHOSTIP')
-                logger.debug("@property Database dbHostIP set to: %s",self._dbHostIP)
+                logger.debug("%s class property dbHostIP set to: %s",__s_fn_id__,self._dbHostIP)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -260,7 +260,7 @@ class SQLWorkLoads():
     @dbHostIP.setter
     def dbHostIP(self,db_host_ip:str='127.0.0.1') -> str:
 
-        __s_fn_id__ = "function <@dbHostIP.setter >"
+        __s_fn_id__ = f"{self.__name__} function <@dbHostIP.setter >"
 
         try:
             if db_host_ip is None or "".join(db_host_ip.strip()) == "":
@@ -280,12 +280,12 @@ class SQLWorkLoads():
     @property
     def dbPort(self) -> str:
 
-        __s_fn_id__ = "function <@property dbPort>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbPort>"
 
         try:
             if self._dbPort is None and appConf.has_option('DATABASE','DBPORT'):
                 self._dbPort = appConf.get('DATABASE','DBPORT')
-                logger.debug("@property Database Port set to: %s",self._dbPort)
+                logger.debug("%s class property Port set to: %s",__s_fn_id__,self._dbPort)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -297,7 +297,7 @@ class SQLWorkLoads():
     @dbPort.setter
     def dbPort(self,db_port:int=5432) -> str:
 
-        __s_fn_id__ = "function <@dbPort.setter dbPort>"
+        __s_fn_id__ = f"{self.__name__} function <@dbPort.setter dbPort>"
 
         try:
             if db_port is None or not isinstance(db_type,int):
@@ -317,7 +317,7 @@ class SQLWorkLoads():
     @property
     def dbName(self):
 
-        __s_fn_id__ = "function <@property dbName>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbName>"
 
         try:
             if self._dbName is None and appConf.has_option('DATABASE','DBNAME'):
@@ -334,14 +334,14 @@ class SQLWorkLoads():
     @dbName.setter
     def dbName(self,db_name:str=''):
 
-        __s_fn_id__ = "function <@dbName.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@dbName.setter>"
 
         try:
             if db_name is None or "".join(db_name.strip()) == "":
                 raise ConnectionError("Invalid database NAME %s" % db_name)
 
             self._dbName = db_name
-            logger.debug("@setter Database dbName set to: %s",self._dbName)
+            logger.debug("%s class property dbName set to: %s",__s_fn_id__,self._dbName)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -354,12 +354,12 @@ class SQLWorkLoads():
     @property
     def dbSchema(self) -> str:
 
-        __s_fn_id__ = "function <@property dbSchema>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbSchema>"
 
         try:
             if self._dbSchema is None and appConf.has_option('DATABASE','DBSCHEMA'):
                 self._dbSchema = appConf.get('DATABASE','DBSCHEMA')
-                logger.debug("@property Database dbSchema set to: %s",self._dbSchema)
+                logger.debug("%s class property dbSchema set to: %s",__s_fn_id__,self._dbSchema)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -371,7 +371,7 @@ class SQLWorkLoads():
     @dbSchema.setter
     def dbSchema(self,db_schema:str='') -> str:
 
-        __s_fn_id__ = "function <@dbSchema.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@dbSchema.setter>"
 
         try:
             if db_schema is None or "".join(db_schema.strip()) == "":
@@ -391,12 +391,12 @@ class SQLWorkLoads():
     @property
     def dbUser(self) -> str:
 
-        __s_fn_id__ = "function <@property dbUser>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbUser>"
 
         try:
             if self._dbUser is None and appConf.has_option('DATABASE','DBUSER'):
                 self._dbUser = appConf.get('DATABASE','DBUSER')
-                logger.debug("@property Database dbUser set to: %s",self._dbUser)
+                logger.debug("%s class property dbUser set to: %s",__s_fn_id__,self._dbUser)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -408,7 +408,7 @@ class SQLWorkLoads():
     @dbUser.setter
     def dbUser(self,db_user:str='') -> str:
 
-        __s_fn_id__ = "function <@dbPswd.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@dbPswd.setter>"
 
         try:
             if db_user is None or "".join(db_user.strip()) == "":
@@ -428,12 +428,12 @@ class SQLWorkLoads():
     @property
     def dbPswd(self) -> str:
 
-        __s_fn_id__ = "function <@property dbPswd>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbPswd>"
 
         try:
             if self._dbPswd is None and appConf.has_option('DATABASE','DBPSWD'):
                 self._dbPswd = appConf.get('DATABASE','DBPSWD')
-                logger.debug("@property Database dbPswd set to: %s",self._dbPswd)
+                logger.debug("%s class property dbPswd set to: %s",__s_fn_id__,self._dbPswd)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -445,7 +445,7 @@ class SQLWorkLoads():
     @dbPswd.setter
     def dbPswd(self,db_driver:str='') -> str:
 
-        __s_fn_id__ = "function <@session.setter dbPswd>"
+        __s_fn_id__ = f"{self.__name__} function <@session.setter dbPswd>"
 
         try:
             if db_driver is None or "".join(db_driver.strip()) == "":
@@ -473,7 +473,7 @@ class SQLWorkLoads():
     @property
     def dbConnURL(self) -> str:
 
-        __s_fn_id__ = "function <@property dbConnURL>"
+        __s_fn_id__ = f"{self.__name__} function <@property dbConnURL>"
 
         try:
             if self._dbConnURL is None and \
@@ -484,7 +484,7 @@ class SQLWorkLoads():
                 self._dbConnURL = "jdbc:"+self.dbType+\
                                     "://"+self.dbHostIP+":"+\
                                     self.dbPort+"/"+self.dbName
-            logger.debug("@property Database dbConnURL set to: %s",self._dbConnURL)
+            logger.debug("%s class property dbConnURL set to: %s",__s_fn_id__,self._dbConnURL)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -496,7 +496,7 @@ class SQLWorkLoads():
     @dbConnURL.setter
     def dbConnURL(self,**kwargs) -> str:
 
-        __s_fn_id__ = "function <@dbConnURL.setter dbConnURL>"
+        __s_fn_id__ = f"{self.__name__} function <@dbConnURL.setter>"
 
         try:
             ''' --- DATABASE PROPERTY **KWARGS --- '''
@@ -543,12 +543,12 @@ class SQLWorkLoads():
     @property
     def homeDir(self) -> str:
 
-        __s_fn_id__ = "function <@property homeDir>"
+        __s_fn_id__ = f"{self.__name__} function <@property homeDir>"
 
         try:
             if self._homeDir is None and appConf.has_option('SPARK','HOMEDIR'):
                 self._homeDir = appConf.get('SPARK','HOMEDIR')
-                logger.debug("@property Spark homeDir set to: %s",self._homeDir)
+                logger.debug("%s class property homeDir set to: %s",__s_fn_id__,self._homeDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -560,7 +560,7 @@ class SQLWorkLoads():
     @homeDir.setter
     def homeDir(self,home_dir:str='') -> str:
 
-        __s_fn_id__ = "function <@homeDir.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@homeDir.setter>"
 
         try:
             if home_dir is None or "".join(home_dir.strip()) == "":
@@ -580,12 +580,12 @@ class SQLWorkLoads():
     @property
     def binDir(self) -> str:
 
-        __s_fn_id__ = "function <@property binDir>"
+        __s_fn_id__ = f"{self.__name__} function <@property binDir>"
 
         try:
             if self._binDir is None and appConf.has_option('SPARK','BINDIR'):
                 self._binDir = appConf.get('SPARK','BINDIR')
-                logger.debug("@property Spark binDir set to: %s",self._binDir)
+                logger.debug("%s class property binDir set to: %s",__s_fn_id__,self._binDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -597,7 +597,7 @@ class SQLWorkLoads():
     @binDir.setter
     def binDir(self,bin_dir:str='') -> str:
 
-        __s_fn_id__ = "function <@binDir.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@binDir.setter>"
 
         try:
             if bin_dir is None or "".join(bin_dir.strip()) == "":
@@ -617,7 +617,7 @@ class SQLWorkLoads():
     @property
     def appName(self) -> str:
 
-        __s_fn_id__ = "function <@property appName>"
+        __s_fn_id__ = f"{self.__name__} function <@property appName>"
 
         try:
             if self._appName is None or "".join(self._appName.split())=="":
@@ -625,7 +625,7 @@ class SQLWorkLoads():
                                           self.__module__,
                                           self.__package__,
                                           self.__name__])
-                logger.debug("@property Spark appName set to: %s",self._appName)
+                logger.debug("%s class property appName set to: %s",__s_fn_id__,self._appName)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -637,7 +637,7 @@ class SQLWorkLoads():
     @appName.setter
     def appName(self,app_name:str='') -> str:
 
-        __s_fn_id__ = "function <@appName.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@appName.setter>"
 
         try:
             if app_name is None or "".join(app_name.strip()) == "":
@@ -657,12 +657,12 @@ class SQLWorkLoads():
     @property
     def config(self) -> str:
 
-        __s_fn_id__ = "function <@property config>"
+        __s_fn_id__ = f"{self.__name__} function <@property config>"
 
         try:
             if self._config is None and appConf.has_option('SPARK','CONFIG'):
                 self._config = appConf.get('SPARK','CONFIG')
-                logger.debug("@property Spark config set to: %s",self._config)
+                logger.debug("%s class property Spark config set to: %s",__s_fn_id__,self._config)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -674,7 +674,7 @@ class SQLWorkLoads():
     @config.setter
     def config(self,config:str='') -> str:
 
-        __s_fn_id__ = "function <@config.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@config.setter>"
 
         try:
             if config is None or "".join(config.strip()) == "":
@@ -694,12 +694,12 @@ class SQLWorkLoads():
     @property
     def jarDir(self) -> str:
 
-        __s_fn_id__ = "function <@property jarDir>"
+        __s_fn_id__ = f"{self.__name__} function <@property jarDir>"
 
         try:
             if self._jarDir is None and appConf.has_option('SPARK','JARDIR'):
                 self._jarDir = appConf.get('SPARK','JARDIR')
-                logger.debug("@property Spark jarDir set to: %s",self._jarDir)
+                logger.debug("%s class property Spark jarDir set to: %s",__s_fn_id__,self._jarDir)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -711,7 +711,7 @@ class SQLWorkLoads():
     @jarDir.setter
     def jarDir(self,jar_dir:str='') -> str:
 
-        __s_fn_id__ = "function <@jarDir.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@jarDir.setter>"
 
         try:
             if jar_dir is None or "".join(jar_dir.strip()) == "":
@@ -731,12 +731,12 @@ class SQLWorkLoads():
     @property
     def master(self) -> str:
 
-        __s_fn_id__ = "function <@property master>"
+        __s_fn_id__ = f"{self.__name__} function <@property master>"
 
         try:
             if self._master is None and appConf.has_option('SPARK','MASTER'):
                 self._master = appConf.get('SPARK','MASTER')
-                logger.debug("@property Spark master set to: %s",self._master)
+                logger.debug("%s class property Spark master set to: %s",__s_fn_id__,self._master)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -748,7 +748,7 @@ class SQLWorkLoads():
     @master.setter
     def master(self,master:str='local[1]') -> str:
 
-        __s_fn_id__ = "function <@master.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@master.setter>"
 
         try:
             if master is None or "".join(master.strip()) == "":
@@ -769,7 +769,7 @@ class SQLWorkLoads():
     @property
     def rwFormat(self) -> str:
 
-        __s_fn_id__ = "function <@property rwFormat>"
+        __s_fn_id__ = f"{self.__name__} function <@property rwFormat>"
 
         try:
             if self._rwFormat is None and appConf.has_option('SPARK','FORMAT'):
@@ -786,7 +786,7 @@ class SQLWorkLoads():
     @rwFormat.setter
     def rwFormat(self,rw_format:str='jdbc') -> str:
 
-        __s_fn_id__ = "function <@rwFormat.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@rwFormat.setter>"
 
         try:
             if rw_format.lower() not in ['jdbc']:
@@ -807,7 +807,7 @@ class SQLWorkLoads():
     @property
     def saveMode(self) -> str:
 
-        __s_fn_id__ = "function <@property saveMode>"
+        __s_fn_id__ = f"{self.__name__} function <@property saveMode>"
 
         try:
             if self._saveMode is None and appConf.has_option('SPARK','SAVEMODE'):
@@ -824,7 +824,7 @@ class SQLWorkLoads():
     @saveMode.setter
     def saveMode(self,save_mode:str='Append') -> str:
 
-        __s_fn_id__ = "function <@saveMode.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@saveMode.setter>"
 
         try:
             if save_mode not in ['Append','Overwrite']:
@@ -848,7 +848,7 @@ class SQLWorkLoads():
     @property
     def session(self):
 
-        __s_fn_id__ = "function <@property session>"
+        __s_fn_id__ = f"{self.__name__} function <@property session>"
 
         try:
             if self._session is None and \
@@ -868,7 +868,7 @@ class SQLWorkLoads():
                                 .appName(self.appName) \
                                 .config(self.config, self.jarDir) \
                                 .getOrCreate()
-                logger.debug("Non-type spark session set with homeDir: %s appName: %s "+\
+                logger.debug("Nonetype spark session set with homeDir: %s appName: %s "+\
                              "conf: %s jarDir: %s master: %s"
                              ,self.homeDir,self.appName,self.config,self.jarDir,self.master)
                 
@@ -884,7 +884,7 @@ class SQLWorkLoads():
     @session.setter
     def session(self,session_args:dict={}):
 
-        __s_fn_id__ = "function <@session.setter session>"
+        __s_fn_id__ = f"{self.__name__} function <@session.setter>"
 
         try:
             ''' set the spark home directory '''
@@ -932,7 +932,7 @@ class SQLWorkLoads():
     @property
     def data(self):
 
-        __s_fn_id__ = "function <@property data>"
+        __s_fn_id__ = f"{self.__name__} function <@property data>"
 
         try:
             if not isinstance(self._data,DataFrame):
@@ -950,13 +950,16 @@ class SQLWorkLoads():
     @data.setter
     def data(self,data):
 
-        __s_fn_id__ = "function <@data.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@data.setter>"
 
         try:
             if data is None:
                 raise AttributeError("Dataset cannot be empty")
-            self._data = data
-                
+            if not isinstance(data,DataFrame):
+                self._data = self.session.createDataFrame(data)
+            else:
+                self._data = data
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
@@ -978,7 +981,7 @@ class SQLWorkLoads():
         Returns: self._partitions (int)
         """
 
-        __s_fn_id__ = "function <@property partitions>"
+        __s_fn_id__ = f"{self.__name__} function <@property partitions>"
 
         try:
             if self._partitions is None and appConf.has_option('SPARK','PARTITIONS'):
@@ -995,7 +998,7 @@ class SQLWorkLoads():
     @partitions.setter
     def partitions(self,num_partitions:int=2):
 
-        __s_fn_id__ = "function <@partitions.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@partitions.setter>"
 
         try:
             if num_partitions <= 0:
@@ -1040,7 +1043,7 @@ class SQLWorkLoads():
         """
 
         load_sdf = None   # initiatlize return var
-        __s_fn_id__ = "function <read_data_from_table>"
+        __s_fn_id__ = f"{self.__name__} function <read_data_from_table>"
 
         try:
             ''' set the partitions '''
@@ -1098,16 +1101,21 @@ class SQLWorkLoads():
     def insert_sdf_into_table(
         self,
         save_sdf,
-        db_table:str,
+        db_name : str=None,
+        db_table: str=None,
         **kwargs):
         
-        __s_fn_id__ = "function <insert_sdf_into_table>"
+        __s_fn_id__ = f"{self.__name__} function <insert_sdf_into_table>"
         _num_records_saved = 0
-        
+
         try:
             self.data = save_sdf
             if self.data.count() <= 0:
-                raise ValueError("No data to insert into database table %s"% db_table)
+                raise AttributeError("No data to insert into database table %s"% db_table)
+            logger.debug("%s %s dtype data convereted to %s pysaprk dataframe with %d rows %d columns",
+                         __s_fn_id__,type(save_sdf),type(self._data),
+                         self._data.count(),len(self._data.columns))
+            self.dbName=db_name
             if len(kwargs) > 0:
                 self.session = kwargs
             else:
@@ -1116,13 +1124,13 @@ class SQLWorkLoads():
             ''' TODO validate table exists '''
             
             ''' if created audit columns don't exist add them '''
-            listColumns=self.data.columns
+            listColumns=self._data.columns
             if "created_dt" not in listColumns:
-                self.data = self.data.withColumn("created_dt", F.current_timestamp())
+                self._data = self._data.withColumn("created_dt", F.current_timestamp())
             if "created_by" not in listColumns:
-                self.data = self.data.withColumn("created_by", F.lit(self.dbUser))
+                self._data = self._data.withColumn("created_by", F.lit(self.dbUser))
             if "created_proc" not in listColumns:
-                self.data = self.data.withColumn("created_proc", F.lit("Unknown"))
+                self._data = self._data.withColumn("created_proc", F.lit("Unknown"))
             
             ''' TODO: add code to accept options() to manage schema specific
                 authentication and access to tables '''
@@ -1131,10 +1139,9 @@ class SQLWorkLoads():
 # #                 self.sparkSaveMode = kwargs['saveMode']
 #                 self.sparkSaveMode = kwargs['SAVEMODE']
                 
-            logger.info("Wait a moment while we insert data int %s", db_table)
-            ''' jdbc:postgresql://<host>:<port>/<database> '''
+#             logger.info("%s Wait a moment while we insert data int %s",__s_fn_id__,db_table)
             
-            self.data.select(self.data.columns).\
+            self._data.select(self.data.columns).\
                     write.format(self.rwFormat).\
                     mode(self.saveMode).\
                 options(
@@ -1144,9 +1151,10 @@ class SQLWorkLoads():
                     password=self.dbPswd, # 'postgres',
                     driver=self.dbDriver).save(self.saveMode.lower())
 
-            _num_records_saved = self.data.count()
-            logger.info("Saved %d  rows into table %s in database %s complete!"
-                        ,_num_records_saved, ".".join([self.dbSchema,db_table]), self.dbName)
+            _num_records_saved = self._data.count()
+            logger.debug("%s Saved %d  rows into table %s in database %s complete!",
+                        __s_fn_id__,_num_records_saved,
+                         ".".join([self.dbSchema,db_table]), self._dbName)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1158,7 +1166,6 @@ class SQLWorkLoads():
     ''' - Function --- UPDATE TABLE ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
-
     '''
     def upsert_with_dbtype(func):
         """
@@ -1180,7 +1187,7 @@ class SQLWorkLoads():
                 processed record count
             """
                 
-            __s_fn_id__ = "function <upsert_wrapper>"
+            __s_fn_id__ = f"{self.__name__} function <upsert_wrapper>"
             _num_records_saved = 0
             total_recs_loaded = None   # initiatlize return attr
 
@@ -1192,10 +1199,11 @@ class SQLWorkLoads():
                 if self.dbType == 'postgresql':
                     upsert_query = SQLWorkLoads.build_pgsql_query(
                         cols=_data.schema.names,
-                        table_name=db_table,
+                        table_name=self.dbSchema+"."+db_table,
                         unique_key=unique_keys,
                         cols_not_for_update=_omitted_cols,
                     )
+#                     print(upsert_query)
                     _db_cred = {
                         "host": self.dbHostIP,
                         "database": self.dbName,
@@ -1218,8 +1226,9 @@ class SQLWorkLoads():
                 else:
                     raise RuntimeError("TBD %s dbType upsert; only works for postgresql", self.dbType)
 
-                logger.info("Saved %d  rows into table %s in database %s complete!"
-                            ,self.data.count(), self.dbSchema+"."+db_table, self.dbName)
+                logger.info("%s Saved %d  rows into table %s in database %s complete!",
+                            __s_fn_id__,self.data.count(),
+                            self.dbSchema+"."+db_table, self.dbName)
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
                 logger.debug(traceback.format_exc())
@@ -1233,7 +1242,7 @@ class SQLWorkLoads():
     def upsert_sdf_to_table(
         self,
         save_sdf,       # any dtype data set (will be converted to Dataframe)
-        db_table :str,  # name of table to be updated
+        db_table :str,  # name of table to be updated; excluding the schema name
         unique_keys:List[str], # list of columns to use in the where statement 
 #         uspert_sql:str="",  # sql update statement
         **options) -> int:
@@ -1247,7 +1256,7 @@ class SQLWorkLoads():
             The options and and drivers will be set accordingly.
         Attributes:
             save_sdf (any) dtype that can be converted to a pyspark dataframe
-            db_table (str) table name to update rows
+            db_table (str) table name to update rows; excluding schema name
             uspert_sql (str) sql update statement to apply directly
         Returns"
             self._data (DataFrame) 
@@ -1255,7 +1264,8 @@ class SQLWorkLoads():
             batch_size_ (int) number of rows to process in each batch
         """
         
-        __s_fn_id__ = "function <upsert_sdf_to_table>"
+        __s_fn_id__ = f"{self.__name__} function <upsert_sdf_to_table>"
+        
         cols_not_for_update_=None
         batch_size_ = 1000
 
@@ -1274,7 +1284,7 @@ class SQLWorkLoads():
             ''' if created audit columns don't exist add them '''
             listColumns=self.data.columns
             if "modified_dt" not in listColumns:
-                self._data = self.data.withColumn("modified_dt", F.current_timestamp())
+                self._data = self._data.withColumn("modified_dt", F.current_timestamp())
             else:
                 self._data = self._data.withColumn('modified_dt',
                                                    F.when(F.col('modified_dt').isNull(),
@@ -1315,14 +1325,14 @@ class SQLWorkLoads():
 #             if "driver" not in options.keys():
 #                 options['driver'] = self.dbDriver
 
-            logger.debug("Validation complete with %d rows to process, "+\
+            logger.debug("%s Validation complete with %d rows to process, "+\
                          "%d columns to omit in update, and "+\
                          "applying %d batch size", 
-                         self._data.count(), len(cols_not_for_update_), batch_size_)
+                         __s_fn_id__,self._data.count(), len(cols_not_for_update_), batch_size_)
             print("Wait a moment, writing data to %s %s database ..." 
                   %(self.dbType, self.dbName))
-            ''' use query else use partition column'''
-            
+            ''' use query else use partition column '''
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
@@ -1353,6 +1363,8 @@ class SQLWorkLoads():
             port (str) postgres port to connect; e.g. 5432.
         Return (connect) database connection.
         """
+        __s_fn_id__ = f"{SQLWorkLoads.__name__} @staticmethod <upsert_sdf_to_table>"
+
         try:
             conn = connect(
                 host=host, database=database,
@@ -1390,6 +1402,8 @@ class SQLWorkLoads():
             batch_size (int) size of batch per round trip to database.
         Return (int) with total records processed.
         """
+
+        __s_fn_id__ = f"{SQLWorkLoads.__name__} @staticmethod <batch_and_upsert>"
 
         conn, cur = None, None
         counter = 0
@@ -1456,7 +1470,8 @@ class SQLWorkLoads():
         Returns (str) Upsert query as per input arguments.
         """
 
-        __s_fn_id__ = "function <build_pgsql_query>"
+        __s_fn_id__ = f"{SQLWorkLoads.__name__} @staticmethod <build_pgsql_query>"
+
         insert_query=""
         on_conflict_clause=""
 
@@ -1493,64 +1508,3 @@ class SQLWorkLoads():
             print("[Error]"+__s_fn_id__, err)
 
         return insert_query + on_conflict_clause
-
-#     @staticmethod
-#     def upsert_sdf_to_pgsql(
-#         dataframe_to_upsert: DataFrame, #spark DataFrame to upsert to postgres
-#         table_name: str,                # postgres table name to upsert
-#         table_unique_key: List[str],    # postgres table primary key list
-#         database_credentials: Dict[str, str], # database connection credentials
-#         batch_size: int = 1000, # desired batch size for upsert
-#         parallelism: int = 1,   # No. of parallel connections to postgres database
-#         **kwargs,
-#     ) -> int:
-#         """
-#         Description:
-#             Upsert a spark DataFrame into a postgres table.
-#             Note: If the target table lacks any unique index, data will be appended through
-#             INSERTS as UPSERTS in postgres require a unique constraint to be present in the table.
-#         Attributes:
-#             dataframe_to_upsert (DataFrame) spark DataFrame to upsert to postgres.
-#             table_name (str) postgres table name to upsert.
-#             table_unique_key (List) postgres table primary key list.
-#             database_credentials (Dict) database connection credentials.
-#                 {
-#                 'host': SQLWorkLoads.dbHostIP,
-#                 'database': SQLWorkLoads.dbName,
-#                 'user': SQLWorkLoads.dbUser,
-#                 'password': SQLWorkLoads.dbPswd,
-#                 'port': SQLWorkLoads.dbPort,
-#                 }
-#             batch_size (int) desired batch size for upsert; e.g. 1000.
-#             parallelism (int) No. of parallel connections to postgres database.
-#         Returns (int) total_recs_loaded
-#         """
-
-#         __s_fn_id__ = "function <upsert_sdf_to_pgsql>"
-
-#         try:
-#             upsert_query = SQLWorkLoads.build_pgsql_query(
-#                 cols=dataframe_to_upsert.schema.names,
-#                 table_name=table_name, unique_key=table_unique_key,
-#                 cols_not_for_update=None,
-#             )
-#             upsert_stats = dataframe_to_upsert.coalesce(parallelism).rdd.mapPartitions(
-#                 lambda dataframe_partition: SQLWorkLoads.batch_and_upsert(
-#                     dataframe_partition=dataframe_partition,
-#                     sql=upsert_query,
-#                     database_credentials=database_credentials,
-#                     batch_size=batch_size
-#                 )
-#             )
-
-#             total_recs_loaded = 0
-
-#             for counter in upsert_stats.collect():
-#                 total_recs_loaded += counter
-
-#         except Exception as err:
-#             logger.error("%s %s \n",__s_fn_id__, err)
-#             logger.debug(traceback.format_exc())
-#             print("[Error]"+__s_fn_id__, err)
-
-#         return total_recs_loaded

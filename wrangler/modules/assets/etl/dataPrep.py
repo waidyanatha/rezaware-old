@@ -75,6 +75,8 @@ class RateOfReturns():
         global clsSCNR
         global clsNoSQL
 
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
+        
         try:
             self.cwd=os.path.dirname(__file__)
             pkgConf = configparser.ConfigParser()
@@ -82,15 +84,6 @@ class RateOfReturns():
 
             self.rezHome = pkgConf.get("CWDS","REZAWARE")
             sys.path.insert(1,self.rezHome)
-
-#             self.pckgDir = pkgConf.get("CWDS",self.__package__)
-#             self.appDir = pkgConf.get("CWDS",self.__app__)
-#             ''' DEPRECATED: get the path to the input and output data '''
-#             self.dataDir = pkgConf.get("CWDS","DATA")
-
-#             ''' set app configparser '''
-#             appConf = configparser.ConfigParser()
-#             appConf.read(os.path.join(self.appDir, self.__conf_fname__))
 
             ''' innitialize the logger '''
             from rezaware import Logger as logs
@@ -125,9 +118,9 @@ class RateOfReturns():
             print("%s Class initialization complete" % self.__name__)
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return None
 
@@ -146,7 +139,7 @@ class RateOfReturns():
         Returns (dataframe) self._data
         """
 
-        __s_fn_id__ = "function <@property data>"
+        __s_fn_id__ = f"{self.__name__} function <@property data>"
 
         try:
             if self._data is None:
@@ -227,7 +220,7 @@ class RateOfReturns():
 #             logger.debug(traceback.format_exc())
 #             print("[Error]"+__s_fn_id__, err)
 
-        return self._portfolio
+#         return self._portfolio
 
     ''' Function --- PREVIOUS VAL DIFFERENCE ---
 
@@ -252,7 +245,7 @@ class RateOfReturns():
         Returns:
         """
 
-        __s_fn_id__ = "function <unpivot_table>"
+        __s_fn_id__ = f"{RateOfReturns.__name__} function <unpivot_table>"
         _diff_data = None
         _diff_col = "diff"
         __prev_val_pofix__ = "lag"
@@ -283,8 +276,8 @@ class RateOfReturns():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return _diff_data, _prev_val, _diff_col
 
@@ -315,49 +308,99 @@ class RateOfReturns():
                   * Counts the number of Nulls to ensure the timeseries is complete.
                   * unpivots the dataframe to reconstuct in original form
             Attributes:
+                query (str) - not used in this wrapper but required for embedding the func
                 **kwargs
-                    AGGREGATE - to set the impute strategy as mean, stddev, avg, ...
+                    PARTCOLNAME - column name to pivot the values into columns (e,g., asset_name)
+                    DATECOLNAME - datetime column name; to group the pivot columns (e.g. mcap_date)
+                    VALUECOLNAME- column with the numeric valuesto apply the imputation (e.g. mcap_value)
+                    AGGREGATE - to set the impute strategy as 'mean','median','mode' ...
             Returns:
                 self._data (dataframe)
+            Exceptions:
+                * If essential **kwargs are not specified then will use default values; log a warning
+                * If the CleanNRich (clsSCNR) class methods pivot, impute, & unpivot return empty or
+                    Nonetype dataframes, then exception is logged and process will abort
             """
 
-            __s_fn_id__ = "function <impute_wrapper>"
-            __strategy__='mean'
+            __s_fn_id__ = f"{self.__name__} function <impute_wrapper>"
+            __def_part_col__='asset_name'
+            __def_date_col__="mcap_date"
+            __def_val_col__ ="mcap_value"
+            __def_agg_st__ = 'mean'
+            
             try:
-#                 _asset_data = func(self, query:str="", **kwargs)
                 self._data = func(self, query, **kwargs)
+
+                ''' set default attribute values '''
+                if "PARTCOLNAME" not in kwargs.keys():
+                    kwargs['PARTCOLNAME']=__def_part_col__
+                    logger.warning("%s undefined kwargs PARTCOLNAME, setting to default: %s",
+                                   __s_fn_id__,kwargs['PARTCOLNAME'].upper())
+                else:
+                    logger.debug("%s using set kwargs PARTCOLNAME: %s ",
+                                 __s_fn_id__,kwargs['PARTCOLNAME'].upper())
+                if "DATECOLNAME" not in kwargs.keys():
+                    kwargs['DATECOLNAME']=__def_date_col__
+                    logger.warning("%s undefined kwargs DATECOLNAME, setting to default: %s",
+                                   __s_fn_id__,kwargs['DATECOLNAME'].upper())
+                else:
+                    logger.debug("%s using set kwargs DATECOLNAME: %s ",
+                                 __s_fn_id__,kwargs['DATECOLNAME'].upper())
+                if "VALUECOLNAME" not in kwargs.keys():
+                    kwargs['VALUECOLNAME']=__def_val_col__
+                    logger.warning("%s undefined kwargs VALUECOLNAME, setting to default to: %s",
+                                   __s_fn_id__,kwargs['VALUECOLNAME'].upper())
+                else:
+                    logger.debug("%s using set kwargs VALUECOLNAME: %s ",
+                                 __s_fn_id__,kwargs['VALUECOLNAME'].upper())
+
                 ''' transpose to get assets in the columns '''
-#                 self._data=clsSCNR.pivot_data(
                 _pivot_sdf=clsSCNR.pivot_data(
                     data=self._data,
-                    group_columns='mcap_date',
-                    pivot_column='asset_name',
-                    agg_column='mcap_value',
+                    group_columns=kwargs['DATECOLNAME'], # mcap_date,price_date,volume_date,etc
+                    pivot_column =kwargs['PARTCOLNAME'], # asset_name,
+                    agg_column = kwargs['VALUECOLNAME'], # mcap_value, price_value, volume_size,etc
                     **kwargs,
                 )
+                if _pivot_sdf is None or _pivot_sdf.count()<=0:
+                    raise RuntimeError("Pivot_data method call returned a %s type object, aborting!" 
+                                       % type(_pivot_sdf))
+                logger.debug("%s returned a pivot table with %d columns and %d rows with " +\
+                             "group column: %s, pivot column: %s, and aggregate column: %s ",
+                             __s_fn_id__,len(_pivot_sdf.columns),_pivot_sdf.count(),
+                             kwargs['DATECOLNAME'].upper(),kwargs['PARTCOLNAME'].upper(),
+                             kwargs['VALUECOLNAME'].upper())
 
                 ''' impute to fill the gaps '''
-                _agg_strategy = __strategy__
-                if "AGGREGATE" in kwargs.keys():
-                    _agg_strategy = kwargs['AGGREGATE']
-#                 _col_subset = self._data.columns
+                if "IMPUTESTRATEGY" not in kwargs.keys() \
+                    and kwargs['IMPUTESTRATEGY'] not in ['mean','median','mode']:
+                    kwargs['IMPUTESTRATEGY']=__def_agg_st__
+                    logger.debug("%s undefined kwargs IMPUTESTRATEGY, setting to default %s",
+                                   __s_fn_id__,kwargs['IMPUTESTRATEGY'].upper())
+                else:
+                    logger.debug("%s set aggregate strategy to %s ",
+                                 __s_fn_id__,kwargs['IMPUTESTRATEGY'].upper())
+                ''' select columns excluding date column '''
                 _col_subset = _pivot_sdf.columns
-                _col_subset.remove('mcap_date')
-#                 _piv_ticker_sdf = clsSCNR.impute_data(
+                _col_subset.remove(kwargs['DATECOLNAME'])
+                ''' impute the data columns '''
                 _pivot_sdf = clsSCNR.impute_data(
-#                     data=self._data,
-                    data=_pivot_sdf,
+                    data = _pivot_sdf,
                     column_subset=_col_subset,
-                    strategy=_agg_strategy,
+                    strategy = kwargs['IMPUTESTRATEGY'],
                 )
-                logger.debug("%s ran an impute on all %d asset tickers"
-                             ,__s_fn_id__,len(_col_subset))
+                if _pivot_sdf is None or _pivot_sdf.count()<=0:
+                    raise RuntimeError("Impute_data method call returned a %s object, aborting! "
+                                       % type(_pivot_sdf))
+                logger.debug("%s ran an impute_data method on all %d %s partition columns; " +\
+                             "excluding %s column; received %d rows.",
+                             __s_fn_id__,len(_col_subset),kwargs['PARTCOLNAME'].upper(),
+                             kwargs['DATECOLNAME'].upper(),_pivot_sdf.count())
 
                 ''' ensure there are no non-numeric values '''
     #             _col_subset = mcap_sdf.columns
-    #             _col_subset.remove('mcap_date')
+    #             _col_subset.remove(kwargs['DATECOLNAME'])
                 _nan_counts_sdf = clsSCNR.count_column_nulls(
-#                     data=self._data,
                     data=_pivot_sdf,
                     column_subset=_col_subset
                 )
@@ -376,23 +419,36 @@ class RateOfReturns():
 
                 ''' unpivot dataframe '''
                 _piv_col_subset = _pivot_sdf.columns
-                _piv_col_subset.remove('mcap_date')
+                _piv_col_subset.remove(kwargs['DATECOLNAME'])
 
                 _unpivot_sdf = clsSCNR.unpivot_table(
                     table = _pivot_sdf,
                     unpivot_columns=_piv_col_subset,
-                    index_column='mcap_date',
-                    value_columns=['asset_name','mcap_value'],
-                    where_cols = 'mcap_value',
+                    index_column=kwargs['DATECOLNAME'],
+#                     value_columns=['asset_name','mcap_value'],
+                    value_columns=[kwargs['PARTCOLNAME'],kwargs['VALUECOLNAME']],
+                    where_cols = kwargs['VALUECOLNAME'],
                     **kwargs
                 )
 
-                if _unpivot_sdf.count() > 0:
-                    self._data = self._data.unionByName(_unpivot_sdf,allowMissingColumns=True)
-                    logger.debug("After unpivot, dataframe with rows %d columns %d"
-                                 ,self._data.count(),len(self._data.columns))
-                else:
-                    raise ValueError("Irregular unpivot ticker dataset; something went wrong")
+                if _unpivot_sdf is None or _unpivot_sdf.count() <= 0:
+                    raise ValueError("Unpivot returned %s dataset" % type(_unpivot_sdf))
+#                 self._data = self._data.unionByName(_unpivot_sdf,allowMissingColumns=True)
+                self._data=self._data.drop(kwargs['VALUECOLNAME'])
+                self._data = self._data.join(_unpivot_sdf,
+                                             [kwargs['PARTCOLNAME'],kwargs['DATECOLNAME']],
+                                             "fullouter")
+                logger.debug("%s After unpivot, dataframe with rows %d columns %d",
+                             __s_fn_id__,self._data.count(),len(self._data.columns))
+
+                ''' add missing values; e.g. asset_symbol '''
+                null_cols_list = ["currency","asset_symbol"]
+                for _null_col in null_cols_list:
+                    self._data = self._data.orderBy(F.col(_null_col).asc())
+                    self._data = self._data.withColumn(_null_col, F.first(_null_col,ignorenulls=True)\
+                                       .over(Window.partitionBy(kwargs['PARTCOLNAME'])))
+                logger.debug("%s Replaced Null values in dataframe columns %s",
+                             __s_fn_id__,str(null_cols_list))
 
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
@@ -408,8 +464,8 @@ class RateOfReturns():
         Description:
             The key feature is to read the mcap data from postgresql and impute to ensure
             the data is clean and useable. There are two options for reading the data
-             (i) giving an SQL query as a string
-            (ii) defining the table name to read the entire dataset
+             (* giving an SQL query as a string
+              * defining the table name to read the entire dataset
             Makes use of sparkDBwls package to read the data from the DB
         Arguments:
             query (str) - valid SQL select statement with any SQl clauses
@@ -421,7 +477,8 @@ class RateOfReturns():
         Returns: self._data (dataframe)
         """
 
-        __s_fn_id__ = "function <read_n_clean_mcap>"
+        __s_fn_id__ = f"{self.__name__} function <read_n_clean_mcap>"
+
         _table ='warehouse.mcap_past'
         _column='mcap_date'
         _to_date =date.today()
@@ -439,18 +496,17 @@ class RateOfReturns():
 
             if query is not None and "".join(query.split())!="":
                 self._data = clsSDB.read_data_from_table(select=query, **kwargs)
-            else:
-                self._data = clsSDB.read_data_from_table(
-                    db_table=_table,
-                    db_column=_column,
-                    lower_bound=_from_date,
-                    upper_bound=_to_date,
-                    **kwargs)
+#             else:
+#                 self._data = clsSDB.read_data_from_table(
+#                     db_table=_table,
+#                     db_column=_column,
+#                     lower_bound=_from_date,
+#                     upper_bound=_to_date,
+#                     **kwargs)
 
-            if self._data.count() > 0:
-                logger.debug("%s loaded %d rows",__s_fn_id__,self._data.count())
-            else:
-                raise ValueError("%s did not read any data",__s_fn_id__)
+            if self._data.count() <= 0:
+                raise RuntimeError("%s did not read any data",__s_fn_id__)
+            logger.debug("%s loaded %d rows",__s_fn_id__,self._data.count())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -468,7 +524,7 @@ class RateOfReturns():
                 all ROR methods: https://en.wikipedia.org/wiki/Rate_of_return
                 Logarithmic ROR: https://www.rateofreturnexpert.com/log-return/
     '''
-    def calc_ror(func):
+    def ror_type_cast(func):
         """
         Description:
             wrapper function to calculate an ROR method
@@ -478,7 +534,7 @@ class RateOfReturns():
             ror_calc_wrapper
         """
         @functools.wraps(func)
-        def ror_calc_wrapper(self,data,ror_type,num_col,part_col,date_col,**kwargs):
+        def cast_ror_wrapper(self,data,ror_type,num_col,part_col,date_col,**kwargs):
             """
             Description:
                 The ror_type defines the ROR method to execute.
@@ -490,7 +546,8 @@ class RateOfReturns():
             Returns:
                 self_data (DataFrame) with the requrested ROR computed column
             """
-            __s_fn_id__ = "function <ror_calc_wrapper>"
+            __s_fn_id__ = f"{self.__name__} function <cast_ror_wrapper>"
+            ''' declare local arguments '''
             _ror_col = "ror"
 
             try:
@@ -505,6 +562,8 @@ class RateOfReturns():
                     _ror_col=kwargs['RORCOLNAME']
                 else:
                     _ror_col="_".join([_ror_col,num_col])
+                logger.debug("%s set ROR column name to %s to store ROR type %s values",
+                             __s_fn_id__,_ror_col.upper(),ror_type.upper())
 
                 ''' compute the log of the prev / current '''
                 if ror_type.upper()=='LOG10':
@@ -523,6 +582,14 @@ class RateOfReturns():
                 else:
                     raise RuntimeError("Something went wrong determining the log base.")
 
+                if self._data is None and self._data.count()<=0:
+                    raise RuntimeError("%s ROR computation returned %s dataframe" 
+                                       % (ror_type.upper(),type(self._data)))
+                ''' drop diff and prev value columns '''
+                self._data=self._data.drop(_prev_col,_diff_col)
+                logger.debug("%s %s ROR computation returned %d rows and %d columns",
+                             __s_fn_id__,ror_type.upper(),self._data.count(),len(self._data.columns))
+
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
                 logger.debug(traceback.format_exc())
@@ -530,10 +597,10 @@ class RateOfReturns():
 
             return self._data.sort(F.col(date_col),F.col(_ror_col)), _ror_col
 
-        return ror_calc_wrapper
+        return cast_ror_wrapper
 
-    @calc_ror
-    def get_ror(
+    @ror_type_cast
+    def calc_ror(
         self,
         data,
         ror_type:str="log10",
@@ -560,7 +627,8 @@ class RateOfReturns():
             self._data (dataframe)
         """
 
-        __s_fn_id__ = "function <get_ror>"
+        __s_fn_id__ = f"{self.__name__} function <calc_ror>"
+        ''' declare local arguments '''
         _diff_col = None
         __diff_prefix__ = "diff"
         _lag_num_col=None
@@ -569,7 +637,7 @@ class RateOfReturns():
             if not isinstance(data,DataFrame) or data.count()==0:
                 raise AttributeError("data attribute must be a vaild non-empty DataFrame")
             if num_col not in data.columns and \
-                data.select(F.col(num_col)).dtypes[0][1]=='string':
+                data.select(F.col(num_col)).dtypes[0][1] in ['string','date','timestamp','boolean']:
                 raise AttributeError("%s is invalid dtype, select a numeric column from %s"
                                      % (num_col,data.dtypes))
             if part_col not in data.columns:
@@ -579,8 +647,9 @@ class RateOfReturns():
             ''' get the difference from the previous value '''
             if "DIFFCOLNAME" not in kwargs.keys():
                 kwargs['DIFFCOLNAME']="_".join([__diff_prefix__,num_col])
-            else:
-                _diff_col=kwargs['DIFFCOLNAME']
+#             else:
+            _diff_col=kwargs['DIFFCOLNAME']
+
             self._data, _lag_num_col, _diff_col=RateOfReturns.prev_val_diff(
                 data=data.sort(date_col,num_col),   # sort by date get previou date value
                 num_column=num_col,   #'mcap_value',
@@ -594,21 +663,6 @@ class RateOfReturns():
             else:
                 raise RuntimeError("previous value (lag) and difference computation +"\
                                    "did not return and rows")
-#             ''' compute the log of the prev / current '''
-#             _log_base = '10'
-#             if "LOGBASE" in kwargs.keys() and kwargs['LOGBASE'] in ['2','10','e']:
-#                 _log_base = kwargs['LOGBASE']
-#             if _log_base=='10':
-#                 self._data=self._data.withColumn(_ror_col_name,
-#                                                  F.log10(F.col(_lag_num_col)/F.col(num_col)))
-#             elif _log_base=='2':
-#                 self._data=self._data.withColumn(_ror_col_name,
-#                                                  F.log2(F.col(_lag_num_col)/F.col(num_col)))
-#             elif _log_base=='e':
-#                 self._data=self._data.withColumn(_ror_col_name,
-#                                                  F.log1p(F.col(_lag_num_col)/F.col(num_col)))
-#             else:
-#                 raise RuntimeError("Something went wrong determining the log base.")
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -633,12 +687,14 @@ class RateOfReturns():
         Returns:
         """
 
-        __s_fn_id__ = "function <write_data_to_db>"
-
-        _tbl_name='warehouse.mcap_past'
+        __s_fn_id__ = f"{self.__name__} function <write_data_to_db>"
+        ''' declare local args '''
+        __def_tbl_name__='mcap_past'
+        __def_db_name__='tip'
         _pk = ['mcap_past_pk']
-        _cols_not_for_update = ['mcap_past_pk','uuid','data_source','asset_name','asset_symbol',
-                           'mcap_date','created_dt','created_by','created_proc']
+        _cols_not_for_update = ['mcap_past_pk','uuid','data_source','asset_name',
+                                'mcap_date','price_date','volume_date',
+                                'created_dt','created_by','created_proc']
         _options={
             "BATCHSIZE":1000,   # batch size to partition the dtaframe
             "PARTITIONS":1,    # number of parallel clusters to run
@@ -647,21 +703,65 @@ class RateOfReturns():
         records_=0
 
         try:
-            if "TABLENAME" in kwargs.keys():
-                _tbl_name=kwargs['TABLENAME']
+            if "TABLENAME" not in kwargs.keys() or "".join(kwargs['TABLENAME'].split())=="":
+                kwargs['TABLENAME']=__def_tbl_name__
+                logger.warning("%s set kwargs TABLENAME to default %s",
+                               __s_fn_id__,kwargs['TABLENAME'].upper())
+            if "DBNAME" not in kwargs.keys() or "".join(kwargs['DBNAME'].split())=="":
+                kwargs['DBNAME']=__def_db_name__
+                logger.warning("%s set kwargs DBNAME to default %s",
+                               __s_fn_id__,kwargs['DBNAME'].upper())
 
-            records_=clsSDB.upsert_sdf_to_table(
-                save_sdf=data,
-                db_table=_tbl_name,
-                unique_keys=_pk,
-                **_options,
-            )
-
-            logger.debug("Upserted %d records into %s", records_,_tbl_name)
+            ''' replace cell nulls with known values '''
+            
+            ''' split the data with mcap_past_pk and without '''
+            ''' --- data has no PK --- '''
+            data_no_pk_ = data.filter(F.col('mcap_past_pk').isNull())
+            if data_no_pk_ is not None and data_no_pk_.count()>0:
+                data_no_pk_=data_no_pk_.drop('mcap_past_pk')
+                no_pk_rec_count_=clsSDB.insert_sdf_into_table(
+                    save_sdf=data_no_pk_,
+                    db_name =kwargs['DBNAME'],
+                    db_table=kwargs['TABLENAME'],
+                    session_args = kwargs
+                )
+                if no_pk_rec_count_ is None or no_pk_rec_count_<=0:
+                    no_pk_rec_count_=0
+                    logger.error("%s Failed insert %d records into %s %s database in %s table",
+                                 __s_fn_id__,data_no_pk_.count(),clsSDB.dbType,
+                                 clsSDB.dbName,kwargs['TABLENAME'])
+                else:
+                    logger.debug("%s Inserted %d of %d records into %s %s database in %s table",
+                                 __s_fn_id__,no_pk_rec_count_,data_no_pk_.count(),
+                                 clsSDB.dbType,clsSDB.dbName,kwargs['TABLENAME'])
+            else:
+                no_pk_rec_count_=0
+                logger.debug("%s No data obtained for attribute mcap_past_pk isNull()",__s_fn_id__)
+            ''' --- data has PK --- '''
+            data_has_pk_ = data.filter(F.col('mcap_past_pk').isNotNull())
+            if data_has_pk_ is not None and data_has_pk_.count()>0:
+                has_pk_rec_count_=clsSDB.upsert_sdf_to_table(
+                    save_sdf=data_has_pk_,
+                    db_table=kwargs['TABLENAME'],
+                    unique_keys=_pk,
+                    **_options,
+                )
+                if has_pk_rec_count_ is None or has_pk_rec_count_<=0:
+                    has_pk_rec_count_=0
+                    logger.error("%s Failed upserty %d records into %s %s database in %s table",
+                                 __s_fn_id__,data_has_pk_.count(),clsSDB.dbType,
+                                 clsSDB.dbName,kwargs['TABLENAME'])
+                else:
+                    logger.debug("%s Upsert %d of %d records into %s %s database in %s table",
+                                 __s_fn_id__,has_pk_rec_count_,data_has_pk_.count(),
+                                 clsSDB.dbType,clsSDB.dbName,kwargs['TABLENAME'])
+            else:
+                has_pk_rec_count_=0
+                logger.debug("%s No data obtained for attribute mcap_past_pk isNotNull()",__s_fn_id__)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return records_
+        return no_pk_rec_count_+has_pk_rec_count_

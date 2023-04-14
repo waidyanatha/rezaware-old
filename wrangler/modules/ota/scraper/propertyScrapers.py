@@ -92,9 +92,9 @@ class PropertyScraper():
 #         from utils.modules.etl.load import sparkwls as spark
         from utils.modules.ml.natlang import nlp
         ''' initialize util class to use common functions '''
-        clsUtil = otasu.Utils(desc='Utilities class for property data scraping')
-        clsNLP = nlp.NatLanWorkLoads(desc="classifying ota room types")
-        clsFile = spark.FileWorkLoads(desc="ota property price scraper")
+        clsUtil = otasu.Utils(desc=self.__desc__)
+        clsNLP = nlp.NatLanWorkLoads(desc=self.__desc__)
+        clsFile = spark.FileWorkLoads(desc=self.__desc__)
         clsFile.storeMode=config.get("DATASTORE","MODE")
         clsFile.storeRoot=config.get("DATASTORE","ROOT")
 
