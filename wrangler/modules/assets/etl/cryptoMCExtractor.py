@@ -65,7 +65,6 @@ class CryptoMarkets():
             self.__desc__ = desc
         
         self._data = None
-#         self._tmpDir =None   # 
         self._dataDir=None   # asset data storage relative path
         self._tmpDir =None   # asset temporary data storate relative pather
         self._connection = None
@@ -90,15 +89,15 @@ class CryptoMarkets():
             sys.path.insert(1,self.rezHome)
             
             ''' import sparkDBwls to write collections to db '''
-            from utils.modules.etl.load import sparkDBwls
+            from utils.modules.etl.loader import sparkDBwls
             clsSDB = sparkDBwls.SQLWorkLoads(desc=self.__desc__)
             ''' import mongo work load utils to read and write data '''
-            from utils.modules.etl.load import sparkNoSQLwls as nosql
+            from utils.modules.etl.loader import sparkNoSQLwls as nosql
             clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
-            from utils.modules.etl.load import sparkFILEwls as spark
+            from utils.modules.etl.loader import sparkFILEwls as spark
             clsFile = spark.FileWorkLoads(desc=self.__desc__)
-            clsFile.storeMode=config.get("DATASTORE","MODE")
-            clsFile.storeRoot=config.get("DATASTORE","ROOT")
+            clsFile.storeMode=pkgConf.get("DATASTORE","MODE")
+            clsFile.storeRoot=pkgConf.get("DATASTORE","ROOT")
 
             self.pckgDir = pkgConf.get("CWDS",self.__package__)
             self.appDir = pkgConf.get("CWDS",self.__app__)
@@ -114,21 +113,19 @@ class CryptoMarkets():
 
             ''' set a new logger section '''
             logger.info('########################################################')
-            logger.info("%s %s Class",__s_fn_id__)
+            logger.info("%s %s Class",self.__package__,__s_fn_id__)
 
             ''' set the package specific storage path '''
             ''' TODO change to use the utils/FileRW package '''
             self.storePath = pkgConf.get("CWDS","DATA")
     
-            logger.info("%s package files stored in %s",self.__package__,self.storePath)
+            logger.debug("%s package files stored in %s",
+                         self.__package__.upper(),self.storePath.upper())
 
-            logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
-                         %(self.__app__,
-                           self.__module__,
-                           self.__package__,
-                           self.__name__,
-                           self.__desc__))
-            logger.info("Intantiated with desc: %s",__s_fn_id__,self.__desc__)
+            logger.debug("%s instantiated %s module  %s package %s done.\nStart workloads: %s."
+                         %(self.__app__.upper(), self.__module__.upper(),
+                           self.__package__.upper(), self.__name__.upper(), self.__desc__))
+#             logger.info("Intantiated with desc: %s",__s_fn_id__,self.__desc__)
 
 #             ''' set the tmp dir to store large data to share with other functions
 #                 if self.tmpDIR = None then data is not stored, otherwise stored to
@@ -203,8 +200,9 @@ class CryptoMarkets():
 
         try:
             if self._dataDir is None:
-                self._dataDir = os.path.join(self.__app__,'data',self.__module__,self.__package__)
-                logger.warning("%s NoneType dataDIR set to default value %s",
+#                 self._dataDir = os.path.join(self.__app__,'data',self.__module__,self.__package__)
+                self._dataDir = pkgConf.get("CWDS","DATA")
+                logger.warning("%s NoneType dataDir set to default value %s",
                                __s_fn_id__,self._dataDir.upper())
 
         except Exception as err:
@@ -544,6 +542,13 @@ class CryptoMarkets():
                     _destin_coll_prefix = ".".join([data_owner,str(from_date),
                                                     "D"+str((to_date-from_date).days)])
 
+                ''' tmp file to store successfully processed assets '''
+                _comp_asset_fname = "proc_coins_"+_destin_coll_prefix+".txt"
+                _comp_fpath = os.path.join(self.tmpDir,_comp_asset_fname)
+#                 mode = 'a' if os.path.exists(_comp_fpath) else 'w+'
+#                 new_file = open(_comp_fpath, mode)
+#                 new_file.close()
+
                 logger.debug("%s Begin processing %s data for writing to %s",
                             __s_fn_id__,data_owner,_destin_db)
 
@@ -571,6 +576,7 @@ class CryptoMarkets():
                         ''' data found, write to collection '''
                         _hmc_data = json.loads(response.text)
                         _coin_hmc_data = []
+
                         ''' COINGECKO - process response data '''
                         if data_owner.upper() == "COINGECKO":
                             ''' zip market_cap, price, and volume data '''
@@ -608,6 +614,10 @@ class CryptoMarkets():
                                         "volume.size": float(_volume[1]),
                                         "volume.date":datetime.fromtimestamp(_volume[0]/1000),
                                         "volume.unix":_volume[0],
+                                        "audit.mod.by":os.environ.get('USERNAME').upper(),
+                                        "audit.mod.dt":datetime.strftime(datetime.now(),
+                                                                         '%Y-%m-%dT%H:%M:%S'),
+                                        "audit.mod.proc":" ".join([self.__package__,__s_fn_id__]),
                                     }
                                 )
                         else:
@@ -640,9 +650,9 @@ class CryptoMarkets():
                                 uuid_list=__uids__)
                             _hmc_dict_list.append(_data)
                             ''' write completed assets to a temporary file '''
-                            _comp_asset_fname = "proc_coins_"+_destin_coll_prefix+".txt"
-                            _comp_fpath = os.path.join(self.tmpDIR,_comp_asset_fname)
-                            with open(_comp_fpath, "a") as compfile:
+#                             _comp_asset_fname = "proc_coins_"+_destin_coll_prefix+".txt"
+#                             _comp_fpath = os.path.join(self.tmpDir,_comp_asset_fname)
+                            with open(_comp_fpath, "a+") as compfile:
                                 compfile.write(_api['id']+"\n")
 
                     except Exception as err:
@@ -658,8 +668,8 @@ class CryptoMarkets():
 #                         db_coll=_destin_coll,
 #                         data=_hmc_dict_list,
 #                         uuid_list=__uids__)
-                logger.info("Appended %d historic marketcap prices to %s collection in %s",
-                            len(_hmc_dict_list),_destin_coll,clsNoSQL.dbType)
+                logger.debug("Appended %d historic marketcap prices to %s collection in %s",
+                            len(_hmc_dict_list),_destin_coll.upper(),clsNoSQL.dbType.upper())
 #                 else:
 #                     logger.info("No data retrieved for %s with %d api list",
 #                                 data_owner,(_proc_api_list))
@@ -730,7 +740,7 @@ class CryptoMarkets():
                 else:
                     raise RuntimeError("Something was wrong")
 
-                logger.info("Prepared api list with %d set of urls, headers, and parameters.",
+                logger.debug("Prepared api list with %d set of urls, headers, and parameters.",
                            len(_built_api_list))
 
 
@@ -853,9 +863,9 @@ class CryptoMarkets():
             if not len(_asset_list) > 0:
                 raise ValueError("No data found %s in %s db and %s collection for %s"
                                  % (__s_fn_id__,str(_find),_asset_db_name,
-                                    _asset_collect,data_owner))
+                                    _asset_collect.upper(),data_owner.upper()))
             logger.debug("%s Read %d %s asset names from %s",
-                       __s_fn_id__,len(_asset_list),data_owner,_asset_collect)
+                       __s_fn_id__,len(_asset_list),data_owner.upper(),_asset_collect.upper())
 
             ''' get the list of APIs '''
             clsNoSQL.connect={'DBAUTHSOURCE':_api_db_auth}
@@ -906,8 +916,8 @@ class CryptoMarkets():
                         'asset.name']     # crypto name
 
             try:
-                logger.info("Begin processing %s data for writing to %s",
-                            data_owner,__mc_destin_db_name__)
+                logger.debug("Begin processing %s data for writing to %s",
+                            data_owner.upper(),__mc_destin_db_name__.upper())
                 _results = func(self,data_owner)
 
                 _mc_dict_list = []
@@ -947,11 +957,11 @@ class CryptoMarkets():
                             }
                         )
                 else:
-                    raise AttributeError("Unrecognized data owner %s" % data_owner)
+                    raise AttributeError("Unrecognized data owner %s" % data_owner.upper())
 
-                logger.info("Appended %d market-cap dicts",len(_mc_dict_list))
-                logger.info("Ready to write %d documents to %s",
-                            len(_mc_dict_list),__mc_destin_db_name__)
+                logger.debug("Appended %d market-cap dicts",len(_mc_dict_list))
+                logger.debug("Ready to write %d documents to %s",
+                            len(_mc_dict_list),__mc_destin_db_name__.upper())
                 clsNoSQL.connect={'DBAUTHSOURCE':__mc_destin_db_name__}
 
                 if not __mc_destin_db_name__ in clsNoSQL.connect.list_database_names():
@@ -963,8 +973,8 @@ class CryptoMarkets():
                     data=_mc_dict_list,
                     uuid_list=__uids__)
 
-                logger.info("Finished writing %s market-cap documents to %s",
-                            data_owner,clsNoSQL.dbType)
+                logger.debug("Finished writing %s market-cap documents to %s",
+                            data_owner.upper(),clsNoSQL.dbType.upper())
 
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
@@ -1008,8 +1018,8 @@ class CryptoMarkets():
             else:
                 _api_categoty = __api_categoty__
 
-            logger.info("Preparing to retrieve %s source metadata from %s database %s collection",
-                       data_owner,__asset_meta_db_name__,__asset_meta_db_coll__)
+            logger.debug("Preparing to retrieve %s source metadata from %s database %s collection",
+                       data_owner.upper(),__asset_meta_db_name__.upper(),__asset_meta_db_coll__.upper())
             clsNoSQL.connect={'DBAUTHSOURCE':'tip'}
             _find = {'category':{"$regex":__api_categoty__},'owner':{"$regex" : data_owner}}
             _data_source_list = clsNoSQL.read_documents(
@@ -1019,7 +1029,7 @@ class CryptoMarkets():
                 doc_find = _find
             )
             logger.debug("Received %d %s metadata",
-                       len(_data_source_list),__asset_meta_db_coll__)
+                       len(_data_source_list),__asset_meta_db_coll__.upper())
 
             for _source in _data_source_list:
                 _s_api = _source['api']['url']
@@ -1034,7 +1044,7 @@ class CryptoMarkets():
 
                 ''' data found, write to collection '''
                 self._data = json.loads(response.text)
-                logger.info("Retrieved %d market-cap data with api:%s",
+                logger.debug("Retrieved %d market-cap data with api:%s",
                            len(self._data),_s_api)
 
 
@@ -1111,7 +1121,7 @@ class CryptoMarkets():
     def nosql_to_sql(
         self,
         source_db:str="",
-        coll_list:list=[],
+#         coll_list:list=[],
         destin_db:str="",
         table_name:str="",
         **kwargs
@@ -1153,14 +1163,16 @@ class CryptoMarkets():
 #                 clsNoSQL.dbAuthSource = kwargs['DBAUTHSOURCE']
 #             else:
 #                 clsNoSQL.dbAuthSource = source_db
-            if len(coll_list) > 0:
-                clsNoSQL.collections = {"COLLLIST":coll_list}
-            elif "COLLLIST" in kwargs.keys() and isinstance(kwargs['COLLLIST'],list):
-                clsNoSQL.collections = {"COLLLIST":kwargs['COLLLIST']}
-            elif "HASINNAME" in kwargs.keys() and isinstance(kwargs['HASINNAME'],str):
-                clsNoSQL.collections = {"HASINNAME":kwargs['HASINNAME']}
-            else:
-                pass
+#             if len(coll_list) > 0:
+#                 kwargs['COLLLIST']=coll_list
+#                 clsNoSQL.collections = {"COLLLIST":coll_list}
+#             elif "COLLLIST" in kwargs.keys() and isinstance(kwargs['COLLLIST'],list):
+#                 clsNoSQL.collections = {"COLLLIST":kwargs['COLLLIST']}
+            if "COLLLIST" in kwargs.keys() or "HASINNAME" in kwargs.keys():
+#                 clsNoSQL.collections = {"HASINNAME":kwargs['HASINNAME']}
+                clsNoSQL.collections = kwargs
+#             else:
+#                 pass
             
             ''' valiate collection list '''
             if len(clsNoSQL.collections)<=0:
@@ -1169,7 +1181,7 @@ class CryptoMarkets():
             print("retrieving collections ...")
             _colls_list = clsNoSQL.collections
             logger.debug("%s Found %d collection in %s %s",
-                        __s_fn_id__,len(_colls_list),clsNoSQL.dbName,clsNoSQL.dbType)
+                        __s_fn_id__,len(_colls_list),clsNoSQL.dbName.upper(),clsNoSQL.dbType.upper())
 
             ''' assign the find filter '''
             if "FIND" in kwargs.keys() and isinstance(kwargs['FIND'],dict):
@@ -1183,7 +1195,8 @@ class CryptoMarkets():
             self._data = pd.DataFrame()   # initialize return dataframe
             
             logger.debug("%s begin transfer data from %s %s to %s %s",
-                         __s_fn_id__,clsNoSQL.dbType,source_db,clsSDB.dbType,destin_db)
+                         __s_fn_id__,clsNoSQL.dbType.upper(),source_db.upper(),
+                         clsSDB.dbType.upper(),destin_db.upper())
             try:
                 ''' loop through collection to get the read data '''
                 for _coll in _colls_list:
@@ -1198,9 +1211,9 @@ class CryptoMarkets():
                     ''' write to sql db if data exists '''
                     if _coll_df is None or _coll_df.shape[0]<=0:
                         raise RuntimeError("%s collection %s returned an empty dataframe",
-                                           __s_fn_id__,_coll)
+                                           __s_fn_id__,_coll.upper())
                     logger.debug("%s read %d documents from collection %s",
-                                 __s_fn_id__,_coll_df.shape[0],_coll)
+                                 __s_fn_id__,_coll_df.shape[0],_coll.upper())
 
                     ''' rename columns to match the db table '''
                     if "COLUMNSMAP" in kwargs.keys() and isinstance(kwargs['COLUMNSMAP'],dict):
@@ -1260,14 +1273,17 @@ class CryptoMarkets():
                         raise AttributeError("Something went wrong with processing %s"
                                              % kwargs['UNIQUEROWBY'])
                     logger.debug("%s Retrieved %d rows with %s mcap_value in dataframe",
-                            __s_fn_id__,_coll_df.shape[0],kwargs['UNIQUEROWBY'])
+                            __s_fn_id__,_coll_df.shape[0],kwargs['UNIQUEROWBY'].upper())
+                    
+                    ''' drop all columns not in COLUMNSMAP '''
+                    _coll_df.drop([x for x in _coll_df.columns \
+                                   if x not in kwargs['COLUMNSMAP'].values()],
+                                  axis=1,inplace=True)
 
                     ''' augment dataframe with missing table columns '''
-#                     _coll_df["asset_name"]=_coll_df["asset_symbol"]
                     _coll_df["created_proc"]="_".join([self.__app__,
                                                        self.__module__,
                                                        self.__package__,
-#                                                        self.__name__,
                                                        __s_fn_id__])
                     ''' write dataframe to table with sparksqlwls'''
                     _saved_rec_count=clsSDB.insert_sdf_into_table(
@@ -1282,17 +1298,19 @@ class CryptoMarkets():
                         self._data = pd.concat([self._data,_coll_df])
                     else:
                         raise RuntimeError("None of %s collection %d rows were inserted %s table"
-                                           %(_coll,_coll_df.shape[0],table_name))
+                                           %(_coll,_coll_df.shape[0],table_name.upper()))
 
             except Exception as coll_err:
-                logger.error("Collection %s hadd errors: %s \n",_coll,coll_err)
+                logger.error("Collection %s had errors: %s \n",_coll.upper(),coll_err)
                 logger.debug("%s",traceback.format_exc())
+                pass
 
             if self._data.shape[0] > 0:
                 logger.info("Done transfering %d %s collection from %s database into "+\
                            "%s %s database table %s with %d rows", \
-                           len(_colls_list),clsNoSQL.dbType,source_db, \
-                           clsSDB.dbType,destin_db,table_name, self._data.shape[0]
+                           len(_colls_list),clsNoSQL.dbType.upper(),source_db.upper(),
+                           clsSDB.dbType.upper(),destin_db.upper(),table_name.upper(),
+                            self._data.shape[0]
                           )
                 print('Done processing with %d rows' % self._data.shape[0])
 

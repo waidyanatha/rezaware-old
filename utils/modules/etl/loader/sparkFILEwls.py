@@ -4,7 +4,7 @@
 ''' Initialize with default environment variables '''
 __name__ = "FileWorkLoads"
 __module__ = "etl"
-__package__ = "load"
+__package__ = "loader"
 __app__ = "utils"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"

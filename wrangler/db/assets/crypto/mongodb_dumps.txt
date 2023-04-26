@@ -1,8 +1,11 @@
+## tip-historic-marketcap
+sudo mongodump --host=localhost --port=27017 --authenticationDatabase=tip-historic-marketcap --db=tip-historic-marketcap --username=farmraider --password=spirittribe --out=/var/backups/mongodb/
+
 ## tip-asset-metadata
 sudo mongodump --host=localhost --port=27017 --authenticationDatabase=tip-asset-metadata --db=tip-asset-metadata --username=farmraider --password=spirittribe --out=/var/backups/mongodb/
 
-## tip-historic-marketcap
-sudo mongodump --host=localhost --port=27017 --authenticationDatabase=tip-historic-marketcap --db=tip-historic-marketcap --username=farmraider --password=spirittribe --out=/var/backups/mongodb/
+## tip-data-sources
+sudo mongodump --host=localhost --port=27017 --authenticationDatabase=tip-data-sources --db=tip-data-sources --username=farmraider --password=spirittribe --out=/var/backups/mongodb/
 
 ## tar.gz
 sudo tar -czvf /var/backups/mongodb/mongodb_20221202.tar.gz /var/backups/mongodb

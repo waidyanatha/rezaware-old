@@ -524,7 +524,7 @@ class RateOfReturns():
                 all ROR methods: https://en.wikipedia.org/wiki/Rate_of_return
                 Logarithmic ROR: https://www.rateofreturnexpert.com/log-return/
     '''
-    def ror_type_cast(func):
+    def apply_ror_method(func):
         """
         Description:
             wrapper function to calculate an ROR method
@@ -534,7 +534,7 @@ class RateOfReturns():
             ror_calc_wrapper
         """
         @functools.wraps(func)
-        def cast_ror_wrapper(self,data,ror_type,num_col,part_col,date_col,**kwargs):
+        def ror_method_wrapper(self,data,ror_type,num_col,part_col,date_col,**kwargs):
             """
             Description:
                 The ror_type defines the ROR method to execute.
@@ -546,7 +546,7 @@ class RateOfReturns():
             Returns:
                 self_data (DataFrame) with the requrested ROR computed column
             """
-            __s_fn_id__ = f"{self.__name__} function <cast_ror_wrapper>"
+            __s_fn_id__ = f"{self.__name__} function <ror_method_wrapper>"
             ''' declare local arguments '''
             _ror_col = "ror"
 
@@ -597,9 +597,9 @@ class RateOfReturns():
 
             return self._data.sort(F.col(date_col),F.col(_ror_col)), _ror_col
 
-        return cast_ror_wrapper
+        return ror_method_wrapper
 
-    @ror_type_cast
+    @apply_ror_method
     def calc_ror(
         self,
         data,

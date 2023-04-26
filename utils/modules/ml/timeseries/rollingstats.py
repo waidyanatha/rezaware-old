@@ -676,3 +676,49 @@ class RollingStats():
 
         return _roll_col_name
 
+    ''' Function --- FAST FOURIER DENOISER ---
+    
+        author: <samana.thetha@gmail.com>
+        
+        resoource: https://medium.com/swlh/5-tips-for-working-with-time-series-in-python-d889109e676d
+    '''
+    def fft_denoiser(x, n_components, to_real=True):
+        """
+        Description:
+        
+        Attributes:
+        
+        Returns:
+        """
+
+        __s_fn_id__ = "function <simple_moving_stats>"
+
+        clean_data = None
+        
+        try:
+            n = len(x)
+
+            # compute the fft
+            fft = np.fft.fft(x, n)
+
+            # compute power spectrum density
+            # squared magnitud of each fft coefficient
+            PSD = fft * np.conj(fft) / n
+
+            # keep high frequencies
+            _mask = PSD > n_components
+            fft = _mask * fft
+
+            # inverse fourier transform
+            clean_data = np.fft.ifft(fft)
+
+            if to_real:
+                clean_data = clean_data.real
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
+            print(traceback.format_exc())
+
+        return clean_data
+

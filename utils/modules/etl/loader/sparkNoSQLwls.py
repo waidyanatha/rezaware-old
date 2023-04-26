@@ -4,7 +4,7 @@
 ''' Initialize with default environment variables '''
 __name__ = "sparkNoSQLwls"
 __module__ = "etl"
-__package__ = "load"
+__package__ = "loader"
 __app__ = "utils"
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
@@ -144,11 +144,11 @@ class NoSQLWorkLoads():
             ''' set a new logger section '''
             logger.info('########################################################')
             logger.info("%s Class %s Package",self.__name__,self.__package__)
-            logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
-                         %(self.__app__,
-                           self.__module__,
-                           self.__package__,
-                           self.__name__,
+            logger.debug("%s initialization for %s module package %s %s done. Starting workloads: %s."
+                         %(self.__app__.upper(),
+                           self.__module__.upper(),
+                           self.__package__.upper(),
+                           self.__name__.upper(),
                            self.__desc__))
             print("%s Class initialization complete" % self.__name__)
 
@@ -180,6 +180,8 @@ class NoSQLWorkLoads():
         try:
             if self._dbHostIP is None and appConf.get('NOSQLDB','DBHOSTIP'):
                 self._dbHostIP = appConf.get('NOSQLDB','DBHOSTIP')
+                logger.warning("%s set class @property dbHostIP to %s from config data in %s",
+                               __s_fn_id__,self._dbHostIP.upper(),__conf_fname__.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -196,7 +198,8 @@ class NoSQLWorkLoads():
         try:
             if not (db_host_ip is None and db_host_ip==""):
                 self._dbHostIP = db_host_ip
-
+                logger.debug("%s set class @property dbHostIP to %s",
+                               __s_fn_id__,self._dbHostIP.upper())
             else:
                 raise ConnectionError("Undefined hostip; set in app.cfg or as class property")
 
@@ -216,6 +219,8 @@ class NoSQLWorkLoads():
         try:
             if self._dbType is None and appConf.get('NOSQLDB','DBTYPE'):
                 self._dbType = appConf.get('NOSQLDB','DBTYPE')
+                logger.warning("%s set class @property dbType to %s",
+                               __s_fn_id__,self._dbType.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -233,6 +238,8 @@ class NoSQLWorkLoads():
                 self._dbType = db_type
             elif appConf.get('NOSQLDB','DBTYPE'):
                 self._dbType = appConf.get('NOSQLDB','DBTYPE')
+                logger.warning("%s set class @property dbType to %s from config data in %s",
+                               __s_fn_id__,self._dbType.upper(),__conf_fname__.upper())
             else:
                 raise ConnectionError("Undefined dbType; set in app.cfg or as class property")
 
@@ -252,6 +259,8 @@ class NoSQLWorkLoads():
         try:
             if self._dbPort is None and appConf.get('NOSQLDB','DBPORT'):
                 self._dbPort = appConf.get('NOSQLDB','DBPORT')
+                logger.warning("%s set class @property dbPort to %s from config data in %s",
+                               __s_fn_id__,self._dbPort.upper(),__conf_fname__.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -268,6 +277,8 @@ class NoSQLWorkLoads():
         try:
             if isinstance(db_port,int):
                 self._dbPort = db_port
+                logger.debug("%s set class @property dbPort to %s",
+                               __s_fn_id__,self._dbPort.upper())
 
             else:
                 raise ConnectionError("dbPort must be a valid integer")
@@ -288,6 +299,8 @@ class NoSQLWorkLoads():
         try:
             if self._dbFormat is None and appConf.get('NOSQLDB','DBFORMAT'):
                 self._dbFormat = appConf.get('NOSQLDB','DBFORMAT')
+                logger.warning("%s Nonetype class @property dbFormat set to %s from config data in %s",
+                               __s_fn_id__,self._dbFormat.upper(),__conf_fname__.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -304,6 +317,8 @@ class NoSQLWorkLoads():
         try:
             if not (db_driver is None and db_format==""):
                 self._dbFormat = db_format
+                logger.debug("%s set class @property dbFormat to %s",
+                               __s_fn_id__,self._dbFormat.upper())
 
             else:
                 raise ConnectionError("Undefined dbFormat; set in app.cfg or as class property")
@@ -324,6 +339,7 @@ class NoSQLWorkLoads():
         try:
             if self._dbName is None and appConf.get('NOSQLDB','DBNAME'):
                 self._dbName = appConf.get('NOSQLDB','DBNAME')
+                logger.warning("%s set class @property dbName to %s",__s_fn_id__,self._dbName.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -340,7 +356,7 @@ class NoSQLWorkLoads():
         try:
             if db_name is not None and "".join(db_name.split())!="":
                 self._dbName = db_name
-                logger.debug("%s set class property dbName to %s",__s_fn_id__,self._dbName)
+                logger.warning("%s set class @property dbName to %s",__s_fn_id__,self._dbName.upper())
             else:
                 raise ConnectionError("Undefined dbName; set in app.cfg or as class property")
 
@@ -375,7 +391,7 @@ class NoSQLWorkLoads():
         try:
             if db_user is not None and "".join(db_user.split())!="":
                 self._dbUser = db_user
-                logger.debug("%s set class property dbUser to %s",__s_fn_id__,self._dbUser)
+                logger.warning("%s set class property dbUser to %s",__s_fn_id__,self._dbUser)
             else:
                 raise ConnectionError("Undefined dbUser; set in app.cfg or as class property")
 
@@ -650,7 +666,7 @@ class NoSQLWorkLoads():
                     authSource=_db_auth,
                     authMechanism=_db_mech
                 )
-                logger.debug(self._connect)
+                logger.debug("%s %s",__s_fn_id__,str(self._connect))
             elif self.dbType.lower() == 'cassandra':
                 raise RuntimError("cassandra is to be included in a future release")
             else:
@@ -678,7 +694,7 @@ class NoSQLWorkLoads():
         try:
             if self._collections is None and self.dbName and self.dbAuthSource:
                 if self.dbType.lower() == 'mongodb':
-                    print(self.dbName,self.dbAuthSource,self.connect)
+#                     print(self.dbName,self.dbAuthSource,self.connect)
                     db = self.connect[self.dbName]
                     self._collections = db.list_collection_names()
                 elif self.dbType.lower() == 'cassendra':
@@ -695,19 +711,19 @@ class NoSQLWorkLoads():
 
     @collections.setter
     def collections(self, collection_properties:dict={}) -> list:
-        
+
         __s_fn_id__ = f"{self.__name__} function <@collections.setter>"
 
         _coll_list=[]
 
         try:
             ''' set the dbName if specified '''
-            if "DBNAME" in collection_properties.keys():
+            if collection_properties is not None and "DBNAME" in collection_properties.keys():
                 self._dbName = collection_properties['DBNAME']
             ''' set the dbType if specified '''
-            if "DBTYPE" in collection_properties.keys():
+            if collection_properties is not None and "DBTYPE" in collection_properties.keys():
                 self._dbType = collection_properties['DBTYPE'].lower()
-            if "DBAUTHSOURCE" in collection_properties.keys():
+            if collection_properties is not None and "DBAUTHSOURCE" in collection_properties.keys():
                 self._dbAuthSource = collection_properties['DBAUTHSOURCE']
             elif self._dbAuthSource is None:
                 self._dbAuthSource = self.dbName
@@ -717,18 +733,40 @@ class NoSQLWorkLoads():
             if self.dbType.lower() == 'mongodb':
                 db = self.connect[self.dbName]
                 _coll_list = db.list_collection_names()
+            elif self.dbType.lower() == 'cassendra':
+                print('TBD')
+            else:
+                raise AttributeError('Something was wrong')
+
+            if _coll_list is None or len(_coll_list)<=0:
+                raise RuntimeError("list_collection_names() returned an empty %s object" 
+                                   % (type(_coll_list)))
             ''' select collections with specified regex '''
-            if "COLLLIST" in collection_properties.keys() and len(_coll_list)>0:
+            if collection_properties is not None and "COLLLIST" in collection_properties.keys():
                 self._collections = list(filter(lambda _coll: 
                                                 _coll in collection_properties['COLLLIST'],
                                                 _coll_list
                                                ))
-            elif "HASINNAME" in collection_properties.keys() and len(_coll_list)>0:
-                r = re.compile(f"{collection_properties['HASINNAME']}")
-                self._collections = list(filter(r.search, _coll_list))
+            elif collection_properties is not None and "HASINNAME" in collection_properties.keys():
+                if isinstance(collection_properties['HASINNAME'],str):
+                    ''' TODO redundant move all to a list, maybe option for OR/AND for 
+                        a list of HASINNAME keys'''
+                    r = re.compile(f"{collection_properties['HASINNAME']}")
+                    self._collections = list(filter(r.search, _coll_list))
+                elif isinstance(collection_properties['HASINNAME'],list):
+                    self._collections = list(filter(lambda x: \
+                                                    all(y in x \
+                                                        for y in collection_properties['HASINNAME']),\
+                                                    _coll_list))
             else:
                 self._collections = _coll_list
-                print(self._collections)
+
+            if self._collections is None or len(self._collections)<=0:
+                logger.warning("%s collections class @property is empty %s object",
+                               __s_fn_id__,type(self._collections))
+            else:
+                logger.debug("%s collections class property has %d elements in %s",
+                               __s_fn_id__,len(self._collections),type(self._collections))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -891,7 +929,7 @@ class NoSQLWorkLoads():
             self.__module__
         ])   # spark app name
 
-        doc_list = None
+        doc_list_ = None
         doc_dics = None
         _docs_sdf = None
 
@@ -904,40 +942,55 @@ class NoSQLWorkLoads():
                 self.dbAuthSource = self._dbName
             else:
                 pass
+            ''' read collections list from DB '''
             if len(db_coll)>0:
                 self.collections={"COLLLIST":db_coll}
-            elif "HASINNAME" in kwargs.keys():
+#             elif "HASINNAME" in kwargs.keys():
+#                 self.collections=kwargs
+            elif isinstance(kwargs,dict):
                 self.collections=kwargs
+            if self. _collections is None or len(self._collections)<=0:
+                raise ValueError("%s database: %s has no collections" 
+                                        % (self._dbType, self._dbName))
+            logger.debug("%s Filtered %d collection(s) %s ... from %s %s",
+                         __s_fn_id__,len(self._collections),
+                         str(self._collections[:3]),self._dbType, self._dbName)
 
             if doc_find is None:
                 doc_find = {}
 
-            logger.debug("%s Prepared to read documents from "+\
-                         "database %s, collection %s with %s find condition",
-                         __s_fn_id__,self.dbName,self.collections,doc_find)
+#             logger.debug("%s Prepared to read documents from "+\
+#                          "database %s, %d collection %s with %s find condition",
+#                          __s_fn_id__,self.dbName,len(self.collections),
+#                          str(self.collections[:3])+"...",doc_find)
 
-            if self.dbType.lower() == 'mongodb':
-                ''' get data from MongoDB collection '''
-                db = self.connect[self.dbName]
-                _coll_list = db.list_collection_names()
-                logger.debug("%s %s database has %d collections",
-                             __s_fn_id__,self.dbName,len(_coll_list))
-                if self.collections:
-#                     logger.debug("Filtering collections by %s",str(self.collections))
-                    self._collections = list(filter(lambda _coll: 
-                                                    _coll in self.collections, 
-                                                    _coll_list
-                                                   ))
-                else:
-                    logger.debug("%s No filters appied collections are %s",
-                                 __s_fn_id__,str(self.collections))
-                    self._collections = _coll_list
-                logger.debug("%s Filtered set of collection %s",
-                             __s_fn_id__,str(self.collections))
+#             if self.dbType.lower() == 'mongodb':
+#                 ''' get data from MongoDB collection '''
+#                 db = self.connect[self.dbName]
+#                 _coll_list = db.list_collection_names()
+#                 if _coll_list is None or len(_coll_list)<=0:
+#                     raise DatabaseError("%s database: %s has no collections" 
+#                                         % (self._dbType, self._dbName))
+#                 logger.debug("%s %s database: %s has %d collections",
+#                              __s_fn_id__,self._dbType, self._dbName,len(_coll_list))
+#                 if self.collections:
+# #                     logger.debug("Filtering collections by %s",str(self.collections))
+#                     self._collections = list(filter(lambda _coll: 
+#                                                     _coll in self.collections, 
+#                                                     _coll_list
+#                                                    ))
+#                 else:
+#                     logger.debug("%s No filters appied collections are %s",
+#                                  __s_fn_id__,str(self.collections))
+#                     self._collections = _coll_list
 
-                ''' read data from all the collections '''
-                if as_type.upper() == "SPARK":
-                    ''' read with spark '''
+#                 if self.collections is not None and len(self.collections)
+#                 logger.debug("%s Filtered %d set of collection %s",
+#                              __s_fn_id__,str(self.collections[:3]))
+
+            ''' read data from all the collections '''
+            if as_type.upper() == "SPARK":
+                ''' read with spark '''
 #                     spark = SparkSession.builder.appName(_appName).getOrCreate()
 #                     empty_rdd = spark.sparkContext.emptyRDD()
 #                     _docs_sdf = spark.createDataFrame(data=empty_rdd,schema=StructType([]))
@@ -947,79 +1000,85 @@ class NoSQLWorkLoads():
 #                                 f"{self.dbPswd}@"+\
 #                                 f"{self.dbHostIP}/"+\
 #                                 f"{self.dbName}."
-                    for _coll_idx,_coll in enumerate(self.collections):
-                        try:
-                            _inp_uri = f"{self.dbType}://"+\
-                                        f"{self.dbUser}:"+\
-                                        f"{self.dbPswd}@"+\
-                                        f"{self.dbHostIP}/"+\
-                                        f"{self.dbName}."+\
-                                        f"{_coll}"+ \
-                                        f"?authSource={self.dbAuthSource}"
+                for _coll_idx,_coll in enumerate(self._collections):
+                    try:
+                        _inp_uri = f"{self.dbType}://"+\
+                                    f"{self.dbUser}:"+\
+                                    f"{self.dbPswd}@"+\
+                                    f"{self.dbHostIP}/"+\
+                                    f"{self.dbName}."+\
+                                    f"{_coll}"+ \
+                                    f"?authSource={self.dbAuthSource}"
 #                             _inp_uri = _inp_uri + f"{_coll}" + f"?authSource={self.dbAuthSource}"
-                            logger.debug("input uri: %s",_inp_uri)
-                            
-                            # Create Spark session
-                            spark = SparkSession.builder \
-                                .appName(_appName) \
-                                .master(self.sparkMaster) \
-                                .config("spark.mongodb.input.uri", _inp_uri) \
-                                .getOrCreate()
+#                             logger.debug("%s input uri: %s",__s_fn_id__,_inp_uri)
 
-                            sdf = spark.read.format(self.dbFormat)\
-                                .option( "uri", _inp_uri)\
-                                .load()
+                        # Create Spark session
+                        spark = SparkSession.builder \
+                            .appName(_appName) \
+                            .master(self.sparkMaster) \
+                            .config("spark.mongodb.input.uri", _inp_uri) \
+                            .getOrCreate()
 
-                            if _coll_idx == 0:
-                                _docs_sdf = sdf.alias('_docs_sdf')
-                            else:
-                                _old_docs_sdf = _docs_sdf.alias('_docs_sdf')
-                                _docs_sdf = _old_docs_sdf.unionByName(sdf)
-                                logger.debug("%s",str(_docs_sdf.head(10)))
-                            logger.debug("%s Union sdf size %d",__s_fn_id__,_docs_sdf.count())
+                        sdf = spark.read.format(self.dbFormat)\
+                            .option( "uri", _inp_uri)\
+                            .load()
 
-                        except Exception as err:
-                            logger.warning("%s collection: %s in database: %s had errors: %s \n",
-                                           __s_fn_id__,_coll, self.dbName, err)
-                            logger.error(traceback.format_exc())
-                            pass
+                        if _coll_idx == 0:
+                            _docs_sdf = sdf.alias('_docs_sdf')
+                        else:
+                            _old_docs_sdf = _docs_sdf.alias('_docs_sdf')
+                            _docs_sdf = _old_docs_sdf.unionByName(sdf)
+                            logger.debug("%s",str(_docs_sdf.head(10)))
+                        logger.debug("%s Union sdf size %d",__s_fn_id__,_docs_sdf.count())
 
-                    if (not _docs_sdf is None) and (_docs_sdf.count() > 0):
-                        doc_list=_docs_sdf
+                    except Exception as err:
+                        logger.warning("%s collection: %s in database: %s had errors: %s \n",
+                                       __s_fn_id__,_coll, self.dbName, err)
+                        logger.error(traceback.format_exc())
+                        pass
 
-                    logger.info("%s Loaded %d documents from %d collections",
-                                __s_fn_id__,doc_list.count(),len(self.collections))
-                else:
-                    ''' read with pymongo '''
-                    doc_list=[]
-                    for _coll in self.collections:
+                if (not _docs_sdf is None) and (_docs_sdf.count() > 0):
+                    doc_list_=_docs_sdf
+
+#                 logger.info("%s %s method Loaded %d documents from %d collections",
+#                             __s_fn_id__,as_type.upper(), doc_list_.count(),len(self.collections))
+            else:
+                ''' read with pymongo '''
+                doc_list_=[]
+                if self.dbType.lower() == 'mongodb':
+                    ''' get data from MongoDB collection '''
+                    db = self.connect[self.dbName]
+
+                    for _coll in self._collections:
                         try:
-                            logger.debug("%s Find %s in %s collection",__s_fn_id__,doc_find,_coll)
+#                             logger.debug("%s Find %s in %s collection",__s_fn_id__,doc_find,_coll)
                             _coll_cur = db[_coll].find(doc_find)
                             if len(list(_coll_cur.clone())) <=0:
                                 raise ValueError("No data")
-                            doc_list.extend(list(_coll_cur.clone()))
+                            doc_list_.extend(list(_coll_cur.clone()))
 
                         except Exception as err:
                             logger.warning("%s collection: %s in database: %s had errors: %s \n",
-                                           __s_fn_id__,_coll, self.dbName, err)
+                                           __s_fn_id__,_coll, self._dbName, err)
                             pass
 
-                    logger.info("%s Loaded %d documents from %d collections",
-                                __s_fn_id__,len(doc_list),len(self.collections))
+            if doc_list_ is None or len(doc_list_)<=0:
+                raise RuntimeError("doc_list_ is an empty %s object" % type(doc_list_))
+            logger.debug("%s %s method Loaded %d documents from %d collections",
+                        __s_fn_id__,as_type.upper(), len(doc_list_),len(self._collections))
 
-            elif self.dbType.lower() == 'cassandra':
-                ''' get data from Cassandra collection '''
-                raise RuntimeError("cassandra read is tbd")
-            else:
-                raise ValueError("Something was wrong")
+#             elif self.dbType.lower() == 'cassandra':
+#                 ''' get data from Cassandra collection '''
+#                 raise RuntimeError("cassandra read is tbd")
+#             else:
+#                 raise ValueError("Something was wrong")
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return doc_list
+        return doc_list_
 
     ''' Function - write collection
 

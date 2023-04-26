@@ -562,7 +562,7 @@ class WeightedPortfolio():
         self,
         mcap_date:date=None,
         pick_asset_db_name:str=None,
-        mcap_ror_db_name:str=None,
+        ror_db_name:str=None,
         **kwargs,
     ) -> DataFrame:
         """
@@ -574,28 +574,35 @@ class WeightedPortfolio():
         
         __s_fn_id__ = "function <build_weighted_portfolio>"
 
-        __def_portf_db_name__ = "tip-portfolio"
+        __def_portf_db_name__="tip-portfolio"
         __def_mcap_db_name__ = "warehouse.mcap_past"
+        __def_portf_coll_prefix__="cherry_picked"
+        __def_mpt_dest_db__ = 'tip-daily-mpt'
+        __def_mpt_coll_prefix__ = 'mpt'
 
         _cols={
             "PRIMARYKEY":'mcap_past_pk',
             "UUID" : 'uuid',
             "NAMECOLUMN":'asset_name',
             "DATECOLUMN":'mcap_date',
-            "NUMCOLUMN" :'log_ror',
+            "NUMCOLUMN" :'mcap_log_ror',
             "MCAPCOLUMN":'mcap_value',
             "WEIGHTCOLUMN":'weights',
             "MCAPSOURCE":'source',
         }
 
         try:
-            ''' validate input attributes '''
+            ''' validate input & initialize parameters '''
             if not isinstance(mcap_date,date):
                 mcap_date=date.today()
-            kwargs['HASINNAME']=str(mcap_date)
             if not isinstance(pick_asset_db_name,str) or "".join(pick_asset_db_name.split())=="":
                 pick_asset_db_name=__def_portf_db_name__
+            ''' explicitly set DBAUTHSAOURCE '''
+            kwargs['DBAUTHSOURCE']=pick_asset_db_name
+            ''' list the keywords to filter list of collections '''
+            kwargs['HASINNAME']=[str(mcap_date),__def_portf_coll_prefix__]
 
+            ''' --- READ CHERRY-PICKED ASSETS --- '''
             self._portfolio = clsNoSQL.read_documents(
                 as_type="list",
                 db_name=pick_asset_db_name,
@@ -603,38 +610,60 @@ class WeightedPortfolio():
                 doc_find={},
                 **kwargs
             )
-            if len(self._portfolio)<=0:
-                raise RuntimeError("%s read documents returned an empty dataframe" % __s_fn_id__)
+            if self._portfolio is None or len(self._portfolio)<=0:
+                raise RuntimeError("read documents returned an empty %s" 
+                                   % (type(self._portfolio)))
             logger.debug("%s document read from %s returned %d rows",
                          __s_fn_id__,pick_asset_db_name,len(self._portfolio))
 
+            ''' --- READ ROR DATA FROM DB --- '''
             _from_date = min([x['asset.mcap.date'] for x in self.portfolio]).split('T')[0]
             _to_date = max([x['asset.mcap.date'] for x in self.portfolio]).split('T')[0]
             _asset_collect = ",".join([f"'{x}'" for x in \
                                        [_p['asset.name'] for _p in self.portfolio]])
 
-            if not isinstance(mcap_ror_db_name,str) or "".join(mcap_ror_db_name.split())=="":
-                mcap_ror_db_name=__def_mcap_db_name__
-
-            _query =f"select * from {mcap_ror_db_name} "+\
+            if not isinstance(ror_db_name,str) or "".join(ror_db_name.split())=="":
+                ror_db_name=__def_mcap_db_name__
+            ''' execute sparkDBwls query '''
+            _query =f"select * from {ror_db_name} "+\
                     f"where mcap_date between '{_from_date}' and '{_to_date}' "+\
-                    f"and asset_name in ({_asset_collect}) and log_ror is not null"
-
+                    f"and asset_name in ({_asset_collect}) and {_cols['NUMCOLUMN']} is not null"
             self._data = self.read_ror(select=_query,**kwargs)
-
-            self._porfolio,_cols_dict=self.get_weighted_mpt(
+            
+            ''' --- BUILD WEIGHTED PORTFOLIO --- '''
+            self._portfolio,_cols_dict=self.get_weighted_mpt(
                 data=self._data,
                 cols_dict=_cols,
                 topN=3,
                 size=5,
             )
+            ''' --- WRITE PORTFOLIO TO DB ---
+                write portfolio to mpt destination DB'''
+            if not "DESTINDBNAME" in kwargs.keys() \
+                    or "".join(split(kwargs['DESTINDBNAME']))=="":
+                kwargs['DESTINDBNAME']=__def_mpt_dest_db__
+            ''' Collection name will be set to mpt.YYYY-MM-DD '''
+            if not "COLLPREFIX" in kwargs.keys() \
+                    or "".join(split(kwargs['COLLPREFIX']))=="":
+                kwargs['COLLPREFIX']=__def_mpt_coll_prefix__
+            kwargs['DBAUTHSOURCE']=__def_mpt_dest_db__
+
+            mpt_list_ = self.write_mpt_to_db(
+                portfolio_data=self._portfolio,
+                cols_dict=_cols,
+                **kwargs,
+            )
+            if mpt_list_ is None or len(mpt_list_)<=0:
+                raise RuntimeError("write_mpt_to_db returned an empty %s object" % type(mpt_list_))
+            logger.debug("%s call to write_mpt_to_db succeded %d documents in %s DB",
+                         __s_fn_id__,len(mpt_list_),kwargs['DESTINDBNAME'])
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return self._porfolio
+        return self._portfolio,self._data
 
 #         return valid_date_list_, valid_asset_data_
 
@@ -718,7 +747,7 @@ class WeightedPortfolio():
             """
 
             __s_fn_id__ = "function <pca_wrapper>"
-            _idx_types=['adx','sharp','rsi','mfi','beta'] # performance indicator list to compute
+            _idx_types=['adx','rsi','mfi','macd'] # performance indicator list to compute
 
             try:
                 _indic_df = func(self,mcap_date,mcap_value_lb,**kwargs)
@@ -791,7 +820,7 @@ class WeightedPortfolio():
 
             __s_fn_id__ = "function <indicators_wrapper>"
 
-            _idx_types=['adx','sharp','rsi','mfi','beta'] # performance indicator list to compute
+            _idx_types=['adx','rsi','mfi','macd'] # performance indicator list to compute
             __val_col__="simp_ror" # the column name with the mcap value
             __name_col__='asset_name' # the column name with the mcap asset names
             __date_col__='mcap_date'  # the column name with mcap date for which value was set
@@ -857,9 +886,9 @@ class WeightedPortfolio():
 
         return indicators_wrapper
 
-    @select_assets
-    @calc_pca
-    @calc_indicators
+#     @select_assets
+#     @calc_pca
+#     @calc_indicators
     def select_top_assets(
         self,
         mcap_date:date=None,
@@ -887,6 +916,8 @@ class WeightedPortfolio():
         __s_fn_id__ = "function <select_top_assets>"
         ''' define default values '''
         __def_mcap_lower__ = 10000.0
+        _rf_asset_name='bitcoin'   # default risk free asset name
+        _rf_val_col = "price_simp_ror" # default risk free ror value column to filter by
         _table_name = "warehouse.mcap_past"
         _asset_count= 23
 
@@ -903,40 +934,56 @@ class WeightedPortfolio():
                 and isinstance(kwargs["ASSETCOUNT"],int) \
                 and kwargs["ASSETCOUNT"]>0:
                 _asset_count=kwargs["ASSETCOUNT"]
+            if "RFASSETNAME" in kwargs.keys() \
+                and "".join(kwargs["RFASSETNAME"].split())!="":
+                _rf_asset_name=kwargs["RFASSETNAME"]
+            if "RFVALCOL" in kwargs.keys() \
+                and "".join(kwargs["RFVALCOL"].split())!="":
+                _rf_val_col=kwargs["RFVALCOL"]
 
             ''' read data from database '''
+#             _query WHAT WE WANT
+#              =f"select * from {_table_name} wmp where wmp.mcap_date = '{mcap_date}' " +\
+#                     f"and wmp.mcap_value > {mcap_value_lb} " +\
+#                     f"and wmp.{_rf_val_col} >= (select MAX({_rf_val_col}) from {_table_name} " +\
+#                     f"where asset_name='{_rf_asset_name}' and mcap_date = '{mcap_date}') " +\
+#                     f"order by wmp.mcap_value DESC limit {_asset_count} "
+#             _query TESTING ONLY
             _query =f"select * from {_table_name} wmp where wmp.mcap_date = '{mcap_date}' " +\
                     f"and wmp.mcap_value > {mcap_value_lb} " +\
+                    f"and wmp.{_rf_val_col} >= 0 " +\
                     f"order by wmp.mcap_value DESC limit {_asset_count} "
-            self._data = clsSDB.read_data_from_table(select=_query, **kwargs)
-            if self._data.count()<=0:
-                raise RuntimeError("%s query resulted in empty dataframe; aborting." % __s_fn_id__)
-            logger.debug("%s query returned %d dataframe rows",__s_fn_id__,self._data.count())
+            print(_query)
+            
+#             self._data = clsSDB.read_data_from_table(select=_query, **kwargs)
+#             if self._data.count()<=0:
+#                 raise RuntimeError("%s query resulted in empty dataframe; aborting." % __s_fn_id__)
+#             logger.debug("%s query returned %d dataframe rows",__s_fn_id__,self._data.count())
 
-            ''' construct portfolio with selected assets '''
-            _assets=self._data.select(F.col('mcap_past_pk'),F.col('uuid'),F.col('mcap_date'),
-                                      F.col('asset_name'),F.col('mcap_value'))\
-                                .distinct()
-            if _assets.count()<=0:
-                raise RuntimeError("%s select distinct assets resulted in empty dataframe"
-                                   % __s_fn_id__)
-            self._portfolio=[]
-            for _asset in _assets.collect():
-                _asset_dict={}
-                _asset_dict={
-                    "mcapid":_asset[0],
-                    "uuid" : _asset[1],
-                    "date" : datetime.strftime(_asset[2],'%Y-%m-%dT00:00:00'),
-                    "asset": _asset[3],
-                    'mcap.weight': 1.0,
-                    'mcap.value' : float(_asset[4]),
-                }
-                self._portfolio.append(_asset_dict)
-                self._portfolio=sorted(self._portfolio, key=lambda d: d['mcap.value'], reverse=True)
-            if len(self._portfolio)<=0:
-                raise RuntimeError("%s failed to construct portfolio for %d assets"
-                                   %(__s_fn_id__,_assets.count()))
-            logger.debug("%s constructed portfolio with %d assets",__s_fn_id__,len(self._portfolio))
+#             ''' construct portfolio with selected assets '''
+#             _assets=self._data.select(F.col('mcap_past_pk'),F.col('uuid'),F.col('mcap_date'),
+#                                       F.col('asset_name'),F.col('mcap_value'))\
+#                                 .distinct()
+#             if _assets.count()<=0:
+#                 raise RuntimeError("%s select distinct assets resulted in empty dataframe"
+#                                    % __s_fn_id__)
+#             self._portfolio=[]
+#             for _asset in _assets.collect():
+#                 _asset_dict={}
+#                 _asset_dict={
+#                     "mcapid":_asset[0],
+#                     "uuid" : _asset[1],
+#                     "date" : datetime.strftime(_asset[2],'%Y-%m-%dT00:00:00'),
+#                     "asset": _asset[3],
+#                     'mcap.weight': 1.0,
+#                     'mcap.value' : float(_asset[4]),
+#                 }
+#                 self._portfolio.append(_asset_dict)
+#                 self._portfolio=sorted(self._portfolio, key=lambda d: d['mcap.value'], reverse=True)
+#             if len(self._portfolio)<=0:
+#                 raise RuntimeError("%s failed to construct portfolio for %d assets"
+#                                    %(__s_fn_id__,_assets.count()))
+#             logger.debug("%s constructed portfolio with %d assets",__s_fn_id__,len(self._portfolio))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -1045,13 +1092,14 @@ class WeightedPortfolio():
                 _destin_db = __destin_db_name__
                 if "DESTINDBNAME" in kwargs.keys():
                     _destin_db = kwargs["DESTINDBNAME"]
+                    
                 if "DBAUTHSOURCE" in kwargs.keys():
                     clsNoSQL.connect={'DBAUTHSOURCE':kwargs['DBAUTHSOURCE']}
                 else:
                     clsNoSQL.connect={'DBAUTHSOURCE':_destin_db}
                 ''' confirm database exists '''
                 if not _destin_db in clsNoSQL.connect.list_database_names():
-                    raise RuntimeError("%s does not exist",_destin_db)
+                    raise RuntimeError("%s does not exist" % _destin_db)
                 ''' set index attributes '''
                 if "UIDSLIST" in kwargs.keys():
                     _uids = kwargs["UIDSLIST"]               

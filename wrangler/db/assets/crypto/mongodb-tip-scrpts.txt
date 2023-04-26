@@ -74,7 +74,7 @@ db.createUser(
 );
 
 # 3) create about db collection
-db.about.db.insertOne({"name":"marketcap","desc":"marketcap"})
+db.about.db.insertOne({"name":"marketcap","desc":"asset-wise marketcap, price, and volumen data"})
 
 ## ----- ASSET HISTORIC MARKETCAP -----
 ##
@@ -100,3 +100,10 @@ db.createUser(
 
 # 3) create about db collection
 db.about.insertOne({"name":"tip-historic-marketcap","desc":"stores source-wise historic marketcap data"})
+
+## DROP MULTIPLE MATCHING COLLECTIONS
+db.getCollectionNames().forEach(function(c) {
+    if(c.match("^coingecko.2023-03-01")) { 
+        db.getCollection(c).drop();
+    }
+  });

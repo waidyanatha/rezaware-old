@@ -76,6 +76,7 @@ class Portfolio():
             'SORTINO', # Sortino ratio 
             'SHARP',    # Sharp ratio of all positive
             'MFI',   # Money Flow Index
+            'MACD',  # Moving Average Convergence Divergence
         ] 
         
         global pkgConf
@@ -459,11 +460,7 @@ class Portfolio():
                 _mpt_coll_prefix = kwargs["COLLPREFIX"]
 
             ''' write portfolio to collection '''
-#             _colls_list=[]
-#             _uniq_dates = set([x['date'] for x in _data])
-#             for _date in _uniq_dates:
             _asset_count=len([x['asset'] for x in self._portfolio])
-#             _assets = list(filter(lambda d: d['asset'] == _date, _data))
             _destin_coll = '.'.join([
                 _mpt_coll_prefix,"top",str(_asset_count),_movement_dt.split('T')[0]
             ])
@@ -472,19 +469,13 @@ class Portfolio():
                 db_coll=_destin_coll,
                 data=_movement_list,
                 uuid_list=__uids__)
-#             _colls_list.append(_mpt_coll)
             ''' confirm returned collection counts '''
-            if len(_write_coll) > 0:
-                logger.debug("%s %d documents written to %s collection in %s %s database",
-                             __s_fn_id__,len(_movement_list),
-                             _destin_coll,clsNoSQL.dbType,_destin_db)
-#             if len(_colls_list) > 0:
-#                 self._portfolio = _colls_list
-#                 logger.info("Wrote %d mpt collections successfully to %s %s",
-#                             len(self._portfolio),clsNoSQL.dbType,_destin_db)
-#             else:
-#                 raise RuntimeError("Something was wrong with writing mpt to collections in %s %s"
-#                                    ,clsNoSQL.dbType,_destin_db)
+            if _write_coll is None or len(_write_coll) <= 0:
+                raise RuntimeError("%s write_document returned was empty %s"
+                                   % (__s_fn_id__,type(_write_coll)))
+            logger.debug("%s %d documents written to %s collection in %s %s database",
+                         __s_fn_id__,len(_movement_list),
+                         _destin_coll,clsNoSQL.dbType,_destin_db)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -640,7 +631,6 @@ class Portfolio():
                 idx_val_dict = {}
                 for _idx_name in index_type:
                     try:
-#                         if self._idxType in ['RSI','MFI']:
                         if _idx_name.upper() in ['RSI','MFI']:
                             _weights_df = pd.DataFrame(self.portfolio)
                             idx_val_=Portfolio.calc_movement(
@@ -649,7 +639,6 @@ class Portfolio():
                                 part_col=asset_name_col,
                                 weights_pdf=_weights_df,
                                 index_type=_idx_name,
-#                                 index_type=self._idxType,
                                 **kwargs,
                             )
 
@@ -684,6 +673,17 @@ class Portfolio():
                                 risk_free_part_col=asset_name_col,
                                 index_type=_idx_name,
 #                                 index_type=self._idxType,
+                                **kwargs,
+                            )
+
+                        if _idx_name.upper() in ['MACD']:
+                            _weights_df = pd.DataFrame(self.portfolio)
+                            idx_val_=Portfolio.calc_macd(
+                                ror_data=_ror_data,
+                                val_col=asset_val_col,
+                                part_col=asset_name_col,
+                                weights_pdf=_weights_df,
+                                index_type=_idx_name,
                                 **kwargs,
                             )
 
@@ -1229,6 +1229,80 @@ class Portfolio():
         return adx_.collect()[0][0],adx_sdf_
 
 
+    ''' --- MOVING AVERAGE CONVERGENCE DIVERGENCE ---
+
+            author: <samana.thetha@gmail.com>
+    '''
+    @staticmethod
+    def calc_macd(
+        ror_data:DataFrame=None,
+        val_col:str="log_ror",
+        part_col:str="asset_name",
+        weights_list:list=[],
+        **kwargs,
+    ) -> float:
+        """
+        Description:
+            Moving Average Convergence Divergence (MACD) is calculated with exponential moving
+            averages (EMA).
+            * calculate the Simple Moving Averate (SMA) as the EMA previous period for a chosen
+                number of time periods; i.e. sum of ROR divided by the number of ROR points
+            * calculate the weighted multiplier: K = 2/(n+1); where n=periods
+            * calculate the n=12 period EMA = (price - EMA_previous) * K + EMA_previous
+
+            is when the DMI and price disagree, or do not confirm one another.
+            An example is when price makes a new high, but the +DMI does not. Divergence
+            is generally a warning to manage risk because it signals a change of swing 
+            strength and commonly precedes a retracement or reversal.
+        Attributes:
+            ror_data (DataFrame) the rate of returns dataframe
+            val_col (str) defines the numeric column to use; default value = log_ror
+            part_col (str) defines the partition column; i.e categories; default value = asset_name
+            weights_list (list) contains dictionaries of asset_name and associated weight,
+            **kwargs not used
+        Returns:
+
+        """
+
+        __s_fn_id__ = "@staticmethod <calc_macd>"
+
+        try:
+            ''' validate the attribues '''
+            if ror_data.count()<=0:
+                raise AttributeError("Cannot compute MACD with empty dataframe")
+#             ror_sdf_=ror_data
+            if "".join(val_col.strip())=="" or \
+                val_col not in ror_sdf_.columns or \
+                ror_sdf_.select(F.col(val_col)).dtypes[0][1]=='string':
+                raise AttributeError("A valid numeric column from %s required" % ror_sdf_.dtypes)
+            if "".join(part_col.strip())=="":
+                raise AttributeError("Invalid partition column, specify one from %s" % ror_sdf_.dtypes)
+
+            ''' Smoothed values '''
+            kwargs['RESULTCOL']="_".join([val_col,'ema_prev'])
+            ema_prev_sdf_ = clsStats.simple_moving_stats(
+                num_col=val_col,
+                date_col="mcap_date",
+                part_col=part_col,
+                stat_op="sum",
+                data=ror_sdf_,
+                **kwargs,
+            )
+
+            k = 2/(ema_prev_sdf_ + 1)
+            ema_prev_sdf_ = ema_prev_sdf_.select((F.col(val_col) - \
+                                           F.col(kwargs['RESULTCOL']))*k + \
+                                            F.col(kwargs['RESULTCOL'])).alias('ema')\
+                                            .sort('ema')
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return None
+
+
     ''' --- GET RISK FREE ROR ---
 
             author: <samana.thetha@gmail.com>
@@ -1433,48 +1507,6 @@ class Portfolio():
         """
         Description:
 
-        Attributes:
-            ror_data (DataFrame) the rate of returns dataframe
-            val_col (str) defines the numeric column to use; default value = log_ror
-            part_col (str) defines the partition column; i.e categories; default value = asset_name
-            weights_list (list) contains dictionaries of asset_name and associated weight,
-            **kwargs not used
-        Returns:
-
-        """
-
-        __s_fn_id__ = "@staticmethod <calc_divergence>"
-
-        try:
-            if ror_data.count() <=0:
-                raise AttributeError("Cannot compute RSI with empty dataframe")
-
-        except Exception as err:
-            logger.error("%s %s \n",__s_fn_id__, err)
-            logger.debug(traceback.format_exc())
-            print("[Error]"+__s_fn_id__, err)
-
-        return None
-
-
-    ''' --- DIVERGENCE ---
-
-            author: <samana.thetha@gmail.com>
-    '''
-    @staticmethod
-    def calc_divergence(
-        ror_data:DataFrame=None,
-        val_col:str="log_ror",
-        part_col:str="asset_name",
-        weights_list:list=[],
-        **kwargs,
-    ) -> float:
-        """
-        Description:
-            Divergence is when the DMI and price disagree, or do not confirm one another.
-            An example is when price makes a new high, but the +DMI does not. Divergence
-            is generally a warning to manage risk because it signals a change of swing 
-            strength and commonly precedes a retracement or reversal.
         Attributes:
             ror_data (DataFrame) the rate of returns dataframe
             val_col (str) defines the numeric column to use; default value = log_ror
