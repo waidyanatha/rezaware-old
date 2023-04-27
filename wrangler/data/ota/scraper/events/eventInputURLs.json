@@ -1,0 +1,7 @@
+{
+    "10times.com": [{
+        "url": "https://10times.com/{destinationID}",
+        "inputs": ["destinationID"],
+        "locations": "cityCodes10times.csv",
+    }]    
+}
