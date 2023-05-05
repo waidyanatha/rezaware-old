@@ -20,6 +20,7 @@ astunparse==1.6.3
 attrs==22.1.0
 Babel==2.10.3
 backcall==0.2.0
+bson==0.5.10
 beautifulsoup4==4.11.1
 billiard==3.6.4.0
 bleach==5.0.1
@@ -180,6 +181,7 @@ pyasn1-modules==0.3.0
 pycparser==2.21
 Pygments==2.13.0
 PyJWT==2.4.0
+pymongo==4.3.3
 pyparsing==3.0.9
 pyrsistent==0.18.1
 python-daemon==2.3.1
