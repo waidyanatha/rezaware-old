@@ -593,10 +593,12 @@ class CryptoMarkets():
                                                      %(_api['name'],_mcap[1],_price[1]))
                                 ''' replace special char with _ to compy with pyspark imute '''
                                 _api['name'] = _api['name'].replace("$","_")\
-                                                .replace("%","_").replace("..","_")\
-                                                .replace(".","_").replace(",","_")\
+                                                .replace(".","_").replace("..","_")\
+                                                .replace("%","_").replace(":","_")\
+                                                .replace(";","_").replace(",","_")\
                                                 .replace("#","_").replace("*","_")\
-                                                .replace("!","1").replace("-","_")\
+                                                .replace("!","1").replace("+","_")\
+                                                .replace("--","_").replace("-","_")\
                                                 .replace(" ","_").replace("  ","_")\
                                                 .replace("(","").replace(")","")\
                                                 .replace("[","").replace("]","")\
