@@ -23,8 +23,8 @@ try:
     from pyspark.sql import functions as F
     from pyspark.sql import DataFrame
     from pyspark.sql.window import Window
-    from pyspark.sql.types import TimestampType,DateType,StructType,StructField,StringType
-#     from pyspark.sql import DataFrame
+    from pyspark.sql.types import TimestampType,DateType,DoubleType, StructType,StructField,StringType
+    from pyspark.sql.functions import pandas_udf
 
     print("All packages in %s %s %s %s imported successfully!"
           % (__app__,__module__,__package__,__name__))
@@ -75,6 +75,8 @@ class RollingStats():
             'UNIT':'DAY'  # rolling window
         }
 
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
+
         global config
         global logger
         global clsSpark
@@ -112,17 +114,14 @@ class RollingStats():
             self.pckgDir = config.get("CWDS",self.__package__)
             self.appDir = config.get("CWDS",self.__app__)
 
-            logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s."
-                         %(self.__app__,
-                           self.__module__,
-                           self.__package__,
-                           self.__name__,
-                           self.__desc__))
+            logger.debug("%s initialization for %s module package %s %s done.\nStart workloads: %s.",
+                         self.__app__,self.__module__,self.__package__,
+                         self.__name__,self.__desc__)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return None
 
@@ -155,7 +154,7 @@ class RollingStats():
             self._session (SparkSession)
         """
 
-        __s_fn_id__ = "function <@property session>"
+        __s_fn_id__ = f"{self.__name__} function <@property session>"
 
         try:
             if self._session is None or self._session=={}:
@@ -169,8 +168,8 @@ class RollingStats():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._session
 
@@ -185,7 +184,7 @@ class RollingStats():
             self._session (SparkSession)
         """
         
-        __s_fn_id__ = "function <@session.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@session.setter>"
 
         try:
             ''' TODO validate if active spark session '''
@@ -194,8 +193,8 @@ class RollingStats():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._session
 
@@ -211,12 +210,16 @@ class RollingStats():
             self._data (DataFrame)
         """
         
-        __s_fn_id__ = "function <@propert data>"
+        __s_fn_id__ = f"{self.__name__} function <@propert data>"
         
         try:
             if self._data is None:
-                raise ValueError("Data is of NoneType; cannot be used in any %s computations"
-                                 %self.__name__)
+                raise ValueError("%s Data is of NoneType; cannot be used in any computations"
+                                 % __s_fn_id__)
+            if not isinstance(self._data,DataFrame):
+                self._data = self.session.createDataFrame(self._data)
+                logger.debug("%s Data converted to pyspark %s dtype",
+                             __s_fn_id__,type(self._data))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -237,7 +240,7 @@ class RollingStats():
             self._data (DataFrame)
         """
 
-        __s_fn_id__ = "function <@data.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@data.setter>"
 #         clsSparkWL.data=data
 #         self._data = clsSparkWL.data
 
@@ -247,15 +250,16 @@ class RollingStats():
 
             if not isinstance(data,DataFrame):
                 self._data = self.session.createDataFrame(data)
-                logger.debug("Data of dtype %s converted to pyspark DataFrame", type(data))
+                logger.debug("%s Data of dtype %s converted to pyspark DataFrame",
+                             __s_fn_id__,type(data))
             else:
                 self._data = data
-                logger.debug("Class property data is a pyspark DataFrame")
+                logger.debug("%s Class property data is a pyspark DataFrame",__s_fn_id__)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._data
 
@@ -270,8 +274,17 @@ class RollingStats():
         Returns:
             self._startDateTime (timestamp)
         """
-        if self._startDT is None and not self.data.isEmpty():
-            self._startDT = self.data.select(F.min(self.datetimeAttr)).collect()
+
+        __s_fn_id__ = f"{self.__name__} function <@endDateTime.setter>"
+
+        try:
+            if self._startDT is None and not self.data.isEmpty():
+                self._startDT = self.data.select(F.min(self.datetimeAttr)).collect()
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return self._startDT
 
@@ -288,7 +301,7 @@ class RollingStats():
             self._startDateTime (timestamp)
         """
 
-        __s_fn_id__ = "function <@startDateTime.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@startDateTime.setter>"
 
         try:
             if start_date_time is None or not isinstance(start_date_time,datetime):
@@ -297,8 +310,8 @@ class RollingStats():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._startDT
 
@@ -313,8 +326,18 @@ class RollingStats():
         Returns:
             self._endDateTime (timestamp)
         """
-        if self._endDT is None and not self.data.isEmpty():
-            self._endDT = self.data.select(F.max(self.datetimeAttr)).collect()
+
+        __s_fn_id__ = f"{self.__name__} function <@endDateTime.setter>"
+
+        try:
+            if self._endDT is None and not self.data.isEmpty():
+                self._endDT = self.data.select(F.max(self.datetimeAttr)).collect()
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
         return self._endDT
 
     @endDateTime.setter
@@ -328,7 +351,7 @@ class RollingStats():
             self._endDateTime (timestamp)
         """
 
-        __s_fn_id__ = "function <@endDateTime.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@endDateTime.setter>"
 
         try:
             if end_date_time is None or not isinstance(end_date_time,datetime):
@@ -337,8 +360,8 @@ class RollingStats():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._endDT
 
@@ -354,7 +377,7 @@ class RollingStats():
             self._datetimeAttr (timestamp)
         """
 
-        __s_fn_id__ = "function <@property datetimeAttr>"
+        __s_fn_id__ = f"{self.__name__} function <@property datetimeAttr>"
 
         try:
             if self._dtAttr is None: # or \
@@ -365,9 +388,9 @@ class RollingStats():
 #                 self.data.schema[self._dtAttr].dataType !=date or \
 #                 self.data.schema[self._dtAttr].dataType !=datetime:
 
-                logger.debug("The datetimeAttr was not explicitly set as a valid "+ \
+                logger.debug("%s The datetimeAttr was not explicitly set as a valid "+ \
                             "DateType or TimestampType and will try to set the first"+ \
-                            "found valid column %s",self.data.dtypes)
+                            "found valid column %s",__s_fn_id__,self.data.dtypes)
 #                 print(self.data.dtypes)
                 _dt_attr_list = next(
                     (x for x, y in self.data.dtypes 
@@ -383,8 +406,8 @@ class RollingStats():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._dtAttr
 
@@ -399,7 +422,7 @@ class RollingStats():
             self._datetimeAttr (timestamp)
         """
 
-        __s_fn_id__ = "function <@datetimeAttr.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@datetimeAttr.setter>"
 
         try:
             if self.data is None or self.data.count()<=0:
@@ -411,12 +434,12 @@ class RollingStats():
                 raise AttributeError("The datetimeAttribute cannot be an empty string")
             ''' cast the datetime attr to a timestamp '''
             self.data = self.data.withColumn(self._dtAttr,F.to_timestamp(self._dtAttr))
-            logger.debug("Cast column %s to timestamp",self._dtAttr)
+            logger.debug("%s Cast column %s to timestamp",__s_fn_id__,self._dtAttr)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._dtAttr
 
@@ -430,18 +453,21 @@ class RollingStats():
         Returns:
             self._partAttr
         """
+        
+        __s_fn_id__ = f"{self.__name__} function <@property partitionAttr>"
+        
         try:
-            if self.__partAttr is None:
-                logger.warning("No partition column set")
+            if self._partAttr is None:
+                logger.warning("%s No partition column set",__s_fn_id__)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._partAttr
 
-    
+    @partitionAttr.setter
     def partitionAttr(self,partition_attr) -> str:
         """
         Description:
@@ -452,17 +478,18 @@ class RollingStats():
             self._partAttr
         """
 
-        __s_fn_id__ = "function <@property windowSpec>"
+        __s_fn_id__ = f"{self.__name__} function <@partitionAttr.setter>"
 
         try:
             if partition_attr is not None or "".join(partition_attr.split())!="":
                 self._partAttr=partition_attr
-                logger.debug("Set partition column attribute name as %s",self._partAttr)
+                logger.debug("%s Set partition column attribute name as %s",
+                             __s_fn_id__,self._partAttr)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._partAttr
 
@@ -480,7 +507,7 @@ class RollingStats():
             self._winSpec (int)
         """
 
-        __s_fn_id__ = "function <@property windowSpec>"
+        __s_fn_id__ = f"{self.__name__} function <@property windowSpec>"
         __win_len__ = 7
 
         try:
@@ -490,13 +517,13 @@ class RollingStats():
                 self._winSpec = Window \
                     .orderBy(F.col(self.datetimeAttr).cast('long')) \
                     .rangeBetween(-days(__win_len__),0)
-                logger.debug("Class property winSpec was not explicitly set "+\
-                             "Setting to $d DAY",__win_len__)
+                logger.debug("%s Class property winSpec was not explicitly set "+\
+                             "Setting to $d DAY",__s_fn_id__,__win_len__)
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._winSpec
 
@@ -513,7 +540,7 @@ class RollingStats():
             self._winSpec (int)
         """
 
-        __s_fn_id__ = "function <@windowSpec.setter>"
+        __s_fn_id__ = f"{self.__name__} function <@windowSpec.setter>"
 
         try:
             if not len(window_spec)>0 or \
@@ -549,12 +576,12 @@ class RollingStats():
                     .orderBy(F.col(self.datetimeAttr).cast('long')) \
                     .rangeBetween(-_time_attr(window_spec['LENGTH']),0)
 
-            logger.debug("WindowSpec set to %s ", str(self._winSpec))
+            logger.debug("%s WindowSpec set to %s ",__s_fn_id__,str(self._winSpec))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return self._winSpec
 
@@ -579,7 +606,7 @@ class RollingStats():
 
             Returns:
             """
-            __s_fn_id__ = "function <roll_stat_wrapper>"
+            __s_fn_id__ = f"{self.__name__} function <calc_roll_stat>"
 
             try:
                 _roll_col_name = func(self,num_col,date_col,part_col,stat_op,data,**kwargs)
@@ -588,6 +615,19 @@ class RollingStats():
                     self._data = self.data. \
                                     withColumn(_roll_col_name, F.mean(num_col). \
                                                over(self.windowSpec))
+                elif stat_op.upper() in ['EMA','EXPMOVEAVG','EXPONENTIALMOVINGAVERAGE']:
+                    self._data = self.data. \
+                                    withColumn(_roll_col_name, F.mean(num_col). \
+                                               over(self.windowSpec))
+                elif stat_op.upper() in ['EWM','EWMA','EXPWEIGHTAVG','EXPWEIGHTMOVEAVG']:
+                    self.data = RollingStats.exp_ma(
+                        df=self._data,
+                        group_col=part_col,
+                        sort_col =date_col,
+                        val_col_name=num_col,
+                        ewa_col_name=_roll_col_name,
+                    )
+
                 elif stat_op.upper() in ['STDDEV','STDV','SD','SDV','STANDARD DEVIATION']:
                     self._data = self.data. \
                                     withColumn(_roll_col_name, F.stddev(num_col). \
@@ -599,10 +639,16 @@ class RollingStats():
                 else:
                     raise AttributeError("Invalid stat operation %s" % stat_op)
 
+                if self._data is None or self._data.count()<=0:
+                    raise AttributeError("%s returned an empty %s dataframe" 
+                                         %(stat_op.upper(),type(self._data)))
+                logger.debug("%s successfully computed %s and returned %d rows and %d columns",
+                             __s_fn_id__,stat_op.upper(),self._data.count(),len(self._data.columns))
+
             except Exception as err:
                 logger.error("%s %s \n",__s_fn_id__, err)
+                logger.debug(traceback.format_exc())
                 print("[Error]"+__s_fn_id__, err)
-                print(traceback.format_exc())
 
             return self._data
         return calc_roll_stat
@@ -625,7 +671,8 @@ class RollingStats():
         Returns:
         """
 
-        __s_fn_id__ = "function <simple_moving_stats>"
+        __s_fn_id__ = f"{self.__name__} function <simple_moving_stats>"
+
         _winspec = {}
         _winspec['LENGTH']=7
         _winspec['UNIT']='DAY'
@@ -660,21 +707,48 @@ class RollingStats():
                 self.windowSpec = _winspec
 #             else:
 #                 pass
-            logger.debug("Class property windowSpec set with %s", str(_winspec))
+            logger.debug("%s Class property windowSpec set with %s",__s_fn_id__,str(_winspec))
 
-            if "RESULTCOL" in kwargs.keys() and kwargs['RESULTCOL'] != '':
+            if "RESULTCOL" in kwargs.keys() and "".join(kwargs['RESULTCOL'].split()) != "":
                 _roll_col_name = kwargs['RESULTCOL']
             else:
                 _roll_col_name = "rolling_"+stat_op+"_"+num_col
 
-            logger.debug("Simple Moving Stats results will be written to column %s",_roll_col_name)
+            logger.debug("%s Simple Moving Stats results, for dataframe with %d rows "+\
+                         "and %d columns, written to column %s",
+                         __s_fn_id__,self.data.count(),len(self.data.columns),_roll_col_name.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return _roll_col_name
+
+    ''' Function --- EXPONENTIAL WEIGHTED MOVING AVERAGE ---
+    
+        author: <samana.thetha@gmail.com>
+        
+        resoource: https://stackoverflow.com/questions/50105631/how-to-run-exponential-weighted-moving-average-in-pyspark
+    '''
+    @staticmethod
+    def exp_ma(
+        df,
+        group_col='asset_name',
+        sort_col='mcap_date',
+        val_col_name='mcap_value',
+        ewa_col_name='ewma',
+        **kwargs):
+        schema = (df.select('*')
+            .schema.add(StructField(ewa_col_name, DoubleType())))
+
+        @pandas_udf(schema, F.PandasUDFType.GROUPED_MAP)
+        def ema(pdf):
+            pdf[ewa_col_name] = pdf[val_col_name].ewm(span=5, min_periods=1).mean()
+            return pdf
+
+        return df.groupby(group_col).apply(ema)
+
 
     ''' Function --- FAST FOURIER DENOISER ---
     
@@ -691,7 +765,7 @@ class RollingStats():
         Returns:
         """
 
-        __s_fn_id__ = "function <simple_moving_stats>"
+        __s_fn_id__ = f"{RollingStats.__name__} @staticmethod <simple_moving_stats>"
 
         clean_data = None
         
@@ -717,8 +791,8 @@ class RollingStats():
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
-            print(traceback.format_exc())
 
         return clean_data
 

@@ -54,7 +54,6 @@ class Portfolio():
             * associated and extended utils and mining etp classes.
             * logger for module/package
         """
-
         self.__name__ = __name__
         self.__package__ = __package__
         self.__module__ = __module__
@@ -77,7 +76,8 @@ class Portfolio():
             'SHARP',    # Sharp ratio of all positive
             'MFI',   # Money Flow Index
             'MACD',  # Moving Average Convergence Divergence
-        ] 
+        ]
+        self._movement=None
         
         global pkgConf
         global logger
@@ -86,6 +86,8 @@ class Portfolio():
 #         global clsSCNR
         global clsStats
 #         global clsMPT
+
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
 
         try:
             self.cwd=os.path.dirname(__file__)
@@ -112,10 +114,10 @@ class Portfolio():
 #             from utils.modules.etl.load import sparkDBwls as sparkDB
 #             clsSDB = sparkDB.SQLWorkLoads(desc=self.__desc__)
 #             ''' import spark clean-n-rich work load utils to transform the data '''
-            from utils.modules.etl.load import sparkDBwls as spark
+            from utils.modules.etl.loader import sparkDBwls as spark
             clsSDB =spark.SQLWorkLoads(desc=self.__desc__)
             ''' import spark mongo work load utils to read and write data '''
-            from utils.modules.etl.load import sparkNoSQLwls as nosql
+            from utils.modules.etl.loader import sparkNoSQLwls as nosql
             clsNoSQL = nosql.NoSQLWorkLoads(desc=self.__desc__)
 #             from utils.modules.etl.transform import sparkCleanNRich as sparkCNR
 #             clsSCNR = sparkCNR.Transformer(desc=self.__desc__)
@@ -135,8 +137,8 @@ class Portfolio():
             print("%s Class initialization complete" % self.__name__)
 
         except Exception as err:
-            logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
+            print("[Error]"+__s_fn_id__, err)
             print(traceback.format_exc())
 
         return None
@@ -155,7 +157,7 @@ class Portfolio():
         Returns (dataframe) self._data
         """
 
-        __s_fn_id__ = "function <@property data>"
+        __s_fn_id__ = f"{self.__name__} function <@property data>"
 
         try:
             if self._data is None:
@@ -171,7 +173,7 @@ class Portfolio():
     @data.setter
     def data(self,data) -> DataFrame:
 
-        __s_fn_id__ = "function <@setter data>"
+        __s_fn_id__ = f"{self.__name__} function <@setter data>"
 
         try:
             if data is None:
@@ -200,7 +202,7 @@ class Portfolio():
         Returns (dataframe) self._data
         """
 
-        __s_fn_id__ = "function <@property portfolio>"
+        __s_fn_id__ = f"{self.__name__} function <@property portfolio>"
 
         try:
             if self._portfolio is None:
@@ -224,7 +226,7 @@ class Portfolio():
     @portfolio.setter
     def portfolio(self,portfolio:list=[]) -> list:
 
-        __s_fn_id__ = "function <@setter portfolio>"
+        __s_fn_id__ = f"{self.__name__} function <@setter portfolio>"
 
         try:
             if len(portfolio)<=0:
@@ -251,7 +253,7 @@ class Portfolio():
         Returns (list) self._movement
         """
 
-        __s_fn_id__ = "function <@property movement>"
+        __s_fn_id__ = f"{self.__name__} function <@property movement>"
 
         try:
             if self._movement is None:
@@ -267,7 +269,7 @@ class Portfolio():
     @movement.setter
     def movement(self,movement:list=[]) -> list:
 
-        __s_fn_id__ = "function <@setter movement>"
+        __s_fn_id__ = f"{self.__name__} function <@setter movement>"
 
         try:
             if len(movement)<=0:
@@ -313,7 +315,7 @@ class Portfolio():
             if database collection list returns None log eventand raise a RuntimeError
         """
 
-        __s_fn_id__ = "function <read_portfolio>"
+        __s_fn_id__ = f"{self.__name__} function <read_portfolio>"
 
         __def_db_type__ ='MongoDB'
         __def_db_name__ = "tip-daily-mpt"
@@ -409,7 +411,7 @@ class Portfolio():
             if database collection list returns None log eventand raise a RuntimeError
         """
 
-        __s_fn_id__ = "function <write_movement>"
+        __s_fn_id__ = f"{self.__name__} function <write_movement>"
         __def_db_type__ ='MongoDB'
         __destin_db_name__ = "tip-portfolio"
         __destin_coll_prefix__="movement"
@@ -499,7 +501,7 @@ class Portfolio():
         Returns (float) self._idxValue
         """
 
-        __s_fn_id__ = "function <@property idxValue>"
+        __s_fn_id__ = f"{self.__name__} function <@property idxValue>"
 
         try:
             if self._idxValue is None:
@@ -559,7 +561,7 @@ class Portfolio():
         Returns (str) self._idxType
         """
 
-        __s_fn_id__ = "function <@property idxType>"
+        __s_fn_id__ = f"{self.__name__} function <@property idxType>"
 
         try:
             if self._idxType not in self._idxTypeList:
@@ -575,7 +577,7 @@ class Portfolio():
     @idxType.setter
     def idxType(self,index_type) -> DataFrame:
 
-        __s_fn_id__ = "function <@setter idxType>"
+        __s_fn_id__ = f"{self.__name__} function <@setter idxType>"
 
         try:
             if index_type.upper() not in self._idxTypeList:
@@ -612,7 +614,7 @@ class Portfolio():
                 self._idxValue
             """
             
-            __s_fn_id__ = "function <index_wrapper>"
+            __s_fn_id__ = f"{self.__name__} function <index_wrapper>"
 
 #             _pos_sdf=None
 #             _neg_sdf=None
@@ -676,7 +678,7 @@ class Portfolio():
                                 **kwargs,
                             )
 
-                        if _idx_name.upper() in ['MACD']:
+                        elif _idx_name.upper() in ['MACD']:
                             _weights_df = pd.DataFrame(self.portfolio)
                             idx_val_=Portfolio.calc_macd(
                                 ror_data=_ror_data,
@@ -688,12 +690,13 @@ class Portfolio():
                             )
 
                         else:
-                            raise RuntimeError("%s something was wrong" % __s_fn_id__)
-                        if idx_val_ is None:
+                            raise RuntimeError("%s something was wrong calculating index %s" 
+                                               % (__s_fn_id__,_idx_name.upper()))
+                        if not isinstance(idx_val_,float):
                             raise ValueError("%s returned None type %s value"
-                                             ,__s_fn_id__,_idx_name)
+                                             ,__s_fn_id__,_idx_name.upper())
                         logger.info("%s computed index value for %s = %0.4f",
-                                    __s_fn_id__,_idx_name,idx_val_)
+                                    __s_fn_id__,_idx_name.upper(),idx_val_)
                         idx_val_dict[_idx_name]=idx_val_
 
                     except Exception as idx_err:
@@ -767,7 +770,7 @@ class Portfolio():
             gets validated; else will raise an AttributeError exception
         """
 
-        __s_fn_id__ = "function <get_index>"
+        __s_fn_id__ = f"{self.__name__} function <get_index>"
 
         _tbl_name = 'warehouse.mcap_past'
         _mcap_min_val = 10000
@@ -780,13 +783,13 @@ class Portfolio():
         try:
             ''' validate and set portfolio data '''
             self.portfolio=portfolio
-            _idx_lsit_upper = [x.upper() for x in index_type]
-            _inval_idxs = [idx for idx in _idx_lsit_upper 
+            _idx_list_upper = [x.upper() for x in index_type]
+            _inval_idxs = [idx for idx in _idx_list_upper 
                                 if idx not in self._idxTypeList]
             if len(_inval_idxs)>0:
                 raise AttributeError("Invalid index types %s" % str(_inval_idxs))
 
-            _dates_list = [x['date'].split('T')[0] for x in self._portfolio]
+            _dates_list = [x[asset_date_col].split('T')[0] for x in self._portfolio]
             if str(asset_eval_date) not in _dates_list:
                 raise AttributeError("Invalid date %s not in any portfolio dates %s"
                                      % (str(asset_eval_date),str(_dates_list)))
@@ -827,11 +830,11 @@ class Portfolio():
                 raise ValueError("No data portfolio asset data received for query %s: " % _query)
 
             ''' to compute sharp, sortion, etc index get risk free data '''
-            risk_free_idx_list = list(set(_idx_lsit_upper)\
+            risk_free_idx_list = list(set(_idx_list_upper)\
                                       .intersection(set(['SHARP','SORTINO','BETA'])))
             if len(risk_free_idx_list)>0:
 #                 print('get risk free data %s'
-#                       % set(_idx_lsit_upper).intersection(set(['SHARP','SORTINO','BETA'])))
+#                       % set(_idx_list_upper).intersection(set(['SHARP','SORTINO','BETA'])))
 #             if index_type.upper() in ['SHARP','SORTINO','BETA']:
                 risk_free_sdf_ = Portfolio.get_risk_free_data(
                     asset_name=risk_free_assets,
@@ -873,7 +876,7 @@ class Portfolio():
         **kwargs,
     ):
 
-        __s_fn_id__ = "@staticmethod <get_weighted_ror>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <get_weighted_ror>"
 
         weighted_data_=None
 
@@ -958,7 +961,7 @@ class Portfolio():
         Exceptions:
         """
 
-        __s_fn_id__ = "@staticmethod <calc_movement>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_movement>"
 
         try:
             if ror_data.count() <=0:
@@ -1041,7 +1044,7 @@ class Portfolio():
                 original DataFrame
         """
 
-        __s_fn_id__ = "@staticmethod <get_dmi_data>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <get_dmi_data>"
 
         try:
             ''' validate the attribues '''
@@ -1166,7 +1169,7 @@ class Portfolio():
             adx (float) with the single adx real number
         """
 
-        __s_fn_id__ = "@staticmethod <calc_adx>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_adx>"
         adx_ = None
         adx_sdf_=None
         obj_map = {}
@@ -1264,7 +1267,7 @@ class Portfolio():
 
         """
 
-        __s_fn_id__ = "@staticmethod <calc_macd>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_macd>"
 
         try:
             ''' validate the attribues '''
@@ -1272,35 +1275,43 @@ class Portfolio():
                 raise AttributeError("Cannot compute MACD with empty dataframe")
 #             ror_sdf_=ror_data
             if "".join(val_col.strip())=="" or \
-                val_col not in ror_sdf_.columns or \
-                ror_sdf_.select(F.col(val_col)).dtypes[0][1]=='string':
-                raise AttributeError("A valid numeric column from %s required" % ror_sdf_.dtypes)
+                val_col not in ror_data.columns or \
+                ror_data.select(F.col(val_col)).dtypes[0][1]=='string':
+                raise AttributeError("A valid numeric column from %s required" % ror_data.dtypes)
             if "".join(part_col.strip())=="":
-                raise AttributeError("Invalid partition column, specify one from %s" % ror_sdf_.dtypes)
+                raise AttributeError("Invalid partition column, specify one from %s" % ror_data.dtypes)
 
             ''' Smoothed values '''
+            ret_val = None
             kwargs['RESULTCOL']="_".join([val_col,'ema_prev'])
             ema_prev_sdf_ = clsStats.simple_moving_stats(
                 num_col=val_col,
                 date_col="mcap_date",
                 part_col=part_col,
-                stat_op="sum",
-                data=ror_sdf_,
+                stat_op="ewm",
+                data=ror_data,
                 **kwargs,
             )
 
-            k = 2/(ema_prev_sdf_ + 1)
-            ema_prev_sdf_ = ema_prev_sdf_.select((F.col(val_col) - \
-                                           F.col(kwargs['RESULTCOL']))*k + \
-                                            F.col(kwargs['RESULTCOL'])).alias('ema')\
-                                            .sort('ema')
+            if ema_prev_sdf_ is None or ema_prev_sdf_.count()<=0:
+                raise AttributeError("simple_moving_stats for EWM returned empty %s dataframe"
+                                   % type(ema_prev_sdf_))
+#             k = 2/(ema_prev_sdf_ + 1)
+#             ema_prev_sdf_ = ema_prev_sdf_.select((F.col(val_col) - \
+#                                            F.col(kwargs['RESULTCOL']))*k + \
+#                                             F.col(kwargs['RESULTCOL'])).alias('ema')\
+#                                             .sort('ema')
+            ret_sdf = ema_prev_sdf_.select(F.mean(F.col(kwargs['RESULTCOL']))\
+                                           .alias('ewm_mean'))\
+                                    .collect()
+            ret_val = ret_sdf[0]['ewm_mean']
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return None
+        return ret_val
 
 
     ''' --- GET RISK FREE ROR ---
@@ -1323,7 +1334,7 @@ class Portfolio():
         Exceptions:
         """
 
-        __s_fn_id__ = "@staticmethod <get_risk_free_data>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <get_risk_free_data>"
 
         _tbl_name = 'warehouse.mcap_past'
         _mcap_min_val = 0
@@ -1420,7 +1431,7 @@ class Portfolio():
 
         """
 
-        __s_fn_id__ = "@staticmethod <calc_movement_with_risk>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_movement_with_risk>"
 
         sharp_sdf=None
         obj_map = {}
@@ -1517,7 +1528,7 @@ class Portfolio():
 
         """
 
-        __s_fn_id__ = "@staticmethod <calc_divergence>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_divergence>"
 
         try:
             if ror_data.count() <=0:
@@ -1562,7 +1573,7 @@ class Portfolio():
             alpha (float) 
         """
 
-        __s_fn_id__ = "@staticmethod <calc_alpha>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_alpha>"
 
         try:
             if ror_data.count() <=0:
