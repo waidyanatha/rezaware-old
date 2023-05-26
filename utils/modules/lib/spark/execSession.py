@@ -46,20 +46,22 @@ except Exception as e:
         https://computingforgeeks.com/how-to-install-apache-spark-on-ubuntu-debian/
 '''
 class Spawn():
-    ''' Function
-            name: __init__
-            parameters:
-                    @name (str)
-                    @enrich (dict)
-            procedure: 
-            return None
-            
-            author: <nuwan.waidyanatha@rezgateway.com>
+    ''' Function --- INIT ---
 
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def __init__(self, desc : str="spark workloads",   # identifier for the instances
                  **kwargs:dict,   # can contain hostIP and database connection settings
                 ):
+        """
+        Decription:
+            Initializes the ExtractFeatures: class property attributes, app configurations, 
+                logger function, data store directory paths, and global classes 
+        Attributes:
+            desc (str) identify the specific instantiation and purpose
+        Returns:
+            None
+        """
 
         self.__name__ = __name__
         self.__package__ = __package__
