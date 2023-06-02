@@ -602,9 +602,11 @@ class Portfolio():
     def calc_index(func):
 
         @functools.wraps(func)
-        def index_wrapper(self,portfolio,asset_eval_date,asset_name_col,asset_val_col,
-                          asset_date_col,index_type,risk_free_assets,risk_free_name_col,
-                          risk_free_val_col,risk_free_date_col,**kwargs):
+        def index_wrapper(self,portfolio,asset_eval_date,asset_name_col,
+#                           asset_val_col,asset_date_col,
+                          index_type,risk_free_assets,risk_free_name_col,
+#                           risk_free_val_col,risk_free_date_col,
+                          **kwargs):
             """
             Description:
                 wrapper function to compute the RSI for the given data
@@ -624,10 +626,16 @@ class Portfolio():
             idx_val_=None
 
             try:
+#                 _ror_data, _rf_data = func(self,portfolio,asset_eval_date,asset_name_col,
+#                                            asset_val_col,asset_date_col,index_type,
+#                                            risk_free_assets,risk_free_name_col,
+#                                            risk_free_val_col,risk_free_date_col,**kwargs)
                 _ror_data, _rf_data = func(self,portfolio,asset_eval_date,asset_name_col,
-                                           asset_val_col,asset_date_col,index_type,
+#                                            asset_val_col,asset_date_col,
+                                           index_type,
                                            risk_free_assets,risk_free_name_col,
-                                           risk_free_val_col,risk_free_date_col,**kwargs)
+#                                            risk_free_val_col,risk_free_date_col,
+                                           **kwargs)
 
                 ''' calc values for all index types '''
                 idx_val_dict = {}
@@ -637,55 +645,48 @@ class Portfolio():
                             _weights_df = pd.DataFrame(self.portfolio)
                             idx_val_=Portfolio.calc_movement(
                                 ror_data=_ror_data,
-                                val_col=asset_val_col,
+                                val_col=str(index_type[_idx_name]['VALUEATTR']),
                                 part_col=asset_name_col,
                                 weights_pdf=_weights_df,
                                 index_type=_idx_name,
                                 **kwargs,
                             )
 
-#                         elif self._idxType == 'DMI':
-                        elif _idx_name.upper() == 'DMI':
-                            self.data = Portfolio.calc_dmi(
-                                ror_data=_ror_data,
-                                val_col=asset_val_col,
-                                part_col=asset_name_col,
-                                **kwargs,
-                            )
-
-#                         elif self._idxType == 'ADX':
                         elif _idx_name.upper() == 'ADX':
+                            ''' select parameters from dict '''
                             idx_val_,self.data = Portfolio.calc_adx(
                                 dmi_sdf=_ror_data,
-                                val_col=asset_val_col,
+                                val_col=str(index_type[_idx_name]['VALUEATTR']),
                                 part_col=asset_name_col,
+                                win_len =int(index_type[_idx_name]['WINLENGTH']),
+                                win_unit=str(index_type[_idx_name]['WINUNIT']),
                                 weights_list=self.portfolio,
                                 **kwargs,
                             )
 
-#                         elif self._idxType in ['BETA','SHARP','SORTINO']:
                         elif _idx_name.upper() in ['BETA','SHARP','SORTINO']:
                             idx_val_, self.data = Portfolio.calc_movement_with_risk(
                                 ror_sdf=_ror_data,
-                                val_col=asset_val_col,
+                                val_col=str(index_type[_idx_name]['VALUEATTR']),
                                 part_col=asset_name_col,
                                 weights_list=self.portfolio,
                                 risk_free_sdf=_rf_data,
-                                risk_free_val_col=asset_val_col,
+                                risk_free_val_col=str(index_type[_idx_name]['VALUEATTR']),
                                 risk_free_part_col=asset_name_col,
                                 index_type=_idx_name,
-#                                 index_type=self._idxType,
                                 **kwargs,
                             )
 
                         elif _idx_name.upper() in ['MACD']:
                             _weights_df = pd.DataFrame(self.portfolio)
-                            idx_val_=Portfolio.calc_macd(
+                            idx_val_=Portfolio.get_macd_data(
                                 ror_data=_ror_data,
-                                val_col=asset_val_col,
+                                val_col=str(index_type[_idx_name]['VALUEATTR']),
                                 part_col=asset_name_col,
+                                date_col=str(index_type[_idx_name]['DATEATTR']),
+                                win_len =int(index_type[_idx_name]['WINLENGTH']),
+                                win_unit=str(index_type[_idx_name]['WINUNIT']),
                                 weights_pdf=_weights_df,
-                                index_type=_idx_name,
                                 **kwargs,
                             )
 
@@ -701,6 +702,7 @@ class Portfolio():
 
                     except Exception as idx_err:
                         logger.warning("%s",idx_err)
+
                 if len(idx_val_dict)>0:
                     self._movement=idx_val_dict
 
@@ -714,7 +716,7 @@ class Portfolio():
         
         return index_wrapper
 
-  
+
     @calc_index
     def get_index(
 #     def get_rsi(
@@ -722,24 +724,24 @@ class Portfolio():
         portfolio:list=[],
         asset_eval_date:date=date.today(),
         asset_name_col:str='asset_name',
-        asset_val_col: str='log_ror',
-        asset_date_col:str='mcap_date',
-#         index_type:str='RSI',
-        index_type:list=['RSI'],
+#         asset_val_col: str='log_ror',
+#         asset_date_col:str='mcap_date',
+        index_type:dict={},
         risk_free_assets:list=[],
         risk_free_name_col:str='asset_name',
-        risk_free_val_col: str='log_ror',
-        risk_free_date_col:str='mcap_date',
+#         risk_free_val_col: str='log_ror',
+#         risk_free_date_col:str='mcap_date',
         **kwargs,
     ) -> DataFrame:
         """
         Description:
-            Calculates the Relative Strength Index (RSI). It is a momentum estimateion,
-            which is the speed and magnitude of the price change. The index will 
-            provide a value between 0 and 1 to decide whether it is overvalued (>= 0.7)
-            or under valued (<0.7). The returned data will provide a time series
-            of the oscilator. It also indicates the trend reversal (uptrend or downtrend).
-            Thereby, indicating when to rebalance; i.e. buy/sell.
+            Calculates all momentum indexes for a given portfolio. It is a momentum estimateion,
+            which is the speed and magnitude of the price change. Momentum refers to the inertia 
+            of a price trend to continue either rising or falling for a particular length of time
+            The index will provide a value between 0 and 1 to decide whether it is overvalued 
+            (>= 0.7) or under valued (<0.7). The returned data will provide a time series of the
+            oscilator. It also indicates the trend reversal (uptrend or downtrend). Thereby, 
+            indicating when to rebalance; i.e. buy/sell.
         Attributes:
             portfolio (list) containing the a dictionary of the 
                 _id (ObjectId)  - unique identifier
@@ -783,45 +785,60 @@ class Portfolio():
         try:
             ''' validate and set portfolio data '''
             self.portfolio=portfolio
-            _idx_list_upper = [x.upper() for x in index_type]
-            _inval_idxs = [idx for idx in _idx_list_upper 
-                                if idx not in self._idxTypeList]
-            if len(_inval_idxs)>0:
-                raise AttributeError("Invalid index types %s" % str(_inval_idxs))
-
-            _dates_list = [x[asset_date_col].split('T')[0] for x in self._portfolio]
-            if str(asset_eval_date) not in _dates_list:
-                raise AttributeError("Invalid date %s not in any portfolio dates %s"
-                                     % (str(asset_eval_date),str(_dates_list)))
+            ''' remove any invalid index names from dict '''
+#             kwargs['INDEXTYPELIST']={x:y for x,y in kwargs['INDEXTYPELIST'].items() 
+#                                      if x.upper() in self._idxTypeList}
+            index_type={x:y for x,y in index_type.items() 
+                                     if x.upper() in self._idxTypeList}
+            if len(index_type)<1:
+                raise AttributeError("Empty index type list of dictionaries %s" 
+                                     % str(index_type))
+            logger.debug("%s valid set of %s indexes will be computed",
+                         __s_fn_id__,str([x for x in index_type.keys()]))
+#             ''' validate if index evaluation date is in the data set '''
+#             _date_cols_list = list(set([y['DATEATTR'] for x,y in kwargs['INDEXTYPELIST'].items()]))
+#             for _date_col in _date_cols_list:
+#                 _dates_list = [x[_date_col].split('T')[0] for x in self._portfolio]
+# #             _dates_list = [x[asset_date_col].split('T')[0] for x in self._portfolio]
+#                 if str(asset_eval_date) not in _dates_list:
+#                     raise AttributeError("Invalid date %s not in any portfolio dates %s"
+#                                      % (str(asset_eval_date),str(_dates_list)))
 
             ''' apply a lower bound to select values above the limit '''
             if "MCAPLIMIT" in kwargs.keys():
                 _mcap_min_val=kwargs['MCAPLIMIT']
-            ''' estanlish the window length and unit '''
-            if "DATETIMEATTR" not in kwargs.keys():
-                kwargs["DATETIMEATTR"]=__def_dt_attr__
-            if "WINLENGTH" not in kwargs.keys():
-                kwargs["WINLENGTH"]=__def_win_len__
-            if "WINUNIT" not in kwargs.keys():
-                kwargs["WINUNIT"]=__def_len_unit__
+#             ''' estanlish the window length and unit '''
+#             if "DATETIMEATTR" not in kwargs.keys():
+#                 kwargs["DATETIMEATTR"]=__def_dt_attr__
+#             if "WINLENGTH" not in kwargs.keys():
+#                 kwargs["WINLENGTH"]=__def_win_len__
+#             if "WINUNIT" not in kwargs.keys():
+#                 kwargs["WINUNIT"]=__def_len_unit__
             if "RSITYPE" not in kwargs.keys() or \
                 kwargs["RSITYPE"].upper() not in ['STEPONE','STEPTWO']:
                 kwargs["RSITYPE"] = 'STEPTWO'
             if "TABLENAME" in kwargs.keys():
                 _tbl_name = kwargs['TABLENAME']
 
-            ''' retrieve mcap log ror for each asset in portfolio for the window length '''
+            ''' retrieve mcap log ror for each asset in portfolio for the max window length '''
             _assets_in = ','.join(["'{}'".format(x['asset']) for x in portfolio])
             _to_date = str(asset_eval_date)
             ''' get for window length + 1 day '''
-            _from_date = str(asset_eval_date - timedelta(days=kwargs["WINLENGTH"]))
+            max_win_len = max([y['WINLENGTH'] for x,y in kwargs['INDEXTYPELIST'].items()])
+            if 'ADX' in str(kwargs['INDEXTYPELIST'].keys())\
+                and 2*kwargs['INDEXTYPELIST']['ADX']['WINLENGTH']>max_win_len:
+                max_win_len = 2*kwargs['INDEXTYPELIST']['ADX']['WINLENGTH']
+            _from_date = str(asset_eval_date - timedelta(days=max_win_len))
+            '''
+                TODO switch between mcap and price
+            '''
             _query =f"select * from {_tbl_name} "+\
                     f"where mcap_date >= '{_from_date}' and mcap_date <= '{_to_date}' "+\
                     f"and asset_name in ({_assets_in}) "+\
                     f"and mcap_value > {_mcap_min_val}"
 
             self.data = clsSDB.read_data_from_table(select=_query, **kwargs)
-            self._data.na.drop(subset=[asset_val_col])
+#             self._data.na.drop(subset=[asset_val_col])
             if self._data.count() > 0:
                 logger.debug("%s loaded %s assets %d rows and %d columns between %s and %s from %s"
                              ,__s_fn_id__,str(_assets_in),self._data.count(),len(self._data.columns),
@@ -830,12 +847,13 @@ class Portfolio():
                 raise ValueError("No data portfolio asset data received for query %s: " % _query)
 
             ''' to compute sharp, sortion, etc index get risk free data '''
-            risk_free_idx_list = list(set(_idx_list_upper)\
+            risk_free_idx_list = list(set([x for x in kwargs['INDEXTYPELIST'].keys()])\
                                       .intersection(set(['SHARP','SORTINO','BETA'])))
             if len(risk_free_idx_list)>0:
 #                 print('get risk free data %s'
 #                       % set(_idx_list_upper).intersection(set(['SHARP','SORTINO','BETA'])))
 #             if index_type.upper() in ['SHARP','SORTINO','BETA']:
+                kwargs["WINLENGTH"]=max_win_len
                 risk_free_sdf_ = Portfolio.get_risk_free_data(
                     asset_name=risk_free_assets,
                     asset_eval_date=asset_eval_date,
@@ -860,6 +878,156 @@ class Portfolio():
             print("[Error]"+__s_fn_id__, err)
 
         return self._data,risk_free_sdf_
+
+
+#     @calc_index
+#     def DEPRECATED_get_index(
+# #     def get_rsi(
+#         self,
+#         portfolio:list=[],
+#         asset_eval_date:date=date.today(),
+#         asset_name_col:str='asset_name',
+#         asset_val_col: str='log_ror',
+#         asset_date_col:str='mcap_date',
+# #         index_type:str='RSI',
+#         index_type:list=['RSI'],
+#         risk_free_assets:list=[],
+#         risk_free_name_col:str='asset_name',
+#         risk_free_val_col: str='log_ror',
+#         risk_free_date_col:str='mcap_date',
+#         **kwargs,
+#     ) -> DataFrame:
+#         """
+#         Description:
+#             Calculates the Relative Strength Index (RSI). It is a momentum estimateion,
+#             which is the speed and magnitude of the price change. The index will 
+#             provide a value between 0 and 1 to decide whether it is overvalued (>= 0.7)
+#             or under valued (<0.7). The returned data will provide a time series
+#             of the oscilator. It also indicates the trend reversal (uptrend or downtrend).
+#             Thereby, indicating when to rebalance; i.e. buy/sell.
+#         Attributes:
+#             portfolio (list) containing the a dictionary of the 
+#                 _id (ObjectId)  - unique identifier
+#                 date (timestamp)- of the asset evaluation date 
+#                 asset (str)     - defining the name of the asset
+#                 weight (flaot64)- propotion of the asset to the portfolio
+#                 ror (float64)   - ratio of return (e.g. log_ror), relative to previous date
+#                 value (float64) - the mcap value of the asset for that date
+#             asset_eval_date (timestamp)- of the asset evaluation date 
+#             asset_name_col (str)- defines the column containinf asset name; also used as
+#                 the partitioning column
+#             asset_val_col (str) - defines the numeric column holding the value
+#             index_type (str) - defines the type of index computation to perform; see the valid
+#                 list in self._idxTypeLlist
+#             kwargs:
+#                 VALCOLNAME (str)  - defines the numeric column to use in the index calc
+#                 DATETIMEATTR (str)- defines the datetime column name to use in timeseries SMA
+#                 WINLENGTH (str)   - defines the window length; typically 14 days
+#                 WINUNIT (str)     - defines the window length is DAY, WEEK, MINUTE, HOUR
+#                 RSITYPE (str)     - STEPONE or STEPTWO first or second step calculation
+#         Returns:
+#             self._data (DataFrame) comprising the T-day timeseries that defines the RSI
+#         Exceptions:
+#             Setting the self.portfolio class property validates the portfolio data; else raises
+#             an AttributeError exception
+#             Setting the self.idxType class property with the 
+#             By returning the data read through sparkDBwls into self.data class property, it
+#             gets validated; else will raise an AttributeError exception
+#         """
+
+#         __s_fn_id__ = f"{self.__name__} function <get_index>"
+
+#         _tbl_name = 'warehouse.mcap_past'
+#         _mcap_min_val = 10000
+#         __def_dt_attr__ = "mcap_date"
+#         __def_win_len__ = 14
+#         __def_len_unit__= "DAY"
+        
+#         risk_free_sdf_=None
+
+#         try:
+#             ''' validate and set portfolio data '''
+#             self.portfolio=portfolio
+#             _idx_list_upper = [x.upper() for x in index_type]
+#             _inval_idxs = [idx for idx in _idx_list_upper 
+#                                 if idx not in self._idxTypeList]
+#             if len(_inval_idxs)>0:
+#                 raise AttributeError("Invalid index types %s" % str(_inval_idxs))
+
+#             _dates_list = [x[asset_date_col].split('T')[0] for x in self._portfolio]
+#             if str(asset_eval_date) not in _dates_list:
+#                 raise AttributeError("Invalid date %s not in any portfolio dates %s"
+#                                      % (str(asset_eval_date),str(_dates_list)))
+
+#             ''' apply a lower bound to select values above the limit '''
+#             if "MCAPLIMIT" in kwargs.keys():
+#                 _mcap_min_val=kwargs['MCAPLIMIT']
+#             ''' estanlish the window length and unit '''
+#             if "DATETIMEATTR" not in kwargs.keys():
+#                 kwargs["DATETIMEATTR"]=__def_dt_attr__
+#             if "WINLENGTH" not in kwargs.keys():
+#                 kwargs["WINLENGTH"]=__def_win_len__
+#             if "WINUNIT" not in kwargs.keys():
+#                 kwargs["WINUNIT"]=__def_len_unit__
+#             if "RSITYPE" not in kwargs.keys() or \
+#                 kwargs["RSITYPE"].upper() not in ['STEPONE','STEPTWO']:
+#                 kwargs["RSITYPE"] = 'STEPTWO'
+#             if "TABLENAME" in kwargs.keys():
+#                 _tbl_name = kwargs['TABLENAME']
+
+#             ''' retrieve mcap log ror for each asset in portfolio for the window length '''
+#             _assets_in = ','.join(["'{}'".format(x['asset']) for x in portfolio])
+#             _to_date = str(asset_eval_date)
+#             ''' get for window length + 1 day '''
+#             _from_date = str(asset_eval_date - timedelta(days=kwargs["WINLENGTH"]))
+#             ''' 
+#                 TODO switch between mcap and price
+#             '''
+#             _query =f"select * from {_tbl_name} "+\
+#                     f"where mcap_date >= '{_from_date}' and mcap_date <= '{_to_date}' "+\
+#                     f"and asset_name in ({_assets_in}) "+\
+#                     f"and mcap_value > {_mcap_min_val}"
+
+#             self.data = clsSDB.read_data_from_table(select=_query, **kwargs)
+#             self._data.na.drop(subset=[asset_val_col])
+#             if self._data.count() > 0:
+#                 logger.debug("%s loaded %s assets %d rows and %d columns between %s and %s from %s"
+#                              ,__s_fn_id__,str(_assets_in),self._data.count(),len(self._data.columns),
+#                              str(_from_date),str(_to_date),_tbl_name.upper())
+#             else:
+#                 raise ValueError("No data portfolio asset data received for query %s: " % _query)
+
+#             ''' to compute sharp, sortion, etc index get risk free data '''
+#             risk_free_idx_list = list(set(_idx_list_upper)\
+#                                       .intersection(set(['SHARP','SORTINO','BETA'])))
+#             if len(risk_free_idx_list)>0:
+# #                 print('get risk free data %s'
+# #                       % set(_idx_list_upper).intersection(set(['SHARP','SORTINO','BETA'])))
+# #             if index_type.upper() in ['SHARP','SORTINO','BETA']:
+#                 risk_free_sdf_ = Portfolio.get_risk_free_data(
+#                     asset_name=risk_free_assets,
+#                     asset_eval_date=asset_eval_date,
+#                     asset_name_col=risk_free_name_col,
+#                     asset_date_col=risk_free_date_col,
+#                     asset_val_col=risk_free_val_col,
+#                     **kwargs,
+#                 )
+
+#                 if risk_free_sdf_.count() > 0:
+#                     logger.debug("%s loaded %d rows and %d columns for %s risk free data assets %s"
+#                                  ,__s_fn_id__,risk_free_sdf_.count()
+#                                  ,len(risk_free_sdf_.columns),risk_free_idx_list
+#                                  ,str(risk_free_assets))
+#                 else:
+#                     raise ValueError("No data portfolio asset data received for query %s: " % _query)
+
+            
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
+
+#         return self._data,risk_free_sdf_
 
 
     ''' --- WEIGHTED PORTFOLIO RETURNS --- 
@@ -1021,8 +1189,10 @@ class Portfolio():
     def get_dmi_data(
 #         self,
         ror_sdf_:DataFrame=None,
-        val_col:str="log_ror",
+        val_col :str="log_ror",
         part_col:str="asset_name",
+        win_len :int=7,
+        win_unit:str='DAY',
         **kwargs,
     ) -> DataFrame:
         """
@@ -1070,10 +1240,12 @@ class Portfolio():
             ''' Smoothed values '''
             kwargs['RESULTCOL']='sm_sum_+DM'
             ror_sdf_ = clsStats.simple_moving_stats(
-                num_col="+DM",
+                num_col ="+DM",
                 date_col="mcap_date",
                 part_col=part_col,
-                stat_op="sum",
+                stat_op ="sum",
+                win_len =win_len,
+                win_unit=win_unit,
                 data=ror_sdf_,
                 **kwargs,
             )
@@ -1083,6 +1255,8 @@ class Portfolio():
                 date_col="mcap_date",
                 part_col=part_col,
                 stat_op="avg",
+                win_len =win_len,
+                win_unit=win_unit,
                 data=ror_sdf_,
                 **kwargs,
             )
@@ -1092,6 +1266,8 @@ class Portfolio():
                 date_col="mcap_date",
                 part_col=part_col,
                 stat_op="sum",
+                win_len =win_len,
+                win_unit=win_unit,
                 data=ror_sdf_,
                 **kwargs,
             )
@@ -1101,6 +1277,8 @@ class Portfolio():
                 date_col="mcap_date",
                 part_col=part_col,
                 stat_op="avg",
+                win_len =win_len,
+                win_unit=win_unit,
                 data=ror_sdf_,
                 **kwargs,
             )
@@ -1147,7 +1325,9 @@ class Portfolio():
         dmi_sdf:DataFrame=None,
         val_col:str="log_ror",
         part_col:str="asset_name",
-         weights_list:list=[],
+        weights_list:list=[],
+        win_len :int=7,
+        win_unit:str='DAY',
         **kwargs,
     ) -> float:
         """
@@ -1156,9 +1336,14 @@ class Portfolio():
             These are used to help assess whether a trade should be taken long or short,
             or if a trade should be taken at all. The method is also refered to as the 
             Directional Movement Indicator (DMI) derived from the Directional Index (DI)
-            The @staticmethod computes all the +/- Direction Index (DI) 14-day rolling sum, 
-            average, and smooth values. Then partitions by the asset_name to multiply the DI 
-            by the asset weight to compute a weighted ADX for the entire portfolio.
+            The @staticmethod 
+            * computes all the +/- Direction Index (DI) 14-day rolling sum, average, and 
+                smooth values. 
+            * Then partitions by the asset_name to multiply the DI by the asset weight to 
+                compute a weighted ADX for the entire portfolio.
+            * Evaluating ADX
+                * ADX > 25 --> a strong trend
+                * ADX < 20 --> a weak trend.
         Attributes:
             dmi_sdf (DataFrame) the directional movement indicator dataframe
             val_col (str) defines the numeric column to use; default value = log_ror
@@ -1193,6 +1378,8 @@ class Portfolio():
                     ror_sdf_= dmi_sdf,
                     val_col=val_col,
                     part_col=part_col,
+                    win_len =win_len,
+                    win_unit=win_unit,
                     **kwargs,
                 )
 #             ''' check if weights match dataframe shape '''
@@ -1237,10 +1424,13 @@ class Portfolio():
             author: <samana.thetha@gmail.com>
     '''
     @staticmethod
-    def calc_macd(
+    def get_macd_data(
         ror_data:DataFrame=None,
         val_col:str="log_ror",
         part_col:str="asset_name",
+        date_col:str="mcap_date",
+        win_len :int=7,
+        win_unit:str='DAY',
         weights_list:list=[],
         **kwargs,
     ) -> float:
@@ -1248,26 +1438,24 @@ class Portfolio():
         Description:
             Moving Average Convergence Divergence (MACD) is calculated with exponential moving
             averages (EMA).
-            * calculate the Simple Moving Averate (SMA) as the EMA previous period for a chosen
+            1. calculate the Simple Moving Averate (SMA) as the EMA previous period for a chosen
                 number of time periods; i.e. sum of ROR divided by the number of ROR points
-            * calculate the weighted multiplier: K = 2/(n+1); where n=periods
-            * calculate the n=12 period EMA = (price - EMA_previous) * K + EMA_previous
-
-            is when the DMI and price disagree, or do not confirm one another.
-            An example is when price makes a new high, but the +DMI does not. Divergence
-            is generally a warning to manage risk because it signals a change of swing 
-            strength and commonly precedes a retracement or reversal.
+            2. calculate the weighted multiplier: K = 2/(n+1); where n=periods
+            3. calculate the n=12 period EMA = (price - EMA_previous) * K + EMA_previous
+            4. calculate the n=26 period EMA = (price - EMA_previous) * K + EMA_previous
+            5. subtract the 26-period EMA from the 12-period EMA.
         Attributes:
             ror_data (DataFrame) the rate of returns dataframe
             val_col (str) defines the numeric column to use; default value = log_ror
             part_col (str) defines the partition column; i.e categories; default value = asset_name
             weights_list (list) contains dictionaries of asset_name and associated weight,
+                * If it is single asset portfolio, then set the weights_list = [1.0]
             **kwargs not used
         Returns:
 
         """
 
-        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_macd>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <get_macd_data>"
 
         try:
             ''' validate the attribues '''
@@ -1289,6 +1477,8 @@ class Portfolio():
                 date_col="mcap_date",
                 part_col=part_col,
                 stat_op="ewm",
+                win_len =win_len,
+                win_unit=win_unit,
                 data=ror_data,
                 **kwargs,
             )
@@ -1353,12 +1543,12 @@ class Portfolio():
             if "MCAPLIMIT" in kwargs.keys():
                 _mcap_min_val=kwargs['MCAPLIMIT']
             ''' estanlish the window length and unit '''
-            if "DATETIMEATTR" not in kwargs.keys():
-                kwargs["DATETIMEATTR"]=__def_dt_attr__
+#             if "DATETIMEATTR" not in kwargs.keys():
+#                 kwargs["DATETIMEATTR"]=__def_dt_attr__
             if "WINLENGTH" not in kwargs.keys():
                 kwargs["WINLENGTH"]=__def_win_len__
-            if "WINUNIT" not in kwargs.keys():
-                kwargs["WINUNIT"]=__def_len_unit__
+#             if "WINUNIT" not in kwargs.keys():
+#                 kwargs["WINUNIT"]=__def_len_unit__
             if "TABLENAME" in kwargs.keys():
                 _tbl_name = kwargs['TABLENAME']
 
@@ -1390,6 +1580,78 @@ class Portfolio():
         return risk_free_data_
 
 
+#     @staticmethod
+#     def DEPRECATED_get_risk_free_data(
+#         asset_name:list=['bitcoin'],
+#         asset_eval_date:date=None,
+#         asset_name_col:str='asset_name',
+#         asset_date_col:str='mcap_date',
+#         asset_val_col:str='mcap_value',
+#         **kwargs,
+#     ):
+#         """
+#         Description:
+#         Attributes:
+#         Returns:
+#         Exceptions:
+#         """
+
+#         __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <get_risk_free_data>"
+
+#         _tbl_name = 'warehouse.mcap_past'
+#         _mcap_min_val = 0
+#         __def_dt_attr__ = "mcap_date"
+#         __def_win_len__ = 14
+#         __def_len_unit__= "DAY"
+
+#         try:
+#             ''' validate and set portfolio data '''
+# #             _dates_list = [x['date'].split('T')[0] for x in portfolio]
+# #             if str(asset_eval_date) not in _dates_list:
+# #                 raise AttributeError("Invalid date %s not in any portfolio dates %s"
+# #                                      % (str(asset_eval_date),str(_dates_list)))
+
+#             ''' apply a lower bound to select values above the limit '''
+#             if "MCAPLIMIT" in kwargs.keys():
+#                 _mcap_min_val=kwargs['MCAPLIMIT']
+#             ''' estanlish the window length and unit '''
+#             if "DATETIMEATTR" not in kwargs.keys():
+#                 kwargs["DATETIMEATTR"]=__def_dt_attr__
+#             if "WINLENGTH" not in kwargs.keys():
+#                 kwargs["WINLENGTH"]=__def_win_len__
+#             if "WINUNIT" not in kwargs.keys():
+#                 kwargs["WINUNIT"]=__def_len_unit__
+#             if "TABLENAME" in kwargs.keys():
+#                 _tbl_name = kwargs['TABLENAME']
+
+#             ''' retrieve mcap log ror for each asset in portfolio for the window length '''
+#             _assets_in = ','.join(["'{}'".format(x) for x in asset_name])
+#             _to_date = str(asset_eval_date)
+#             ''' get for window length + 1 day '''
+#             _from_date = str(asset_eval_date - timedelta(days=kwargs["WINLENGTH"]))
+#             _query =f"select * from {_tbl_name} "+\
+#                     f"where {asset_date_col} >= '{_from_date}' "+\
+#                     f"and {asset_date_col} <= '{_to_date}' "+\
+#                     f"and {asset_name_col} in ({_assets_in}) "+\
+#                     f"and mcap_value > {_mcap_min_val}"
+
+#             risk_free_data_ = clsSDB.read_data_from_table(select=_query, **kwargs)
+#             risk_free_data_.na.drop(subset=[asset_val_col])
+#             if risk_free_data_.count() > 0:
+#                 logger.debug("%s loaded %d rows and %d columns for %s assets",
+#                              __s_fn_id__,risk_free_data_.count(),
+#                              len(risk_free_data_.columns), str(_assets_in))
+#             else:
+#                 raise ValueError("No asset data received for query %s: " % _query)
+
+#         except Exception as err:
+#             logger.error("%s %s \n",__s_fn_id__, err)
+#             logger.debug(traceback.format_exc())
+#             print("[Error]"+__s_fn_id__, err)
+
+#         return risk_free_data_
+
+
     ''' --- MOVEMENT WITH RISK (SHARP, BETA, SORTINO) ---
 
             author: <samana.thetha@gmail.com>
@@ -1408,13 +1670,17 @@ class Portfolio():
     ) -> float:
         """
         Description:
-            Sharpe Ratio (or Sharpe Index) gauges the performanceof an investment by adjusting
+            1. Sharpe Ratio (or Sharpe Index) gauges the performanceof an investment by adjusting
                 for its risk. The higher the ratio, the greater the investment return relative
                 to the amount of risk taken, and thus, the better the investment.
-                Sharpe Ratio = (Rx – Rf) / StdDev Rx; where Rx = Expected portfolio return, 
-                Rf = Risk-free rate of return, StdDev Rx = Standard deviation of portfolio return
-                Grading threshold < 1: Bad, 1 – 1.99: Adequate, 2 – 2.99: Very good, > 3: Excellent
-            Beta is the volatility of the investment. Along with the Alpha, it is used in the
+                * Sharpe Ratio = (Rx – Rf) / StdDev Rx; where Rx = Expected portfolio return, 
+                    * Rf = Risk-free rate of return, StdDev Rx = Standard deviation of portfolio 
+                    return. 
+                    * Grading threshold < 1: Bad, 1 – 1.99: Adequate, 2 – 2.99: 
+                                        Very good, > 3: Excellent
+            2. Sortino Ratio (or Sortino Index) 
+
+            3. Beta is the volatility of the investment. Along with the Alpha, it is used in the
                 Capital Asset Pricing Model (CAPM).
                 Beta = Covariance/Variance
         Attributes:

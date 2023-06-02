@@ -598,7 +598,7 @@ class RollingStats():
         Returns:
         """
         @functools.wraps(func)
-        def calc_roll_stat(self,num_col,date_col,part_col,stat_op,data,**kwargs):
+        def calc_roll_stat(self,num_col,date_col,part_col,win_len,win_unit,stat_op,data,**kwargs):
             """
             Description:
 
@@ -609,7 +609,8 @@ class RollingStats():
             __s_fn_id__ = f"{self.__name__} function <calc_roll_stat>"
 
             try:
-                _roll_col_name = func(self,num_col,date_col,part_col,stat_op,data,**kwargs)
+                _roll_col_name = func(self,num_col,date_col,part_col,
+                                      win_len,win_unit,stat_op,data,**kwargs)
 
                 if stat_op.upper() in ['MEAN','AVG','AVERAGE']:
                     self._data = self.data. \
@@ -656,12 +657,117 @@ class RollingStats():
     @rollingstat
     def simple_moving_stats(
         self,
-        num_col:str='',   # numeric column name to apply the rolling computation
+        num_col :str='',  # numeric column name to apply the rolling computation
         date_col:str='',  # datetime column name to use as the time stamp
         part_col:str='',  # partition column name to apply rolling stats to windows
+        win_len :int=7,   # window length in days, hous, min
+        win_unit:str='DAY', # window length unit of measure by days, hours, minutes
         stat_op:str="mean", # stat operation sum, mean or standard deviation
-        data=None,   # data set
-        **kwargs,    # 
+        data=None,   # data set; that can be converted to pyspark DataFrame
+        **kwargs,    # key/value pairs to set other parameters
+    ):
+        """
+        Description:
+            For a specified valid numeric column, the function will set the window length
+            based on the defined date column. Thereafter, apply the moving sum, average, mean,
+            exonential averate, standard deviation, and so on. The computed values, for each
+            partition column, is saved to the dataframe as a new results column.
+                * simple_moving_stats - validates the input paramenters
+                * rollingstat - is a wrapper that computes the rolling stats
+        Attributes:
+            num_col (str), numeric column name to apply the rolling computation
+            date_col (str, datetime column name to use as the time stamp
+            part_col(str), partition column name to apply rolling stats to windows
+            win_len (int), window length; default is 7 days
+            win_unit(str), window length unit of measure by days, hours, minutes; default is DAY
+            stat_op (str), stat operation sum, mean or standard deviation
+            data (any), any data set; that can be converted to pyspark DataFrame
+            kwargs (dict), key/value pairs to set other parameters
+                RESULTSCOL - specify a column name to use  for storing the generated values;
+                    else, will use the default joining 'rolling',stat operation, & numeric
+                    column name
+        Returns:
+            self._data (DataFrame)
+        Exceptions:
+            data count is < 2; cannot compute moving stats
+            num_col is not numeric; abort
+            
+        """
+
+        __s_fn_id__ = f"{self.__name__} function <simple_moving_stats>"
+
+        _winspec = {}
+        __def_win_len__ =7
+        __def_win_unit__='DAY'
+
+        try:
+#             if not data is None:
+
+#             if self.data is None:
+#                 raise AttributeError("There is no data to perform a rolling computation")
+
+            self.data = data
+            if self._data.count() < 2:
+                raise ValueError("%s Cannot processing moving stats with %d<2 rows" 
+                                 % (type(self._data),self._data.count()))
+
+            ''' column name to apply rolling computation '''
+            if "".join(num_col.split())=="" or \
+                    self.data.filter(F.col(num_col).cast("Long").isNotNull()).count()==0:
+                raise ValueError("A num_col name from %s with dtype = int,long,double, "+ \
+                                 "or decimal must be specified." % self.data.dtypes)
+            ''' rolling functions only works with decimal dtypes '''
+            self.data = self.data.withColumn(num_col,F.col(num_col).cast('decimal(38,18)'))
+            ''' setting the datetimeAttr property will validate and cast column to timestamp '''
+            self.datetimeAttr=date_col
+            ''' set the partition column name '''
+            self.partitionAttr=part_col
+            ''' set the rolling window specs '''
+            if isinstance(win_len,int) and win_len > 1:
+                _winspec['LENGTH']=win_len
+            else:
+                _winspec['LENGTH']=__def_win_len__
+                logger.warning("%s invalid win_len; setting with default value %d",
+                               __s_fn_id__,_winspec['LENGTH'])
+            if win_unit is None or "".join(win_unit.split())=="":
+                _winspec['UNIT']=__def_win_unit__
+                logger.warning("%s invalid win_unit; setting with default value %s",
+                               __s_fn_id__,_winspec['UNIT'])
+            else:
+                _winspec['UNIT']=win_unit
+            ''' set default values '''
+            self.windowSpec = _winspec
+            logger.debug("%s Class property windowSpec set with %s",__s_fn_id__,str(_winspec))
+
+            if "RESULTCOL" in kwargs.keys() and "".join(kwargs['RESULTCOL'].split()) != "":
+                _roll_col_name = kwargs['RESULTCOL']
+            else:
+                _roll_col_name = "_".join(["roll",stat_op,num_col])
+
+            logger.debug("%s Simple Moving Stats results, for dataframe with %d rows "+\
+                         "and %d columns, written to column %s",
+                         __s_fn_id__,self.data.count(),len(self.data.columns),_roll_col_name.upper())
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return _roll_col_name
+    
+    
+    
+    @rollingstat
+    def DEPRECATED_simple_moving_stats(
+        self,
+        num_col :str='',  # numeric column name to apply the rolling computation
+        date_col:str='',  # datetime column name to use as the time stamp
+        part_col:str='',  # partition column name to apply rolling stats to windows
+        win_len :int=7,   # window length in days, hous, min
+        win_unit:str='DAY', # window length unit of measure by days, hours, minutes
+        stat_op:str="mean", # stat operation sum, mean or standard deviation
+        data=None,   # data set; that can be converted to pyspark DataFrame
+        **kwargs,    # key/value pairs to set other parameters
     ):
         """
         Description:

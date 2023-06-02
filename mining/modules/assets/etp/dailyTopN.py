@@ -812,7 +812,7 @@ class WeightedPortfolio():
             index_wrapper (func)
         """
         @functools.wraps(func)
-        def indicators_wrapper(self,mcap_date,mcap_value_lb,**kwargs):
+        def indicators_wrapper(self,mcap_date,mcap_value_lb,indicators,**kwargs):
             """
             Description:
             Attributes:
@@ -820,7 +820,7 @@ class WeightedPortfolio():
                 self._data (DataFrame) with the PCA components
             """
 
-            ___s_fn_id____ = f"{self.__name__} function <indicators_wrapper>"
+            __s_fn_id__ = f"{self.__name__} function <indicators_wrapper>"
 
             __def_idx_types__=['adx','rsi','mfi','macd'] # performance indicator list to compute
             __val_col__="mcap_simp_ror" # the column name with the mcap value
@@ -832,12 +832,13 @@ class WeightedPortfolio():
             __rf_date_col__='mcap_date'  # the column name with mcap date for which value was set
 
             try:
-                _data, _portf = func(self,mcap_date,mcap_value_lb,**kwargs)
+                _data, _portf = func(self,mcap_date,mcap_value_lb,indicators,**kwargs)
 
-                if "INDEXTYPELIST" not in kwargs.keys() or len(kwargs['INDEXTYPELIST'])<=0:
-                    kwargs['INDEXTYPELIST']=__def_idx_types__
-                logger.debug("%s calculating %s index types for %d portfolios",
-                             ___s_fn_id____,str(kwargs['INDEXTYPELIST']).upper(),len(_portf))
+#                 if "INDEXTYPELIST" not in kwargs.keys() or len(kwargs['INDEXTYPELIST'])<=0:
+#                     raise AttributeError("")
+# #                     kwargs['INDEXTYPELIST']=__def_idx_types__
+#                 logger.debug("%s calculating %s index types for %d portfolios",
+#                              __s_fn_id__,str(kwargs['INDEXTYPELIST']).upper(),len(_portf))
 
                 _index_df=pd.DataFrame()
                 __idx_dict={}
@@ -849,7 +850,8 @@ class WeightedPortfolio():
                             asset_name_col=__name_col__,
                             asset_val_col =__val_col__,
                             asset_date_col=__date_col__,
-                            index_type=kwargs['INDEXTYPELIST'],
+#                             index_type=kwargs['INDEXTYPELIST'],
+                            index_type=indicators,
                             risk_free_assets=__rf_assets__,
                             risk_free_name_col=__rf_name_col__,
                             risk_free_val_col=__rf_val_col__,
@@ -864,13 +866,15 @@ class WeightedPortfolio():
                         _idx_dict['asset_name']=asset_portf['asset']
                         _idx_dict['mcap_date']=mcap_date
                         _idx_dict['mcap_value']=asset_portf['mcap.value']
+                        _idx_dict['price_date']=asset_portf['price.date']
+                        _idx_dict['price_value']=asset_portf['price.value']
                         _index_df=pd.concat([_index_df,pd.DataFrame([_idx_dict])])
 
                     except Exception as port_err:
                         logger.warning("%s portfolio %s had errors %s \n",
-                                       ___s_fn_id____, asset_portf, port_err)
+                                       __s_fn_id__, asset_portf, port_err)
                         logger.debug(traceback.format_exc())
-#                         print("[Error]"+___s_fn_id____, err)
+#                         print("[Error]"+__s_fn_id__, err)
                 if _index_df is None or _index_df.shape[0] <= 0:
                     raise RuntimeError("Failed to construct porfolio index values, "+\
                                        "returned %s dataframe",type(_index_df))
@@ -879,27 +883,31 @@ class WeightedPortfolio():
                 _index_df.insert(2, 'asset_name', _index_df.pop('asset_name'))
                 _index_df.insert(3, 'mcap_date', _index_df.pop('mcap_date'))
                 _index_df.insert(4, 'mcap_value', _index_df.pop('mcap_value'))
+                _index_df.insert(5, 'price_date', _index_df.pop('price_date'))
+                _index_df.insert(6, 'price_value', _index_df.pop('price_value'))
                 logger.debug("%s pre cleanup index got dataframe with %d rows and %d columns",
-                             ___s_fn_id____,_index_df.shape[0],len(_index_df.columns))
+                             __s_fn_id__,_index_df.shape[0],len(_index_df.columns))
 
                 ''' remove rows with NaN,None values '''
                 _drop_idx_df = pd.DataFrame()
                 self._index = pd.DataFrame()
-                self._index = _index_df.dropna(subset=kwargs['INDEXTYPELIST'])
+#                 self._index = _index_df.dropna(subset=kwargs['INDEXTYPELIST'])
+                self._index = _index_df.dropna(subset=[x for x,y in kwargs['INDEXTYPELIST'].items()])
                 _drop_idx_df = pd.concat([_index_df,self._index]).drop_duplicates(keep=False)
                 if _drop_idx_df.shape[0]>0:
                     logger.warning("%s Dropped assets with NaN/None/Null index values: %s",
-                                   ___s_fn_id____,str(_drop_idx_df['asset_name'].to_list()))
+                                   __s_fn_id__,str(_drop_idx_df['asset_name'].to_list()))
 
                 if self._index.shape[0]<=0:
-                    raise RuntimeError("%s resulted in an empty index dataframe, aborting" % ___s_fn_id____)
+                    raise RuntimeError("%s resulted in an empty index dataframe, aborting" 
+                                       % __s_fn_id__)
                 logger.debug("%s resulted in an index dataframe with %d rows and %d columns",
-                             ___s_fn_id____,self._index.shape[0],self._index.shape[1])
+                             __s_fn_id__,self._index.shape[0],self._index.shape[1])
 
             except Exception as err:
-                logger.error("%s %s \n",___s_fn_id____, err)
+                logger.error("%s %s \n",__s_fn_id__, err)
                 logger.debug(traceback.format_exc())
-                print("[Error]"+___s_fn_id____, err)
+                print("[Error]"+__s_fn_id__, err)
 
             return self._index
 
@@ -912,6 +920,7 @@ class WeightedPortfolio():
         self,
         mcap_date:date=None,
         mcap_value_lb:float=10000.0,
+        indicators:dict=None,
         **kwargs,
     ) -> DataFrame:
         """
@@ -932,9 +941,20 @@ class WeightedPortfolio():
         Exceptions:
         """
 
-        ___s_fn_id____ = f"{self.__name__} function <select_top_assets>"
+        __s_fn_id__ = f"{self.__name__} function <select_top_assets>"
+
         ''' define default values '''
         __def_mcap_lower__ = 10000.0
+        __def_indicators__ = {
+            "ADX": {"DATEATTR":'mcap_date',"VALUEATTR":'mcap_log_ror',
+                    "WINLENGTH":14,"WINUNIT":'DAY'},
+            "RSI":{"DATEATTR":'price_date',"VALUEATTR":'price_log_ror',
+                   "WINLENGTH":7,"WINUNIT":'DAY'},
+            "MFI":{"DATEATTR":'mcap_date',"VALUEATTR":'mcap_log_ror',
+                   "WINLENGTH":7,"WINUNIT":'DAY'},
+            "BETA":{"DATEATTR":'price_date',"VALUEATTR":'price_log_ror',
+                    "WINLENGTH":20,"WINUNIT":'DAY'},
+        }
         _rf_asset_name='bitcoin'   # default risk free asset name
         _rf_val_col = "price_simp_ror" # default risk free ror value column to filter by
         _table_name = "warehouse.mcap_past"
@@ -947,6 +967,8 @@ class WeightedPortfolio():
             mcap_date=datetime.strftime(mcap_date,'%Y-%m-%dT00:00:00')
             if not isinstance(mcap_value_lb,float) and mcap_value_lb<=0:
                 mcap_value_lb=__def_mcap_lower__
+            if not isinstance(indicators,dict) and len(indicators)<=0:
+                indicators=__def_indicators__
             if "TABLENAME" in kwargs.keys() and "".join(kwargs["TABLENAME"].split())!="":
                 _table_name=kwargs["TABLENAME"]
             if "ASSETCOUNT" in kwargs.keys() \
@@ -960,7 +982,7 @@ class WeightedPortfolio():
                 and "".join(kwargs["RFVALCOL"].split())!="":
                 _rf_val_col=kwargs["RFVALCOL"]
 
-            ''' read data from database '''
+            ''' select assets from database table for date range and value constraint '''
 #             _query WHAT WE WANT
 #              =f"select * from {_table_name} wmp where wmp.mcap_date = '{mcap_date}' " +\
 #                     f"and wmp.mcap_value > {mcap_value_lb} " +\
@@ -977,7 +999,7 @@ class WeightedPortfolio():
             if self._data.count()<=0:
                 raise RuntimeError("query resulted in empty %s dataframe; aborting." 
                                    % type(self._data))
-            logger.debug("%s query returned %d dataframe rows",___s_fn_id____,self._data.count())
+            logger.debug("%s query returned %d dataframe rows",__s_fn_id__,self._data.count())
 
             ''' construct portfolio with selected assets '''
             _assets=self._data.select(F.col('mcap_past_pk'),F.col('uuid'),F.col('asset_name'),
@@ -989,32 +1011,36 @@ class WeightedPortfolio():
                                 .distinct()
             if _assets.count()<=0:
                 raise RuntimeError("%s select distinct assets resulted in empty dataframe"
-                                   % ___s_fn_id____)
+                                   % __s_fn_id__)
             self._portfolio=[]
             for _asset in _assets.collect():
                 _asset_dict={}
                 _asset_dict={
-                    "mcapid":_asset[0],"uuid" : _asset[1],"asset": _asset[2],
+                    "mcapid" : _asset[0],"uuid" : _asset[1],"asset": _asset[2],
                     "mcap.date" : datetime.strftime(_asset[3],'%Y-%m-%dT00:00:00'),
-                    'mcap.value' : float(_asset[4]),'mcap.ror.log':float(_asset[5]),
-                    'mcap.ror.simp':float(_asset[6]),'mcap.weight': 1.0,
-                    "price.date" : datetime.strftime(_asset[7],'%Y-%m-%dT00:00:00'),
-                    'price.value' : float(_asset[8]),'price.ror.log':float(_asset[9]),
-                    'price.ror.simp':float(_asset[10]),'price.weight': 1.0,
+                    'mcap.value': float(_asset[4]),
+                    'mcap.ror.log' :float(_asset[5]),
+                    'mcap.ror.simp':float(_asset[6]),
+                    'mcap.weight' : 1.0,
+                    "price.date": datetime.strftime(_asset[7],'%Y-%m-%dT00:00:00'),
+                    'price.value' : float(_asset[8]),
+                    'price.ror.log' :float(_asset[9]),
+                    'price.ror.simp':float(_asset[10]),
+                    'price.weight' : 1.0,
                 }
                 self._portfolio.append(_asset_dict)
 #             self._portfolio=sorted(self._portfolio, key=lambda d: d['mcap.value'], reverse=True)
             if len(self._portfolio)<=0:
                 raise RuntimeError("%s failed to construct portfolio for %d assets"
-                                   %(___s_fn_id____,_assets.count()))
+                                   %(__s_fn_id__,_assets.count()))
             self._portfolio=sorted(self._portfolio, key=lambda d: d['mcap.value'], reverse=True)
             logger.debug("%s constructed portfolio with %d assets",
-                         ___s_fn_id____,len(self._portfolio))
+                         __s_fn_id__,len(self._portfolio))
 
         except Exception as err:
-            logger.error("%s %s \n",___s_fn_id____, err)
+            logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
-            print("[Error]"+___s_fn_id____, err)
+            print("[Error]"+__s_fn_id__, err)
 
         return self._data,self._portfolio
 
