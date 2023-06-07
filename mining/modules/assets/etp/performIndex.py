@@ -160,9 +160,12 @@ class Portfolio():
         __s_fn_id__ = f"{self.__name__} function <@property data>"
 
         try:
+#             print("%s rows: %d columns: %d" % (__s_fn_id__,self._data.count(),len(self._data.columns)))
+
             if self._data is None:
-                raise ValueError("Data is of NoneType; cannot be used in any %s computations"
-                                 %self.__name__)
+                raise ValueError("cannot perform any computations; data is of %s."
+                                 % (type(self._data)))
+
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
@@ -178,7 +181,6 @@ class Portfolio():
         try:
             if data is None:
                 raise AttributeError("Invalid data attribute, must be a valid pyspark dataframe")
-
             self._data = data
 
         except Exception as err:
@@ -641,7 +643,7 @@ class Portfolio():
                 idx_val_dict = {}
                 for _idx_name in index_type:
                     try:
-                        if _idx_name.upper() in ['RSI','MFI']:
+                        if _idx_name.upper() in ['RSI']:
                             _weights_df = pd.DataFrame(self.portfolio)
                             idx_val_=Portfolio.calc_movement(
                                 ror_data=_ror_data,
@@ -652,12 +654,26 @@ class Portfolio():
                                 **kwargs,
                             )
 
+                        elif _idx_name.upper() == 'MFI':
+                            ''' computes MFI; return index value and pyspark dataframe '''
+                            idx_val_,self.data = Portfolio.calc_mcap_mfi(
+                                ror_sdf=_ror_data,
+                                val_col=str(index_type[_idx_name]['VALUEATTR']),
+                                part_col=asset_name_col,
+                                date_col=str(index_type[_idx_name]['DATEATTR']),
+                                win_len =int(index_type[_idx_name]['WINLENGTH']),
+                                win_unit=str(index_type[_idx_name]['WINUNIT']),
+                                weights_list=self.portfolio,
+                                **kwargs,
+                            )
+
                         elif _idx_name.upper() == 'ADX':
-                            ''' select parameters from dict '''
-                            idx_val_,self.data = Portfolio.calc_adx(
+                            ''' computes ADX with DMI; return index value and pyspark dataframe '''
+                            idx_val_,self.data = Portfolio.calc_mcap_adx(
                                 dmi_sdf=_ror_data,
                                 val_col=str(index_type[_idx_name]['VALUEATTR']),
                                 part_col=asset_name_col,
+                                date_col=str(index_type[_idx_name]['DATEATTR']),
                                 win_len =int(index_type[_idx_name]['WINLENGTH']),
                                 win_unit=str(index_type[_idx_name]['WINUNIT']),
                                 weights_list=self.portfolio,
@@ -691,17 +707,25 @@ class Portfolio():
                             )
 
                         else:
-                            raise RuntimeError("%s something was wrong calculating index %s" 
-                                               % (__s_fn_id__,_idx_name.upper()))
+                            raise RuntimeError("something was wrong calculating index %s" 
+                                               % (_idx_name.upper()))
                         if not isinstance(idx_val_,float):
-                            raise ValueError("%s returned None type %s value"
-                                             ,__s_fn_id__,_idx_name.upper())
-                        logger.info("%s computed index value for %s = %0.4f",
+                            raise ValueError("returned %s for %s index calculation" 
+                                             % (type(idx_val_),_idx_name.upper()))
+                        logger.info("%s successfully computed index value for %s = %0.4f",
                                     __s_fn_id__,_idx_name.upper(),idx_val_)
                         idx_val_dict[_idx_name]=idx_val_
 
+                        if _idx_name.upper() in ['ADX','BETA','SHARP','SORTINO']:
+                            if self._data is None or self._data.count()<=0:
+                                raise AttributeError("retuned a %s dataframe for %s index computation"
+                                                 %(type(self._data),_idx_name.upper()))
+                            logger.debug("%s index computation for %s also returned dataframe"+\
+                                         "with %d rows and %d columns",__s_fn_id__,_idx_name.upper(),
+                                         self._data.count(),len(self._data.columns))
+
                     except Exception as idx_err:
-                        logger.warning("%s",idx_err)
+                        logger.warning("%s %s",__s_fn_id__,idx_err)
 
                 if len(idx_val_dict)>0:
                     self._movement=idx_val_dict
@@ -828,7 +852,7 @@ class Portfolio():
             if 'ADX' in str(kwargs['INDEXTYPELIST'].keys())\
                 and 2*kwargs['INDEXTYPELIST']['ADX']['WINLENGTH']>max_win_len:
                 max_win_len = 2*kwargs['INDEXTYPELIST']['ADX']['WINLENGTH']
-            _from_date = str(asset_eval_date - timedelta(days=max_win_len))
+            _from_date = str(asset_eval_date - timedelta(days=max_win_len-1))
             '''
                 TODO switch between mcap and price
             '''
@@ -836,7 +860,7 @@ class Portfolio():
                     f"where mcap_date >= '{_from_date}' and mcap_date <= '{_to_date}' "+\
                     f"and asset_name in ({_assets_in}) "+\
                     f"and mcap_value > {_mcap_min_val}"
-
+#             print("%s %s" % (__s_fn_id__,_query))
             self.data = clsSDB.read_data_from_table(select=_query, **kwargs)
 #             self._data.na.drop(subset=[asset_val_col])
             if self._data.count() > 0:
@@ -1079,14 +1103,14 @@ class Portfolio():
                 obj_map[_wt_rec[weight_asset_col]]=_wt_rec[weight_val_col]
             mapping_expr = F.create_map([F.lit(x) for x in chain(*obj_map.items())])
             ''' set the corresponding weights in dataframe '''
-            df1 = ror_sdf.filter(F.col(ror_asset_col).isNull())\
+            sdf1 = ror_sdf.filter(F.col(ror_asset_col).isNull())\
                             .withColumn('weight', F.lit(None))
-            df2 = ror_sdf.filter(F.col(ror_asset_col).isNotNull())\
+            sdf2 = ror_sdf.filter(F.col(ror_asset_col).isNotNull())\
                             .withColumn('weight',\
                                         F.when(F.col(ror_asset_col).isNotNull(),\
                                                mapping_expr[F.col(ror_asset_col)]
                                               ))
-            weighted_data_ = df1.unionAll(df2)
+            weighted_data_ = sdf1.unionAll(sdf2)
             weighted_data_ = weighted_data_.withColumn(_ror_weight_val_col,
                                                        (F.col(ror_val_col)*F.col('weight')))
             ''' check if non-empty dataframe '''
@@ -1152,6 +1176,7 @@ class Portfolio():
                                               F.col(val_col))\
                                       .otherwise(0))\
                                  .alias('neg_col')).sort(part_col)
+            ''' compute rolling mean sum for window length for +ve & -ve values ''' 
 
             _pos_arr=_pos_sdf.toPandas()['pos_col'].astype('float').to_numpy()
             _neg_arr=_neg_sdf.toPandas()['neg_col'].astype('float').to_numpy()
@@ -1178,7 +1203,106 @@ class Portfolio():
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return ret_idx_val_
+        return float(ret_idx_val_*100)
+
+
+    ''' --- MONEY FLOW INDEX (MFI) ---
+    
+            author: <samana.thetha@gmail.com>
+    '''
+    @staticmethod
+    def calc_mcap_mfi(
+#         self,
+        ror_sdf :DataFrame=None,
+        val_col :str="log_ror",
+        part_col:str="asset_name",
+        date_col:str="mcap_date",
+        weights_list:list=[],
+        win_len :int=14,
+        win_unit:str='DAY',
+        **kwargs,
+    ) -> float:
+        """
+        Description:
+
+        Attributes:
+            ror_data (DataFrame) the rate of returns dataframe
+            val_col (str) defines the numeric column to use; default value = log_ror
+            part_col (str) defines the partition column; i.e categories; default value = asset_name
+            **kwargs not used
+        Returns:
+            mfi (float) with the single mfi number between [0,1]
+            mfi_sdf (DataFrame) augments the all the POS, NEG, POS avg, NEG avp columns to the
+                original DataFrame
+        """
+
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_mcap_mfi>"
+
+        try:
+            ''' validate the attribues '''
+            if ror_sdf.count()<=0:
+                raise AttributeError("Cannot compute MFI with empty dataframe")
+            if "".join(val_col.strip())=="" or \
+                val_col not in ror_sdf.columns or \
+                ror_sdf.select(F.col(val_col)).dtypes[0][1]=='string':
+                raise AttributeError("A valid numeric column from %s required" % ror_sdf.dtypes)
+            if "".join(part_col.strip())=="":
+                raise AttributeError("Invalid partition column, specify one from %s" % ror_sdf.dtypes)
+
+            ''' compute the DMI sum, avg, smooth, and DI column values '''
+            ror_sdf = ror_sdf.withColumn("pos",
+                                           F.when(F.col(val_col) > 0,
+                                                  F.col('mcap_value'))
+                                           .otherwise(0))
+            ror_sdf = ror_sdf.withColumn("neg",
+                                           F.when(F.col(val_col) <= 0,
+                                                  F.col('mcap_value'))
+                                           .otherwise(0))
+            ''' Smoothed values '''
+            kwargs['RESULTCOL']='sm_sum_pos'
+            ror_sdf = clsStats.simple_moving_stats(
+                num_col ="pos",
+                date_col=date_col, #"mcap_date",
+                part_col=part_col,
+                stat_op ="sum",
+                win_len =win_len,
+                win_unit=win_unit,
+                data=ror_sdf,
+                **kwargs,
+            )
+            kwargs['RESULTCOL']='sm_sum_neg'
+            ror_sdf = clsStats.simple_moving_stats(
+                num_col="neg",
+                date_col=date_col, #"mcap_date",
+                part_col=part_col,
+                stat_op="sum",
+                win_len =win_len,
+                win_unit=win_unit,
+                data=ror_sdf,
+                **kwargs,
+            )
+
+            ''' compute money flow ration sum(pos)/sum(neg) '''
+            ror_sdf = ror_sdf.withColumn('mfr',(F.col('sm_sum_pos')/F.col('sm_sum_neg')))
+            if ror_sdf is None or ror_sdf.count()<=0:
+                raise RuntimeError("MFR returned a %s empty dataframe" % (type(ror_sdf)))
+            logger.debug("%s computation of MFR resulted in %d rows and %d columns",
+                         __s_fn_id__,ror_sdf.count(),len(ror_sdf.columns))
+            max_date = ror_sdf.select(F.max(date_col).alias('max_date'))
+            mfr_of_eval_date = ror_sdf.filter(F.col('mcap_date')==max_date.collect()[0][0])\
+                                        .select(F.col('mfr')).collect()[0][0]
+            
+            mfi = 100*(1.0-1.0/(1.0+float(mfr_of_eval_date)))
+#             ror_sdf.select(F.col(part_col),F.col('mcap_date'),F.col('mcap_value'),
+#                            F.col('sm_sum_pos'),F.col('sm_sum_neg'),F.col('mfr'),).show()
+#             print(mfr_of_eval_date)
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return float(mfi),ror_sdf
 
 
     ''' --- DIRECTIONAL MOVEMENT INDICATOR ---
@@ -1191,6 +1315,7 @@ class Portfolio():
         ror_sdf_:DataFrame=None,
         val_col :str="log_ror",
         part_col:str="asset_name",
+        date_col:str="mcap_date",        
         win_len :int=7,
         win_unit:str='DAY',
         **kwargs,
@@ -1241,7 +1366,7 @@ class Portfolio():
             kwargs['RESULTCOL']='sm_sum_+DM'
             ror_sdf_ = clsStats.simple_moving_stats(
                 num_col ="+DM",
-                date_col="mcap_date",
+                date_col=date_col, #"mcap_date",
                 part_col=part_col,
                 stat_op ="sum",
                 win_len =win_len,
@@ -1252,7 +1377,7 @@ class Portfolio():
             kwargs['RESULTCOL']='sm_avg_+DM'
             ror_sdf_ = clsStats.simple_moving_stats(
                 num_col="+DM",
-                date_col="mcap_date",
+                date_col=date_col, #"mcap_date",
                 part_col=part_col,
                 stat_op="avg",
                 win_len =win_len,
@@ -1263,7 +1388,7 @@ class Portfolio():
             kwargs['RESULTCOL']='sm_sum_-DM'
             ror_sdf_ = clsStats.simple_moving_stats(
                 num_col="-DM",
-                date_col="mcap_date",
+                date_col=date_col, #"mcap_date",
                 part_col=part_col,
                 stat_op="sum",
                 win_len =win_len,
@@ -1274,7 +1399,7 @@ class Portfolio():
             kwargs['RESULTCOL']='sm_avg_-DM'
             ror_sdf_ = clsStats.simple_moving_stats(
                 num_col="-DM",
-                date_col="mcap_date",
+                date_col=date_col, #"mcap_date",
                 part_col=part_col,
                 stat_op="avg",
                 win_len =win_len,
@@ -1284,7 +1409,7 @@ class Portfolio():
             )
 
             ''' shift +DM & -DM column by period=1 '''
-            _win = Window.partitionBy(F.col(part_col)).orderBy(F.col("mcap_date").cast('long'))
+            _win = Window.partitionBy(F.col(part_col)).orderBy(F.col(date_col).cast('long'))
             ror_sdf_ = ror_sdf_.withColumn('shift_+DM',
                                            F.lag(F.col('+DM'),offset=1,default=0)
                                            .over(_win))
@@ -1321,10 +1446,11 @@ class Portfolio():
             author: <samana.thetha@gmail.com>
     '''
     @staticmethod
-    def calc_adx(
+    def calc_mcap_adx(
         dmi_sdf:DataFrame=None,
         val_col:str="log_ror",
         part_col:str="asset_name",
+        date_col:str="mcap_date",
         weights_list:list=[],
         win_len :int=7,
         win_unit:str='DAY',
@@ -1354,7 +1480,7 @@ class Portfolio():
             adx (float) with the single adx real number
         """
 
-        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_adx>"
+        __s_fn_id__ = f"{Portfolio.__name__} @staticmethod <calc_mcap_adx>"
         adx_ = None
         adx_sdf_=None
         obj_map = {}
@@ -1374,10 +1500,16 @@ class Portfolio():
 #                 not (kwargs['+DICOL'] in dmi_sdf.columns and kwargs['-DICOL'] in dmi_sdf.columns):
             if "+DI" not in dmi_sdf.columns or "-DI" not in dmi_sdf.columns:
                 logger.warning("Could not find +DI or -DI columns; proceeding with DMI calculation")
+                _date_range = dmi_sdf.select(F.col(date_col)).distinct().count()
+                if _date_range<win_len*2:
+                    raise ValueError("Insufficient date range %d to calc DMI. "+\
+                                     "Dates range must be twice the window length = %d" 
+                                     % (_date_range,2*win_len))
                 dmi_sdf = Portfolio.get_dmi_data(
                     ror_sdf_= dmi_sdf,
                     val_col=val_col,
                     part_col=part_col,
+                    date_col=date_col,
                     win_len =win_len,
                     win_unit=win_unit,
                     **kwargs,
@@ -1388,7 +1520,7 @@ class Portfolio():
 #                 raise AttributeError("Dimension mismatching weights %d "+ \
 #                                      "to that of distinct asset count %d"
 #                                      % (len(weights_list),r_asset_count))
-
+            ''' compute the weighted DMI; i.e. wighted -DI & +DI '''
             adx_sdf_=Portfolio.get_weighted_ror(
                 ror_sdf=dmi_sdf,
                 ror_asset_col=part_col,
@@ -1407,16 +1539,38 @@ class Portfolio():
                 weight_val_col='mcap.weight',
                 **kwargs,
             )
-            adx_sdf_ = adx_sdf_.withColumn('ADX',(F.col('weighted_-DI')-F.col('weighted_+DI'))/
+            ''' computed the DX '''
+#             adx_sdf_ = adx_sdf_.withColumn('ADX',(F.col('weighted_-DI')-F.col('weighted_+DI'))/
+#                                         (F.col('weighted_-DI')+F.col('weighted_+DI')))
+            adx_sdf_ = adx_sdf_.withColumn('DX',100*F.abs(F.col('weighted_-DI')-F.col('weighted_+DI'))/
                                         (F.col('weighted_-DI')+F.col('weighted_+DI')))
-            adx_ = adx_sdf_.select(F.sum(F.col('ADX'))).alias("adx_val")
+            logger.debug("%s computed DX for %d rows",__s_fn_id__,
+                         adx_sdf_.select(F.col('DX').isNotNull()).count())
+            ''' compute adx for using most recent window length '''
+            kwargs['RESULTCOL']='ADX'
+            adx_sdf_ = clsStats.simple_moving_stats(
+                num_col ="DX",
+                date_col=date_col, #"mcap_date",
+                part_col=part_col,
+                stat_op ="average",
+                win_len =win_len,
+                win_unit=win_unit,
+                data=adx_sdf_,
+                **kwargs,
+            )
+#             adx_sdf_.select(F.col('asset_name'),F.col('mcap_date'),F.col('mcap_value'),
+#                             F.col('mcap_simp_ror'),F.col('DX'),F.col('ADX'))\
+#                     .show()
+            logger.debug("%s computed ADX for %d rows with window length %d (%s)",__s_fn_id__,
+                         adx_sdf_.select(F.col('ADX').isNotNull()).count(),win_len,win_unit)
+            adx_ = adx_sdf_.select(F.mean(F.col('ADX'))).alias("adx_val")
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             logger.debug(traceback.format_exc())
             print("[Error]"+__s_fn_id__, err)
 
-        return adx_.collect()[0][0],adx_sdf_
+        return float(adx_.collect()[0][0]),adx_sdf_
 
 
     ''' --- MOVING AVERAGE CONVERGENCE DIVERGENCE ---
