@@ -200,10 +200,12 @@ class CryptoMarkets():
 
         try:
             if self._dataDir is None:
-#                 self._dataDir = os.path.join(self.__app__,'data',self.__module__,self.__package__)
                 self._dataDir = pkgConf.get("CWDS","DATA")
                 logger.warning("%s NoneType dataDir set to default value %s",
                                __s_fn_id__,self._dataDir.upper())
+            if not os.path.exists(self._dataDir):
+                os.makedirs(self._dataDir)
+                logger.warning("%s Created new directory path %s", __s_fn_id__,self._dataDir.upper())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -264,8 +266,11 @@ class CryptoMarkets():
         try:
             if self._tmpDir is None:
                 self._tmpDir = os.path.join(self.dataDir,__tmp_data_dir_ext__)
-                logger.warning("%s NoneType tmpDIR set to default value %s",
+                logger.warning("%s NoneType tmpDIR class property set to default value %s",
                                __s_fn_id__,self._tmpDir.upper())
+            if not os.path.exists(self._tmpDir):
+                os.makedirs(self._tmpDir)
+                logger.warning("%s Created new directory path %s", __s_fn_id__,self._tmpDir.upper())
             
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -588,10 +593,12 @@ class CryptoMarkets():
                                                      %(_api['name'],_mcap[1],_price[1]))
                                 ''' replace special char with _ to compy with pyspark imute '''
                                 _api['name'] = _api['name'].replace("$","_")\
-                                                .replace("%","_").replace("..","_")\
-                                                .replace(".","_").replace(",","_")\
+                                                .replace(".","_").replace("..","_")\
+                                                .replace("%","_").replace(":","_")\
+                                                .replace(";","_").replace(",","_")\
                                                 .replace("#","_").replace("*","_")\
-                                                .replace("!","1").replace("-","_")\
+                                                .replace("!","1").replace("+","_")\
+                                                .replace("--","_").replace("-","_")\
                                                 .replace(" ","_").replace("  ","_")\
                                                 .replace("(","").replace(")","")\
                                                 .replace("[","").replace("]","")\
@@ -1178,7 +1185,6 @@ class CryptoMarkets():
             if len(clsNoSQL.collections)<=0:
                 raise ValueError("Unable to locate any collection in %s database"
                                 %(clsNoSQL.dbName))
-            print("retrieving collections ...")
             _colls_list = clsNoSQL.collections
             logger.debug("%s Found %d collection in %s %s",
                         __s_fn_id__,len(_colls_list),clsNoSQL.dbName.upper(),clsNoSQL.dbType.upper())
@@ -1197,10 +1203,11 @@ class CryptoMarkets():
             logger.debug("%s begin transfer data from %s %s to %s %s",
                          __s_fn_id__,clsNoSQL.dbType.upper(),source_db.upper(),
                          clsSDB.dbType.upper(),destin_db.upper())
-            try:
-                ''' loop through collection to get the read data '''
-                for _coll in _colls_list:
-                    _coll_df = pd.DataFrame()   # initialize the data frame
+#             try:
+            ''' loop through collection to get the read data '''
+            for _coll in _colls_list:
+                _coll_df = pd.DataFrame()   # initialize the data frame
+                try:
                     ''' read data from nosql collection as pandas dataframe '''
                     _coll_df = clsNoSQL.read_documents(
                         as_type=__as_type__,
@@ -1259,7 +1266,8 @@ class CryptoMarkets():
                                             .groupby(['asset_name','volume_date'])\
                                             ['volume_size'].idxmax()]                    
                         _coll_df = pd.merge(_mcap_price_df,_coll_volume_df,
-                                            how='inner', left_on='mcap_date', right_on='volume_date',
+                                            how='inner', left_on='mcap_date',
+                                            right_on='volume_date',
                                                   suffixes=[None,'_1'])
                         _coll_df.drop(['volume_size','volume_date'],axis=1,inplace=True)
                         _rename_col_dict = {
@@ -1274,7 +1282,7 @@ class CryptoMarkets():
                                              % kwargs['UNIQUEROWBY'])
                     logger.debug("%s Retrieved %d rows with %s mcap_value in dataframe",
                             __s_fn_id__,_coll_df.shape[0],kwargs['UNIQUEROWBY'].upper())
-                    
+
                     ''' drop all columns not in COLUMNSMAP '''
                     _coll_df.drop([x for x in _coll_df.columns \
                                    if x not in kwargs['COLUMNSMAP'].values()],
@@ -1292,18 +1300,19 @@ class CryptoMarkets():
                         db_table=table_name,
                         session_args = kwargs
                     )
-                    logger.debug("%s %d records inserted into table %s in database %s",
-                                __s_fn_id__,_saved_rec_count,table_name,destin_db)
                     if _saved_rec_count > 0:
                         self._data = pd.concat([self._data,_coll_df])
+                        logger.debug("%s %d records inserted into table %s in database %s",
+                                    __s_fn_id__,_saved_rec_count,table_name,destin_db)
                     else:
                         raise RuntimeError("None of %s collection %d rows were inserted %s table"
                                            %(_coll,_coll_df.shape[0],table_name.upper()))
 
-            except Exception as coll_err:
-                logger.error("Collection %s had errors: %s \n",_coll.upper(),coll_err)
-                logger.debug("%s",traceback.format_exc())
-                pass
+                except Exception as coll_err:
+                    logger.warning("%s Collection %s had errors: %s; moving on to the next",
+                                 __s_fn_id__,_coll.upper(),coll_err)
+#                         logger.debug("%s",traceback.format_exc())
+                    pass
 
             if self._data.shape[0] > 0:
                 logger.info("Done transfering %d %s collection from %s database into "+\

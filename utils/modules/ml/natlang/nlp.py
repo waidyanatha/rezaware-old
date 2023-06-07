@@ -3,9 +3,9 @@
 
 ''' Initialize with default environment variables '''
 __name__ = "NatLanWorkLoads"
-__package__ = "natlang"
+__package__ = "natlang"    # natural language processing
 __module__ = "ml"   # machine learning
-__app__ = "utils"
+__app__ = "utils"   # rezaware utils
 __ini_fname__ = "app.ini"
 __conf_fname__ = "app.cfg"
 
@@ -21,6 +21,9 @@ try:
     from collections import Counter
     from difflib import SequenceMatcher
     import re
+    ''' pyspark packaes '''
+    from pyspark.sql import functions as F
+    from pyspark.sql import DataFrame
 
     ''' loading env vars, logging, and error reporting '''
     import configparser    
@@ -35,38 +38,44 @@ except Exception as e:
           .format(__module__.upper(),__package__.upper(),__name__.upper(),e))
 
 '''
-    CLASS run relevant natural language processing tasks
-        1) 
-
-    Resources:
-        
+    CLASS runs pyspark nlp workloads
 '''
 class NatLanWorkLoads():
-    ''' Function
-            name: __init__
-            parameters:
-                    @desc (str)
-                    @enrich (dict)
-            procedure: 
-            return None
-            
-            author: <nuwan.waidyanatha@rezgateway.com>
+    ''' Function --- INIT ---
 
+            author: <nuwan.waidyanatha@rezgateway.com>
     '''
     def __init__(self, desc : str="NLP workloads",   # identifier for the instances
                  **kwargs:dict,   # can contain hostIP and database connection settings
                 ):
+        """
+        Decription:
+            Initializes the ExtractFeatures: class property attributes, app configurations, 
+                logger function, data store directory paths, and global classes 
+        Attributes:
+            desc (str) identify the specific instantiation and purpose
+        Returns:
+            None
+        """
 
         self.__name__ = __name__
         self.__package__ = __package__
         self.__module__ = __module__
         self.__app__ = __app__
         self.__ini_fname__ = __ini_fname__
-        self.__desc__ = desc
-        _s_fn_id = "__init__"
+        if desc is None or "".join(desc.split())=="":
+            self.__desc__ = " ".join([self.__app__,
+                                      self.__module__,
+                                      self.__package__,
+                                      self.__name__])
+        else:
+            self.__desc__ = desc
 
         global config
         global logger
+        
+        __s_fn_id__ = f"{self.__name__} function <__init__>"
+
         try:
             self.cwd=os.path.dirname(__file__)
 
@@ -90,7 +99,8 @@ class NatLanWorkLoads():
             ''' set a new logger section '''
             logger.info('########################################################')
             logger.info("%s %s",self.__name__,self.__package__)
-
+            from utils.modules.lib.spark import execSession as spark
+            clsSpark = spark.Spawn(desc=self.__desc__)
             ''' set tmp storage location from app.cfg '''
             self.tmpDIR = None
             if "WRITE_TO_FILE" in kwargs.keys():
@@ -108,48 +118,107 @@ class NatLanWorkLoads():
             print("%s Class initialization complete" % self.__name__)
 
         except Exception as err:
-            _s_fn_id = "Class <SparkWorkLoads> Function <__init__>"
             logger.error("%s %s \n",_s_fn_id, err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return None
 
-    ''' Function
-            name: ngram_counter
-            parameters:
+    ''' Function --- CLASS PROPERTIES ---
 
-                kwargs - 
+            author: <nuwan.waidyanatha@rezgateway.com>
+                    <ushan.jayasuriya@colombo.rezgateway.com>
+    '''
+    ''' --- DATA --- '''
+    @property
+    def data(self):
+        """
+        Description:
+            data @property and @setter functions. make sure it is a valid spark dataframe
+        Attributes:
+            data in @setter will instantiate self._data    
+        Returns (dataframe) self._data
+        """
 
-            procedure: 
+        __s_fn_id__ = f"{self.__name__} function <@property data>"
 
-            return:  (Counter object)
+        try:
+            if self._data is not None and not isinstance(self._data,DataFrame):
+                self._data = clsSFile.session.createDataFrame(self._data)
+                logger.debug("%s converted non pyspark data object to %s",
+                             __s_fn_id__,type(self._data))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+    @data.setter
+    def data(self,data):
+
+        __s_fn_id__ = f"{self.__name__} function <@setter data>"
+
+        try:
+            if data is None:
+                raise AttributeError("Invalid data attribute, must be a valid pyspark dataframe")
+            if not isinstance(data,DataFrame):
+                self._data = clsSFile.session.createDataFrame(data)
+                logger.debug("%s converted %s object to %s",
+                             __s_fn_id__,type(data),type(self._data))
+            else:
+                self._data = data
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+
+    ''' Function -- SENTENCE EMBEDDINGS ---
 
             author: <nuwan.waidyanatha@rezgateway.com>
 
             TODO: complete the functions
 
     '''
+    @staticmethod
     def get_sentence_embeddings(
-        self, 
         sentences:list=[],   # list of word ngrams 
         model_name:str='',   # https://www.sbert.net/docs/pretrained_models.html
         **kwargs
     ): 
+        """
+        Description:
+            For a given list of text sentences, the function generate an embedding.
+            It makes use of a pretrained model to encode the sentences. 
+        Attributes:
+            sentences (list) - list of space seperated word ngrams
+            model_name (str) - https://www.sbert.net/docs/pretrained_models.html
+        Returns:
+            sentences (list)
+            embeddings (list)
+        Exceptions:
+        """
 
-        _s_fn_id = "function <create_embedding>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
-        
+        __s_fn_id__ = f"{self.__name__} function <create_embedding>"
+
+        pre_trained_models = [
+            "all-MiniLM-L6-v2"
+        ]
+        __def_pre_train_model__ = "all-MiniLM-L6-v2"
         embeddings = None
 
         try:
             if model_name in pre_trained_models:
                 model = SentenceTransformer(model_name)
             else:
-                model = SentenceTransformer('all-MiniLM-L6-v2')
-                logger.warning("Invalid pretrained model, adopting defaule model: all-MiniLM-L6-v2")
-#             if "MODEL_NAME" in kwargs.keys():
-#                 model = SentenceTransformer(kwags['MODEL_NAME'])
+                model = SentenceTransformer(__def_pre_train_model__)
+                logger.warning("%s invalid pretrained model, adopting default: %s",
+                               __s_fn_id__,__def_pre_train_model__)
 
             if "NOSTOPWORDS" in kwargs.keys() and kwargs["NOSTOPWORDS"]==True:
                 sentences = sentences.apply(lambda x: ' '\
@@ -164,22 +233,14 @@ class NatLanWorkLoads():
             embeddings = model.encode(sentences)
             
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id,err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s \n", __s_fn_id__,err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return sentences, embeddings
 
 
     ''' Function
-            name: get_similarity_scores
-            parameters:
-
-                kwargs - 
-
-            procedure: 
-
-            return:  (list)
 
             author: <nuwan.waidyanatha@rezgateway.com>
 
@@ -187,9 +248,15 @@ class NatLanWorkLoads():
 
     '''
     def get_similarity_scores(self, input_sentences:list, lookup_sentences:list, **kwargs):
+        """
+        Description:
+        Attributes:
+        Returns:
+        Exceptions:
+        """
 
-        _s_fn_id = "function <get_similarity_scores>"
-        logger.info("Executing %s %s" % (self.__package__, _s_fn_id))
+        __s_fn_id__ = f"{self.__name__} function <get_similarity_scores>"
+        logger.info("Executing %s %s" % (self.__package__, __s_fn_id__))
         
         sim_scores = None
         return_sim_scores = None
@@ -232,50 +299,164 @@ class NatLanWorkLoads():
                 _sim_scores_df = pd.concat([_sim_scores_df,pd.DataFrame(_l_sim_scores)])
 
         except Exception as err:
-            logger.error("%s %s \n", _s_fn_id,err)
-            print("[Error]"+_s_fn_id, err)
-            print(traceback.format_exc())
+            logger.error("%s %s \n", __s_fn_id__,err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
 
         return _sim_scores_df
 
 
-    ''' Function
-            name: ngram_counter
-            parameters:
+    ''' Function -- WORDS TO NUMBERS ---
 
-                kwargs - 
+            authors:<nuwan.waidyanatha@rezgateway.com>
+                    <ushan.jayasuriya@colombo.rezgateway.com>
 
-            procedure: 
+            TODO: complete the functions
+    '''
+    def remove_stop_words(
+        self,
+        data: DataFrame,   # dataframe that is pyspark.sql.DataFrame compatible
+        col_names :dict,   # key=column with sentences to use & value = new column name
+        stop_words:list,   # list of stopwords to remove from the sentences
+        **kwargs,
+    ) -> DataFrame:
+        """
+        Description:
+            For a given set of columns, the process will remove the list of defined
+            (or default) stop words from the column text.
+        Attributes :
+            data (DataFrame) - dataframe that is pyspark.sql.DataFrame compatible
+            col_names (dict) - key=column with sentences to use & value = new column name
+            stop_words(list) - list of stopwords to remove from the sentences
+        returns :
+            self._data (DataFrame) with additional column with stop word removed sentences
+        Exceptions :
+            data cannot be converted to pyspark dataframe, throw exception
+            col_names is an invalid dict, throw exception
+        """
+        __s_fn_id__ = f"{self.__name__} function <remove_stop_words>"
 
-            return:  (Counter object)
+        ''' declare variables & default values '''
+        __col_pofix__ = "no_stop_word"
 
-            author: <nuwan.waidyanatha@rezgateway.com>
+        try:
+            ''' validate input attributes '''
+            self.data = data
+            if not isinstance(col_names,dict) and len(col_names)<=0:
+                raise AttributeError("Specify, at least, one column to remove stop words")
+            if not isinstance(stop_words,list) or len(stop_words)<=0:
+                stop_words = stop
+            ''' loop through each columns dictionary to remove stop words '''
+            for _col,_new_col in col_names.items():
+                try:
+                    if _col not in self._data.columns:
+                        raise ValueError("%s is an invalid collumn name" % (_col))
+                    if _new_col is None or "".join(_new_col.split())=="":
+                        _new_col = "_".join([_col,__col_pofix__])
+                        
+                        ''' ADD LOGIC >>>'''
+#                         self._data = self._data.withColumn(_new_col,<<PYSPARK ADD LOGIC>>)
+#                         sentences = sentences.apply(lambda x: ' '\
+#                                                     .join([word for word in x.split()\
+#                                                            if word not in (stop_words)]))
+
+                    
+                except Exception as col_err:
+                    logger.warning("%s column had errors %s \n",__s_fn_id__, col_err)
+
+            
+            ''' check if function produced a valid return object '''
+            if self._data is None or self._data.count() <= 0:
+                raise RuntimeError("retuned an empty %s bow dict",type(self._data))
+            logger.debug("%s successfully completed with enriching dataframe: %d rows and %d columns",
+                         __s_fn_id__,self._data.count(),len(self._data.columns))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+
+    ''' Function -- WORDS TO NUMBERS ---
+
+            author: <ushan.jayasuriya@colombo.rezgateway.com>
+
+    '''
+    def words_to_numbers(
+        self,
+        data: DataFrame, # dataframe that is pyspark.sql.DataFrame compatible
+        col_names: dict, # key=column with sentences to use & value = new column name
+        num_type : str,  # the type of number to convert decimal, integer, roman numeral, etc
+        **kwargs,
+    ) -> DataFrame:
+        """
+        Description:
+        Attributes :
+        Returns :
+        Exceptions :
+        """
+        __s_fn_id__ = f"{self.__name__} function <words_to_numbers>"
+
+        ''' declare variables & default values '''
+
+        try:
+            ''' validate input attributes '''
+            self._data = data
+            
+            ''' << ADD THE LOGIC HERE >> '''
+
+            
+            ''' check if function produced a valid return object '''
+            if self._data is None or self._data.count() <= 0:
+                raise RuntimeError("retuned an empty %s bow dict",type(self._data))
+            logger.debug("%s successfully completed with enriching dataframe: %d rows and %d columns",
+                         __s_fn_id__,self._data.count(),len(self._data.columns))
+
+        except Exception as err:
+            logger.error("%s %s \n",__s_fn_id__, err)
+            logger.debug(traceback.format_exc())
+            print("[Error]"+__s_fn_id__, err)
+
+        return self._data
+
+
+    ''' Function -- NGRAM COUNTER ---
+
+            author: <ushan.jayasuriya@colombo.rezgateway.com>
 
             TODO: complete the functions
 
     '''
-    def ngram_counter(self, df, col, **kwargs):
+    @staticmethod
+    def ngram_counter(df, col, **kwargs):
+        """
+        Description:
+        Attributes:
+        Returns:
+        Exceptions:
+        """
         L = [x for x in df[col].unique() for x in bigrams(x.split())]
         c = Counter(L)
         top = c.most_common(20)
         return c
 
-    ''' Function
-            name: diff_scores
-            parameters:
 
-                kwargs - 
-
-            procedure: 
-
-            return:  (list object)
-
+    ''' Function -- DIFFERENCE SCORES --
+    
             author: <nuwan.waidyanatha@rezgateway.com>
             
             TODO: complete the functions
 
     '''
     def diff_scores(self, df1, df2, col, **kwargs):
+        """
+        Description:
+        Attributes:
+        Returns:
+        Exceptions:
+        """
         _room_desc = pd.read_csv(os.path.join(DATA_DIR,"room_descriptions.csv"), delimiter=',')
         _l_result = []
 

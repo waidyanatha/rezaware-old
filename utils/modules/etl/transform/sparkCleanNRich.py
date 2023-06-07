@@ -196,8 +196,8 @@ class Transformer():
                 else:
                     raise AttributeError("Invalid column_subset list; must be numeric dtype columns")
             else:
-                logger.warning("Undefined column_subset, defaulting to all %d numeric columns",
-                               len(num_col_list))
+                logger.warning("%s Undefined column_subset, defaulting to all %d numeric columns",
+                               __s_fn_id__,len(num_col_list))
 #                 if _num_col_count < len(column_subset):
 #                     raise AttributeError("%d invalid non-numeric columns in input attr: column_subset"
 #                                          % len(column_subset)-_num_col_count)
@@ -216,8 +216,8 @@ class Transformer():
             _strategy = strategy.lower()
             if not strategy.lower() in ['mean','median','mode']:
                 _strategy = 'mean'
-                logger.warning("Invalid strategy %s, reverting to default strategy = %s"
-                               ,strategy,_strategy)
+                logger.warning("%s Invalid strategy %s, reverting to default strategy = %s",
+                               __s_fn_id__,strategy,_strategy)
             ''' apply imputation '''
             imputer = Imputer(inputCols=column_subset,
                               outputCols=[col_ for col_ in column_subset]
@@ -225,7 +225,8 @@ class Transformer():
             imputed_data_ = imputer.fit(data).transform(data)
             if not imputed_data_ or imputed_data_.count() <= 0:
                 raise RuntimeError("Imputer returned an empty dataset")
-            logger.debug("IMputer succeded with returning %d rows", imputed_data_.count())
+            logger.debug("%s IMputer succeded with returning %d rows",
+                         __s_fn_id__,imputed_data_.count())
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -262,7 +263,8 @@ class Transformer():
                                 for c in column_subset])
 
             if _nan_counts_sdf.count() > 0:
-                logger.debug("NULL count completed for %d columns",len(_nan_counts_sdf.columns))
+                logger.debug("%s Count None/NaN/Null completed for %d columns",
+                             __s_fn_id__, len(_nan_counts_sdf.columns))
 
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
@@ -326,15 +328,16 @@ class Transformer():
             if len(_piv_col_names)<=0:
                 raise AttributeError("No matching pivot column names in kwargs 'PIVCOLUMNS' list %s"
                                      % kwargs['PIVCOLUMNS'])
-            logger.debug("Pivoting %d valid columns",len(_piv_col_names))
+            logger.debug("%s Pivoting %d valid columns",
+                         __s_fn_id__,len(_piv_col_names))
             _agg = 'sum'
             if "AGGREGATE" in kwargs.keys() and kwargs['AGGREGATE'] in aggList_:
                 _agg = kwargs['AGGREGATE'].lower()
 
-            logger.debug("Transposing %d rows groupby %s to pivot with "+\
-                         "distinct values in %s and %s aggregation on column(s): %s"
-                         ,data.count(),str(group_columns).upper()
-                         ,str(pivot_column).upper(),_agg.upper(),str(agg_column).upper())
+            logger.debug("%s Transposing %d rows groupby %s to pivot with "+\
+                         "distinct values in %s and %s aggregation on column(s): %s",
+                         __s_fn_id__,data.count(),str(group_columns).upper(),
+                         str(pivot_column).upper(),_agg.upper(),str(agg_column).upper())
             if _agg == 'sum':
                 _piv_data = data.groupBy(group_columns)\
                         .pivot(pivot_column, _piv_col_names)\
@@ -535,14 +538,15 @@ class Transformer():
                 TODO - move to a @staticmethod '''
             if "DROPDUPLICATES" in kwargs.keys() and kwargs['DROPDUPLICATES']:
                 _unique_sdf = data.distinct()
-                logger.debug("Removed duplicates, reduced dataframe with %d rows",_unique_sdf.count())
+                logger.debug("%s Removed duplicates, reduced dataframe with %d rows",
+                             __s_fn_id__,_unique_sdf.count())
 
             ''' convert to pandas dataframe 
                 TODO - move to @staticmethod '''
             if 'TOPANDAS' in kwargs.keys() and kwargs['TOPANDAS']:
                 _unique_sdf = _unique_sdf.toPandas()
-                logger.debug("Converted pyspark dataframe to pandas dataframe with %d rows"
-                             % _unique_sdf.shape[0])
+                logger.debug("%s Converted pyspark dataframe to pandas dataframe with %d rows",
+                             __s_fn_id__,_unique_sdf.shape[0])
         except Exception as err:
             logger.error("%s %s \n",__s_fn_id__, err)
             print("[Error]"+__s_fn_id__, err)
