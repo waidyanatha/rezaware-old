@@ -4,6 +4,8 @@
 
 The README file is intended for Rezgateway affiilates working on rezAWARE projects. It povides an introduction to getting started with the available tools and code. Thereafter, refer to the WIKI for complete documentation on the system's components, and interfaces.
 
+__Wiki__ 
+
 ## Introduction
 
 The rezAWARE tools and processes will support an organization to mature from descriptive to cognitive analytics. For such data being the key ingrediant, the rezAWARE core components offer:
@@ -12,57 +14,67 @@ The rezAWARE tools and processes will support an organization to mature from des
 1. _Wrangler_ - for processing data extract, transform, and load automated pipelines
 1. _Visuals_ - interactive dashboards with visual analytics for Business Intelligence (BI)
 
-## Getting Started
+## Quickstart
+__Linux Only__
+* Simply download and run the setup file
+   * ```python3 setup.py```
+
+#### Setup will guide you with
+* creating a new user and home directory
+* starting a new conda environment
+* cloning rezaware pltform
+* installing all dependencies
+* starting all databases and storage tools
+* configuring for your environment
+
+#### Test the new setup
+Run __pytest__ by executing the command in your terminal prompt
+* ```pytest```
+
+
+## Developers
 
 ### Prerequisits
-It is recommended to setup a clean [Anaconda3](https://www.anaconda.com/) environment with Python 3.8 to avoid any distutils issues. To get started with a working environment to execute the librabries, the following packages are required.<br>
+
+#### Clone rezaware
+* [Install Git on you machine](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+* Create a fork of the rezaware platform
+   * ```http://github/myrepo/rezaware```
+* Make a working director on you machine; e.g., in linux prompt:
+   * ```mkdir ~/workspace/```
+* Navigate to that director; e.g., in linux prompt: 
+   * ```cd ~/workspace/```
+* Initialize your git in this directory 
+   * ```git init```
+* Clone the rezaware platform in to you local machine,
+   * ```git clone https://github.com/myrepo/rezaware.git
+* Change your directory to the rezaware folder; e.g., 
+   * ```cd ~/workspace/rezaware```
+
+#### Conda environment
+* It is recommended to setup a clean [Anaconda3](https://www.anaconda.com/) environment with Python 3.8.10 to avoid any distutils issues. 
+* After you have installed __conda__; create a new environment using the _requirements.txt_ file:
+   * ```conda create --name rezenv --file requirements.txt```
+* Thereafter, check if all packages, listed in requirements.txt was installed
+   * ```conda list``` will print a list to stdout like this
+
+    ```
+    
+    # packages in environment at /home/nuwan/anaconda3/envs/reza:
+    #
+    # Name                    Version                   Build  Channel
+    _libgcc_mutex             0.1                        main  
+    _openmp_mutex             5.1                       1_gnu  
+    absl-py                   1.2.0                    pypi_0    pypi
+    alembic                   1.8.1                    pypi_0    pypi
+    amqp                      5.1.1                    pypi_0    pypi
+    aniso8601                 9.0.1                    pypi_0    pypi
+    anyio                     3.6.1                    pypi_0    pypi
+    apache-airflow            2.3.4                    pypi_0    pypi
+    apache-airflow-providers-celery 3.0.0              pypi_0    pypi
+    ...
+    
+    ```
+
 ___Please note that the getting started steps have not been tested and should be revised with missing steps.___
 
-#### Required Packages
-* conda >= 4.14
-* python >= 3.8
-* postgresql >= 13.5 and above
-* pyspark >= 2.3.4
-* airflow >= 2.3.4
-
-#### Run requirements.txt
-Run ```python3 -m pip install -r requirements.txt``` to install the remaining dependencies.
-
-## Wrangler
-Wrangler has ___five___ key classes and affiliated methods:
-1. dags
-1. data
-1. db
-1. logs
-1. modules
-1. notebooks
-1. utils
-1. app.cfg
-
-### Database setup
-The ```*.sql``` scripts for setting up the database and relevant database components like schemas, views, and functions are located in the folder: ```wrangeler/db```. After installing postgresql database, execute the ```*.sql``` scripts, in the order of any files that have the words ___create_db_schema___. Thereafter, any othe ```*.sql``` files may be executed.
-
-### Airflow Dags
-The modul-wise dags are stored in ```wrangler\dags```. These files should be copied to the airflow home dags directory, typically, located at ```~/airflow/dags```
-
-### Notebooks
-The notebooks are a templates that can be extended for any use-case. Each notebook is designed to be used withthe wrangler package classes.
-
-### Utils
-Contains abstract reusable librabries. However, these libraries, such as apache pyspark requires defining the environment settings for making invoking spark sessions. Use the ```app.cfg``` in the ```wranger/utils``` folder to define those settings. 
-
-### The app.cfg
-The ```app.cfg``` contains all the environment and common static information to perform various functions. The ```app.cfg``` in the main wrangler folder sets the main deplyment settings: _AppOwner, Hosting, Security, Database, Airflow, TimeZone, Currency_ settings. These should be ___set after the prerequists are satisfied___. 
-
-## Mining
-
-
-## Visuals
-The sample_data folder contains data that wa tried with the template notebooks
-
-## Common
-
-
-### Tutorials
-
-### 
